@@ -29,8 +29,8 @@ export default function Navbar() {
   return (
     <header>
       <div className="container">
-        <div className="logo">
-          <span className="dot">◇</span> WASATA وساطة
+         <img src="/logo.PNG" alt="وساطة" className="logo-img" />
+          وساطة
         </div>
         <nav>
           <ul>
