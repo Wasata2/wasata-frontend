@@ -5,7 +5,7 @@ export default function Navbar() {
     <header>
       <div className="container">
         <div className="logo">
-          <img src="/logo.png" alt="وساطة" className="logo-img" />
+          <img src="/logo.PNG" alt="وساطة" className="logo-img" />
           وساطة
         </div>
         <nav>
