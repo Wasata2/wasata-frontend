@@ -59,11 +59,11 @@ export default function SignupCustomer() {
     <div className="account-page">
       <header className="account-header">
         <div className="container">
-          <Link to="/account-type" className="back-link">العودة →</Link>
           <div className="logo">
-            <img src="/logo.png" alt="وساطة" className="logo-img" />
+            <img src="/logo.PNG" alt="وساطة" className="logo-img" />
             وساطة
           </div>
+          <Link to="/account-type" className="back-link">العودة →</Link>
         </div>
       </header>
 
