@@ -29,7 +29,8 @@ export default function Navbar() {
   return (
     <header>
       <div className="container">
-         <img src="/logo.PNG" alt="وساطة" className="logo-img" />
+         <div className="logo">
+          <img src="/logo.PNG" alt="وساطة" className="logo-img" />
           وساطة
         </div>
         <nav>
