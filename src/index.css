@@ -91,14 +91,19 @@ nav a.active{
 
 /* Hero */
 .hero{
-  padding:72px 0 40px;
+  padding:100px 0;
+  background-size: cover;
+  background-position: center;
 }
 .hero .container{
-  display:grid;
-  grid-template-columns:1fr 1fr;
-  gap:48px;
-  align-items:center;
+  max-width:100%;
 }
+.hero-copy{
+  max-width:700px;
+  margin:0 auto;
+  text-align:center;
+}
+
 .badge{
   display:inline-flex;
   align-items:center;
@@ -116,24 +121,31 @@ nav a.active{
   font-weight:900;
   line-height:1.35;
   margin-bottom:20px;
+  color:#000;
 }
 .hero p{
-  color:var(--gray);
+  color:#1a1a1a;
   font-size:16px;
   line-height:1.9;
   max-width:480px;
   margin-bottom:28px;
+  margin-left:auto;
+  margin-right:auto;
+  font-weight:500;
 }
+
 .hero-ctas{
   display:flex;
   gap:12px;
   margin-bottom:32px;
+  justify-content:center;
 }
 .hero-ctas .btn{padding:13px 26px;font-size:15px;}
 .features-inline{
   display:flex;
   flex-wrap:wrap;
   gap:10px;
+  justify-content:center;
 }
 .feature-pill{
   display:flex;
@@ -156,63 +168,6 @@ nav a.active{
   font-size:10px;
 }
 
-/* Hero visual */
-.hero-visual{
-  background:var(--blue-tint);
-  border-radius:28px;
-  padding:32px;
-  display:flex;
-  flex-direction:column;
-  align-items:center;
-  gap:10px;
-}
-.flow-card{
-  background:#fff;
-  border-radius:14px;
-  padding:10px 18px;
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  gap:10px;
-  width:82%;
-  font-size:14px;
-  box-shadow:0 4px 12px rgba(16,24,40,.05);
-}
-.flow-card .title{font-weight:700;font-size:14px;}
-.flow-card .icon-circle{
-  width:32px;height:32px;
-  border-radius:50%;
-  display:flex;align-items:center;justify-content:center;
-  font-size:14px;
-  flex-shrink:0;
-}
-.flow-card.customer .icon-circle{background:#f2f0fb;color:#6b5bd6;}
-.flow-card.mediator .icon-circle{background:#e9edff;color:var(--blue);}
-.flow-card.center{
-  background:var(--blue);
-  color:#fff;
-  border-radius:20px;
-  padding:28px 24px;
-  width:100%;
-  flex-direction:column;
-  text-align:center;
-  box-shadow:0 16px 32px rgba(41,82,227,.28);
-}
-.flow-card.center .icon-circle{
-  width:44px;height:44px;
-  background:rgba(255,255,255,.18);
-  color:#fff;
-  margin-bottom:12px;
-  font-size:20px;
-}
-.flow-card.center .title{font-size:20px;font-weight:900;}
-.flow-card.center .sub{font-size:13px;opacity:.85;margin-top:4px;}
-.rating-tag{margin-inline-start:4px;}
-.arrow-down{
-  text-align:center;
-  color:var(--blue);
-  font-size:16px;
-}
 
 /* How it works */
 section{

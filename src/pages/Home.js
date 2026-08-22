@@ -6,7 +6,13 @@ export default function Home() {
     <>
       <Navbar />
 
-      <section className="hero" id="home">
+      <section
+        className="hero"
+        id="home"
+        style={{
+          backgroundImage: `linear-gradient(rgba(255,255,255,0.5), rgba(255,255,255,0.5)), url(${process.env.PUBLIC_URL}/hero-bg.jpg)`,
+        }}
+      >
         <div className="container">
           <div className="hero-copy">
             <span className="badge">⏱ منصة تنظيم طلبات ذكي</span>
@@ -33,22 +39,6 @@ export default function Home() {
               <span className="feature-pill">
                 <span className="check">✓</span> وسيطات موثوقات
               </span>
-            </div>
-          </div>
-
-          <div className="hero-visual">
-            <div className="flow-card customer">
-              <div className="icon-circle">👤</div>
-              <div className="title">العميلة</div>
-            </div>
-            <div className="arrow-down">↓</div>
-            <div className="flow-card center">
-              <div className="title">WASATA وساطة</div>
-            </div>
-            <div className="arrow-down">↓</div>
-            <div className="flow-card mediator">
-              <div className="icon-circle">🛍</div>
-              <div className="title">الوسيطة</div>
             </div>
           </div>
         </div>
