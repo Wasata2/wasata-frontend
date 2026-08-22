@@ -1,0 +1,145 @@
+import { useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
+
+export default function SignupMediator() {
+  const [form, setForm] = useState({
+    fullName: "",
+    email: "",
+    phone: "",
+    password: "",
+    agree: false,
+  });
+  const [error, setError] = useState("");
+  const navigate = useNavigate();
+  const handleChange = (e) => {
+    const { name, value, type, checked } = e.target;
+    setForm((prev) => ({
+      ...prev,
+      [name]: type === "checkbox" ? checked : value,
+    }));
+  };
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    if (!form.fullName || !form.email || !form.phone || !form.password) {
+      setError("يرجى تعبئة جميع الحقول.");
+      return;
+    }
+    if (!form.agree) {
+      setError("يجب الموافقة على الشروط والأحكام وسياسة الخصوصية.");
+      return;
+    }
+    setError("");
+    console.log("Signup data:", form);
+    navigate('/create-store');
+  };
+
+  return (
+    <div className="account-page">
+      <header className="account-header">
+        <div className="container">
+          <div className="logo">
+            <img src="/logo.png" alt="وساطة" className="logo-img" />
+            وساطة
+          </div>
+          <Link to="/account-type" className="back-link">
+            العودة →
+          </Link>
+        </div>
+      </header>
+
+      <section className="signup-section">
+        <div className="container">
+          <div className="signup-card">
+            <div className="signup-header">
+              <div>
+                <h1>إنشاء حساب جديد</h1>
+                <p>أنشئي حسابك وابدئي تجربتك مع وساطة</p>
+              </div>
+              <div className="account-type-box">
+                <div className="account-type-icon">🏪</div>
+                <span className="account-type-label">وسيطة</span>
+              </div>
+            </div>
+
+            <form className="signup-form" onSubmit={handleSubmit}>
+              <div className="form-row">
+                <div className="password-field">
+                  <label htmlFor="fullName">الاسم الكامل</label>
+                  <input
+                    id="fullName"
+                    name="fullName"
+                    type="text"
+                    placeholder="أدخلي اسمك الكامل"
+                    value={form.fullName}
+                    onChange={handleChange}
+                  />
+                </div>
+                <div className="password-field">
+                  <label htmlFor="email">البريد الإلكتروني</label>
+                  <input
+                    id="email"
+                    name="email"
+                    type="email"
+                    placeholder="example@email.com"
+                    value={form.email}
+                    onChange={handleChange}
+                  />
+                </div>
+              </div>
+
+              <div className="form-row">
+                <div className="password-field">
+                  <label htmlFor="phone">رقم الهاتف</label>
+                  <input
+                    id="phone"
+                    name="phone"
+                    type="tel"
+                    placeholder="+966 5X XXX XXXX"
+                    value={form.phone}
+                    onChange={handleChange}
+                  />
+                </div>
+                <div className="password-field">
+                  <label htmlFor="password">كلمة المرور</label>
+                  <input
+                    id="password"
+                    name="password"
+                    type="password"
+                    placeholder="أدخلي كلمة المرور"
+                    value={form.password}
+                    onChange={handleChange}
+                  />
+                </div>
+              </div>
+
+              <div className="signup-checkbox">
+                <input
+                  type="checkbox"
+                  id="terms"
+                  name="agree"
+                  checked={form.agree}
+                  onChange={handleChange}
+                />
+                <label htmlFor="terms">
+                  أوافق على <a href="#">الشروط والأحكام</a> و{" "}
+                  <a href="#">سياسة الخصوصية</a>.
+                </label>
+              </div>
+
+              {error && <p className="form-error">{error}</p>}
+
+              <button type="submit" className="btn btn-primary signup-submit">
+                إنشاء الحساب{" "}
+              </button>
+            </form>
+
+            <p className="signup-footer">
+              لديكِ حساب بالفعل؟ <a href="#">تسجيل الدخول</a>
+            </p>
+          </div>
+        </div>
+      </section>
+    </div>
+  );
+}
