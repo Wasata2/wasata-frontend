@@ -6,7 +6,7 @@ export default function AccountType() {
       <header className="account-header">
         <div className="container">
           <div className="logo">
-            <img src="/logo.png" alt="وساطة" className="logo-img" />
+            <img src="/logo.PNG" alt="وساطة" className="logo-img" />
             وساطة
           </div>
           <Link to="/" className="back-link">

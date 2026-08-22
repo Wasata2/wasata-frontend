@@ -6,7 +6,7 @@ export default function Home() {
     <>
       <Navbar />
 
-      <section className="hero">
+      <section className="hero" id="home">
         <div className="container">
           <div className="hero-copy">
             <span className="badge">⏱ منصة تنظيم طلبات ذكي</span>
