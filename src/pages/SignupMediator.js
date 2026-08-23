@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { registerUser } from "../api";
 
 export default function SignupMediator() {
   const [form, setForm] = useState({
@@ -10,7 +11,9 @@ export default function SignupMediator() {
     agree: false,
   });
   const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
     setForm((prev) => ({
@@ -19,19 +22,39 @@ export default function SignupMediator() {
     }));
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     if (!form.fullName || !form.email || !form.phone || !form.password) {
       setError("يرجى تعبئة جميع الحقول.");
+      return;
+    }
+    if (form.password.length < 8) {
+      setError("كلمة المرور يجب أن تكون 8 أحرف على الأقل.");
       return;
     }
     if (!form.agree) {
       setError("يجب الموافقة على الشروط والأحكام وسياسة الخصوصية.");
       return;
     }
+
     setError("");
-    console.log("Signup data:", form);
-    navigate('/create-store');
+    setLoading(true);
+
+    try {
+      const result = await registerUser({
+        full_name: form.fullName,
+        email: form.email,
+        phone: form.phone,
+        password: form.password,
+        role: "broker",
+      });
+      console.log("نجح التسجيل:", result);
+      navigate("/create-store");
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -129,8 +152,8 @@ export default function SignupMediator() {
 
               {error && <p className="form-error">{error}</p>}
 
-              <button type="submit" className="btn btn-primary signup-submit">
-                إنشاء الحساب{" "}
+              <button type="submit" className="btn btn-primary signup-submit" disabled={loading}>
+                {loading ? "جاري الإنشاء..." : "إنشاء الحساب →"}
               </button>
             </form>
 
