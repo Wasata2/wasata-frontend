@@ -692,6 +692,21 @@ footer .copyright{font-size:12px;color:var(--gray-light);}
   text-align:center;
 }
 
+.login-options{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  margin:14px 0 24px;
+}
+.login-options .signup-checkbox{
+  margin:0;
+}
+.forgot-link{
+  color:var(--blue);
+  font-size:13px;
+  font-weight:700;
+}
+
 @media (max-width:900px){
   .hero .container{grid-template-columns:1fr;}
   .steps{grid-template-columns:1fr;}

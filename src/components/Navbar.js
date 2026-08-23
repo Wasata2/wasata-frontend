@@ -43,7 +43,7 @@ export default function Navbar() {
         </nav>
         <div className="header-actions">
           <Link to="/account-type" className="btn btn-primary">إنشاء حساب</Link>
-          <a href="#" className="btn btn-outline">تسجيل الدخول</a>
+          <Link to="/login" className="btn btn-outline">تسجيل الدخول</Link>
         </div>
       </div>
     </header>
