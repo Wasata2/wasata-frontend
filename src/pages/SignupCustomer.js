@@ -151,7 +151,7 @@ export default function SignupCustomer() {
               </button>
             </form>
 
-            <p className="signup-footer">لديكِ حساب بالفعل؟ <a href="#">تسجيل الدخول</a></p>
+           <p className="signup-footer">لديكِ حساب بالفعل؟ <Link to="/login">تسجيل الدخول</Link></p>
           </div>
         </div>
       </section>

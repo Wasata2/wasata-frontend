@@ -152,13 +152,17 @@ export default function SignupMediator() {
 
               {error && <p className="form-error">{error}</p>}
 
-              <button type="submit" className="btn btn-primary signup-submit" disabled={loading}>
+              <button
+                type="submit"
+                className="btn btn-primary signup-submit"
+                disabled={loading}
+              >
                 {loading ? "جاري الإنشاء..." : "إنشاء الحساب →"}
               </button>
             </form>
 
             <p className="signup-footer">
-              لديكِ حساب بالفعل؟ <a href="#">تسجيل الدخول</a>
+              لديكِ حساب بالفعل؟ <Link to="/login">تسجيل الدخول</Link>
             </p>
           </div>
         </div>
