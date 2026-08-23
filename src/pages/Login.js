@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { loginUser } from "../api";
 
 export default function Login() {
   const [form, setForm] = useState({
@@ -30,8 +31,19 @@ export default function Login() {
     setLoading(true);
 
     try {
-      // سيتم ربطها بالباك اند لاحقًا
-      console.log("Login data:", form);
+      const result = await loginUser({
+        email: form.email,
+        password: form.password,
+      });
+      console.log("نجح تسجيل الدخول:", result);
+
+      // التوجيه حسب نوع الحساب (role.name)
+      const roleName = result.user.role.name;
+      if (roleName === "broker") {
+        navigate("/create-store");
+      } else {
+        navigate("/");
+      }
     } catch (err) {
       setError(err.message);
     } finally {
