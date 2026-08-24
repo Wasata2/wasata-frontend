@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
+import { createStore } from "../api";
 
 export default function CreateStore() {
   const [form, setForm] = useState({
@@ -9,6 +10,11 @@ export default function CreateStore() {
     phone: "",
     whatsappEnabled: true,
   });
+  const [imageFile, setImageFile] = useState(null);
+  const [imagePreview, setImagePreview] = useState(null);
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
+  const navigate = useNavigate();
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -18,23 +24,54 @@ export default function CreateStore() {
     }));
   };
 
-  const handleSubmit = (e) => {
+  const handleImageChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      setImageFile(file);
+      setImagePreview(URL.createObjectURL(file));
+    }
+  };
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    console.log("Store data:", form);
+
+    if (!form.storeName || !form.phone || !form.city) {
+      setError("يرجى تعبئة جميع الحقول الإلزامية.");
+      return;
+    }
+
+    setError("");
+    setLoading(true);
+
+    try {
+      const result = await createStore({
+        name: form.storeName,
+        bio: form.bio,
+        phone: `+970${form.phone}`,
+        city: form.city,
+        accepts_whatsapp_orders: form.whatsappEnabled,
+        image: imageFile,
+      });
+      console.log("نجح إنشاء المتجر:", result);
+      navigate("/");
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
     <div className="account-page">
       <header className="account-header">
         <div className="container">
-            <div className="logo">
+          <div className="logo">
             <img src="/logo.PNG" alt="وساطة" className="logo-img" />
             وساطة
           </div>
           <Link to="/signup-mediator" className="back-link">
             العودة →
           </Link>
-          
         </div>
       </header>
 
@@ -53,8 +90,27 @@ export default function CreateStore() {
           <div className="store-card">
             <form onSubmit={handleSubmit}>
               <div className="store-photo-upload">
-                <div className="store-photo-circle">📷</div>
+                <label
+                  htmlFor="storeImage"
+                  className="store-photo-circle"
+                  style={{
+                    cursor: 'pointer',
+                    backgroundImage: imagePreview ? `url(${imagePreview})` : 'none',
+                    backgroundSize: 'cover',
+                    backgroundPosition: 'center',
+                  }}
+                >
+                  {!imagePreview && '📷'}
+                </label>
+                <input
+                  id="storeImage"
+                  type="file"
+                  accept="image/*"
+                  onChange={handleImageChange}
+                  style={{ display: 'none' }}
+                />
                 <div className="store-photo-label">صورة المتجر</div>
+                <div className="store-photo-sub">(اختياري، أقصى حجم 4MB)</div>
               </div>
 
               <h3 className="store-section-title">معلومات المتجر</h3>
@@ -94,12 +150,13 @@ export default function CreateStore() {
                     value={form.city}
                     onChange={handleChange}
                   >
-                      <option value="">اختر المدينة</option>
-                      <option value="gaza">غزة</option>
-                      <option value="khan">خانيونس</option>
-                      <option value="northgaza">شمال غزة</option>
-                      <option value="wosta">الوسطى</option>
-                    </select>
+                    <option value="">اختر المدينة</option>
+                    <option value="غزة">غزة</option>
+                    <option value="خانيونس">خانيونس</option>
+                    <option value="شمال غزة">شمال غزة</option>
+                    <option value="الوسطى">الوسطى</option>
+                    <option value="رفح">رفح</option>
+                  </select>
                 </div>
                 <div className="password-field">
                   <label htmlFor="phone">رقم الهاتف</label>
@@ -135,12 +192,14 @@ export default function CreateStore() {
                 </div>
               </div>
 
+              {error && <p className="form-error">{error}</p>}
+
               <div className="store-actions">
                 <button type="button" className="btn btn-outline">
                   إلغاء
                 </button>
-                <button type="submit" className="btn btn-primary">
-                  إنشاء المتجر
+                <button type="submit" className="btn btn-primary" disabled={loading}>
+                  {loading ? "جاري الإنشاء..." : "إنشاء المتجر"}
                 </button>
               </div>
             </form>
