@@ -3,12 +3,55 @@ import { Link } from "react-router-dom";
 
 export default function MediatorProfile() {
   const [acceptingOrders, setAcceptingOrders] = useState(true);
+  const [isEditing, setIsEditing] = useState(false);
+  const [error, setError] = useState("");
 
   const storedUser = JSON.parse(localStorage.getItem('user')) || {};
-  const userName = storedUser.full_name || "مستخدمة";
-  const userInitial = userName.charAt(0);
-  const userPhone = storedUser.phone || "غير متوفر";
-  const userCity = storedUser.city || storedUser.store?.city || "غير محدد";
+
+  const [form, setForm] = useState({
+    fullName: storedUser.full_name || "",
+    phone: storedUser.phone || "",
+    city: storedUser.city || storedUser.store?.city || "",
+  });
+
+  const userInitial = (form.fullName || "م").charAt(0);
+
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setForm((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const handleSave = () => {
+    if (!form.fullName || !form.phone) {
+      setError("يرجى تعبئة الحقول الإلزامية.");
+      return;
+    }
+    setError("");
+
+    // تحديث البيانات محليًا (localStorage)
+    const updatedUser = {
+      ...storedUser,
+      full_name: form.fullName,
+      phone: form.phone,
+      city: form.city,
+    };
+    localStorage.setItem('user', JSON.stringify(updatedUser));
+
+    // TODO: إرسال التحديث فعليًا للباك اند عند توفر الـ endpoint المناسب
+    // مثال متوقع: apiPostWithAuth('/api/profile/update', { full_name, phone, city })
+
+    setIsEditing(false);
+  };
+
+  const handleCancel = () => {
+    setForm({
+      fullName: storedUser.full_name || "",
+      phone: storedUser.phone || "",
+      city: storedUser.city || storedUser.store?.city || "",
+    });
+    setError("");
+    setIsEditing(false);
+  };
 
   return (
     <div className="dashboard-layout">
@@ -63,7 +106,7 @@ export default function MediatorProfile() {
           </div>
           <div className="topbar-user">
             <div className="user-info">
-              <div className="user-name">{userName}</div>
+              <div className="user-name">{form.fullName}</div>
               <div className="user-store">وسيطة</div>
             </div>
             <div className="user-avatar">{userInitial}</div>
@@ -83,33 +126,76 @@ export default function MediatorProfile() {
             </span>
           </div>
 
-          <div className="profile-info">
-            <div className="profile-field">
-              <div className="profile-field-label">الاسم الكامل</div>
-              <div className="profile-field-value">{userName}</div>
-            </div>
+          {!isEditing ? (
+            <>
+              <div className="profile-info">
+                <div className="profile-field">
+                  <div className="profile-field-label">الاسم الكامل</div>
+                  <div className="profile-field-value">{form.fullName || "—"}</div>
+                </div>
 
-            <div className="profile-field">
-              <div className="profile-field-label">الموقع</div>
-              <div className="profile-field-value">{userCity}</div>
-            </div>
+                <div className="profile-field">
+                  <div className="profile-field-label">الموقع</div>
+                  <div className="profile-field-value">{form.city || "غير محدد"}</div>
+                </div>
 
-            <div className="profile-field">
-              <div className="profile-field-label">رقم الهاتف</div>
-              <div className="profile-field-value">{userPhone}</div>
-            </div>
+                <div className="profile-field">
+                  <div className="profile-field-label">رقم الهاتف</div>
+                  <div className="profile-field-value">{form.phone || "—"}</div>
+                </div>
 
-            <div className="profile-field">
-              <div className="profile-field-label">حالة استقبال الطلبات</div>
-              <div className="profile-field-value">
-                <span className={`status-badge ${acceptingOrders ? "progress" : "pending"}`}>
-                  {acceptingOrders ? "متاحة الآن" : "غير متاحة"}
-                </span>
+                <div className="profile-field">
+                  <div className="profile-field-label">حالة استقبال الطلبات</div>
+                  <div className="profile-field-value">
+                    <span className={`status-badge ${acceptingOrders ? "progress" : "pending"}`}>
+                      {acceptingOrders ? "متاحة الآن" : "غير متاحة"}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              <button className="btn btn-outline profile-edit-btn" onClick={() => setIsEditing(true)}>
+                تعديل البيانات
+              </button>
+            </>
+          ) : (
+            <div className="profile-edit-form">
+              <label htmlFor="fullName">الاسم الكامل</label>
+              <input
+                id="fullName"
+                name="fullName"
+                type="text"
+                value={form.fullName}
+                onChange={handleChange}
+              />
+
+              <label htmlFor="city">الموقع</label>
+              <select id="city" name="city" value={form.city} onChange={handleChange}>
+                <option value="">اختر المدينة</option>
+                <option value="غزة">غزة</option>
+                <option value="خانيونس">خانيونس</option>
+                <option value="شمال غزة">شمال غزة</option>
+                <option value="الوسطى">الوسطى</option>
+                <option value="رفح">رفح</option>
+              </select>
+
+              <label htmlFor="phone">رقم الهاتف</label>
+              <input
+                id="phone"
+                name="phone"
+                type="tel"
+                value={form.phone}
+                onChange={handleChange}
+              />
+
+              {error && <p className="form-error">{error}</p>}
+
+              <div className="profile-edit-actions">
+                <button className="btn btn-outline" onClick={handleCancel}>إلغاء</button>
+                <button className="btn btn-primary" onClick={handleSave}>حفظ التغييرات</button>
               </div>
             </div>
-          </div>
-
-          <button className="btn btn-outline profile-edit-btn">تعديل البيانات</button>
+          )}
         </div>
       </main>
     </div>

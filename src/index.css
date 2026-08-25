@@ -940,6 +940,7 @@ footer .copyright{font-size:12px;color:var(--gray-light);}
   border-radius:16px;
   padding:32px;
   max-width:600px;
+  margin:0 auto;
 }
 .profile-photo-wrap{
   display:flex;
@@ -988,7 +989,37 @@ footer .copyright{font-size:12px;color:var(--gray-light);}
   width:100%;
   text-align:center;
 }
-
+.profile-edit-form{
+  display:flex;
+  flex-direction:column;
+}
+.profile-edit-form label{
+  font-size:13px;
+  font-weight:700;
+  margin:14px 0 6px;
+}
+.profile-edit-form input,
+.profile-edit-form select{
+  border:1px solid var(--line);
+  border-radius:10px;
+  padding:12px 16px;
+  font-family:'Tajawal',sans-serif;
+  font-size:14px;
+}
+.profile-edit-form input:focus,
+.profile-edit-form select:focus{
+  outline:none;
+  border-color:var(--blue);
+}
+.profile-edit-actions{
+  display:flex;
+  gap:12px;
+  margin-top:20px;
+}
+.profile-edit-actions .btn{
+  flex:1;
+  text-align:center;
+}
 @media (max-width:900px){
   .hero .container{grid-template-columns:1fr;}
   .steps{grid-template-columns:1fr;}
