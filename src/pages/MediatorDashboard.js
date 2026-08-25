@@ -4,7 +4,7 @@ import { Link } from "react-router-dom";
 export default function MediatorDashboard() {
   const [acceptingOrders, setAcceptingOrders] = useState(true);
 
-  const storedUser = JSON.parse(localStorage.getItem('user')) || {};
+  const storedUser = JSON.parse(localStorage.getItem("user")) || {};
   const userName = storedUser.full_name || "مستخدمة";
   const userInitial = userName.charAt(0);
 
@@ -21,8 +21,12 @@ export default function MediatorDashboard() {
   ]);
 
   const activeServicesCount = 4;
-  const inProgressCount = orders.filter((o) => o.statusClass === "progress" || o.statusClass === "ordered").length;
-  const newOrdersCount = orders.filter((o) => o.statusClass === "pending").length;
+  const inProgressCount = orders.filter(
+    (o) => o.statusClass === "progress" || o.statusClass === "ordered",
+  ).length;
+  const newOrdersCount = orders.filter(
+    (o) => o.statusClass === "pending",
+  ).length;
 
   return (
     <div className="dashboard-layout">
@@ -32,6 +36,9 @@ export default function MediatorDashboard() {
           وساطة
         </div>
         <nav className="sidebar-nav">
+          <Link to="/" className="sidebar-link">
+            <span className="sidebar-icon">🏠</span> الرئيسية
+          </Link>
           <Link to="/mediator-dashboard" className="sidebar-link active">
             <span className="sidebar-icon">▦</span> لوحة التحكم
           </Link>
@@ -82,7 +89,7 @@ export default function MediatorDashboard() {
         </div>
 
         <div className="dashboard-welcome">
-          <h1>مرحبًا، {userName.split(' ')[0]} 👋</h1>
+          <h1>مرحبًا، {userName.split(" ")[0]} 👋</h1>
           <p>إليك نظرة سريعة على نشاطك اليوم.</p>
         </div>
 
@@ -123,7 +130,9 @@ export default function MediatorDashboard() {
         <div className="dashboard-orders">
           <div className="orders-header">
             <h3>الطلبات الواردة</h3>
-            <a href="#" className="view-all-link">عرض جميع الطلبات ⟵</a>
+            <a href="#" className="view-all-link">
+              عرض جميع الطلبات ⟵
+            </a>
           </div>
 
           {orders.length === 0 ? (
@@ -153,10 +162,14 @@ export default function MediatorDashboard() {
                       <td>{order.items}</td>
                       <td>{order.amount}</td>
                       <td>
-                        <span className={`status-badge ${order.statusClass}`}>{order.status}</span>
+                        <span className={`status-badge ${order.statusClass}`}>
+                          {order.status}
+                        </span>
                       </td>
                       <td>
-                        <a href="#" className="details-link">عرض التفاصيل</a>
+                        <a href="#" className="details-link">
+                          عرض التفاصيل
+                        </a>
                         {order.statusClass === "pending" && (
                           <span className="row-actions">
                             <button className="icon-btn accept">✓</button>
