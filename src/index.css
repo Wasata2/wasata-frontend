@@ -976,6 +976,7 @@ footer .copyright{font-size:12px;color:var(--gray-light);}
   border-radius:16px;
   padding:32px;
   max-width:600px;
+  margin:0 auto;
 }
 .profile-photo-wrap{
   display:flex;
@@ -1024,7 +1025,6 @@ footer .copyright{font-size:12px;color:var(--gray-light);}
   width:100%;
   text-align:center;
 }
-
 /* بطاقة تتبع الطلب الحالي */
 .order-card{
   background:#fff;
@@ -1112,9 +1112,43 @@ footer .copyright{font-size:12px;color:var(--gray-light);}
 }
 .mediator-card .btn{width:100%;text-align:center;padding:10px;font-size:13px;}
 
+/* وضع تعديل البروفايل */
+.profile-edit-form{
+  display:flex;
+  flex-direction:column;
+}
+.profile-edit-form label{
+  font-size:13px;
+  font-weight:700;
+  margin:14px 0 6px;
+}
+.profile-edit-form input,
+.profile-edit-form select{
+  border:1px solid var(--line);
+  border-radius:10px;
+  padding:12px 16px;
+  font-family:'Tajawal',sans-serif;
+  font-size:14px;
+}
+.profile-edit-form input:focus,
+.profile-edit-form select:focus{
+  outline:none;
+  border-color:var(--blue);
+}
+.profile-edit-actions{
+  display:flex;
+  gap:12px;
+  margin-top:20px;
+}
+.profile-edit-actions .btn{
+  flex:1;
+  text-align:center;
+}
+
 /* ============ Responsive ============ */
 @media (max-width:1024px){
   .suggested-grid{grid-template-columns:repeat(2,1fr);}
+
 }
 @media (max-width:900px){
   .dashboard-layout{ flex-direction:column; }
