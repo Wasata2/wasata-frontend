@@ -57,9 +57,9 @@ export default function MediatorDashboard() {
           <a href="#" className="sidebar-link">
             <span className="sidebar-icon">⭐</span> التقييمات
           </a>
-          <a href="#" className="sidebar-link">
+          <Link to="/mediator-profile" className="sidebar-link">
             <span className="sidebar-icon">👤</span> الملف الشخصي
-          </a>
+          </Link>
         </nav>
       </aside>
 
