@@ -553,6 +553,9 @@ footer .copyright{font-size:12px;color:var(--gray-light);}
 .store-photo-upload{
   text-align:center;
   margin-bottom:28px;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
 }
 .store-photo-circle{
   width:80px;height:80px;
