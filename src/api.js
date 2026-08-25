@@ -47,13 +47,14 @@ export async function loginUser(data) {
     throw new Error(result.message || 'خطأ في البريد الإلكتروني أو كلمة المرور');
   }
 
-  // حفظ التوكن وبيانات المستخدم محليًا
+  // مسح أي بيانات جلسة سابقة قبل تخزين الجديدة
+  localStorage.clear();
+
   localStorage.setItem('token', result.token);
   localStorage.setItem('user', JSON.stringify(result.user));
 
   return result;
 }
-
 export async function apiPostWithAuth(endpoint, data) {
   const token = localStorage.getItem('token');
 
@@ -105,6 +106,27 @@ export async function createStore(data) {
 
   if (!response.ok) {
     throw new Error(result.message || 'حدث خطأ أثناء إنشاء المتجر');
+  }
+
+  return result;
+}
+
+export async function getMyStore() {
+  const token = localStorage.getItem('token');
+
+  const response = await fetch(`${BASE_URL}/api/stores/me`, {
+    method: 'GET',
+    credentials: 'include',
+    headers: {
+      'Accept': 'application/json',
+      'Authorization': `Bearer ${token}`,
+    },
+  });
+
+  const result = await response.json();
+
+  if (!response.ok) {
+    throw new Error(result.message || 'تعذر جلب بيانات المتجر');
   }
 
   return result;

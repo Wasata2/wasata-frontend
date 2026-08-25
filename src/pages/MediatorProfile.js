@@ -1,24 +1,44 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
+import { getMyStore } from "../api";
 
 export default function MediatorProfile() {
   const [acceptingOrders, setAcceptingOrders] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
   const [error, setError] = useState("");
+  const [loadingStore, setLoadingStore] = useState(true);
 
   const storedUser = JSON.parse(localStorage.getItem("user")) || {};
 
   const [form, setForm] = useState({
     fullName: storedUser.full_name || "",
     phone: storedUser.phone || "",
-    city: storedUser.city || storedUser.store?.city || "",
-    commission: storedUser.commission || storedUser.store?.commission || "",
+    city: "",
+    commission: "",
   });
 
   const [imageFile, setImageFile] = useState(null);
   const [imagePreview, setImagePreview] = useState(storedUser.image || null);
 
   const userInitial = (form.fullName || "م").charAt(0);
+
+  // جلب بيانات متجر المستخدم الحالي فعليًا من الباك اند (بدل الاعتماد على localStorage)
+  useEffect(() => {
+    getMyStore()
+      .then((data) => {
+        const store = data.store || data;
+        setForm((prev) => ({
+          ...prev,
+          city: store.city || "",
+          commission: store.commission || "",
+        }));
+        setLoadingStore(false);
+      })
+      .catch((err) => {
+        console.log("تعذر جلب بيانات المتجر:", err.message);
+        setLoadingStore(false);
+      });
+  }, []);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -40,28 +60,25 @@ export default function MediatorProfile() {
     }
     setError("");
 
-   const updatedUser = {
-  ...storedUser,
-  full_name: form.fullName,
-  phone: form.phone,
-  city: form.city,
-  commission: form.commission,
-  image: imagePreview,
-};
+    const updatedUser = {
+      ...storedUser,
+      full_name: form.fullName,
+      phone: form.phone,
+      image: imagePreview,
+    };
     localStorage.setItem("user", JSON.stringify(updatedUser));
 
-    // TODO: إرسال التحديث فعليًا للباك اند (بما فيها الصورة عبر FormData) عند توفر الـ endpoint
+    // TODO: إرسال التحديث فعليًا للباك اند (بما فيها الصورة والمدينة والعمولة) عند توفر الـ endpoint المناسب
 
     setIsEditing(false);
   };
 
   const handleCancel = () => {
-  setForm({
-    fullName: storedUser.full_name || "",
-    phone: storedUser.phone || "",
-    city: storedUser.city || storedUser.store?.city || "",
-    commission: storedUser.commission || storedUser.store?.commission || "",
-  });
+    setForm((prev) => ({
+      ...prev,
+      fullName: storedUser.full_name || "",
+      phone: storedUser.phone || "",
+    }));
     setImagePreview(storedUser.image || null);
     setImageFile(null);
     setError("");
@@ -191,7 +208,7 @@ export default function MediatorProfile() {
                 <div className="profile-field">
                   <div className="profile-field-label">الموقع</div>
                   <div className="profile-field-value">
-                    {form.city || "غير محدد"}
+                    {loadingStore ? "جاري التحميل..." : (form.city || "غير محدد")}
                   </div>
                 </div>
 
@@ -203,7 +220,7 @@ export default function MediatorProfile() {
                 <div className="profile-field">
                   <div className="profile-field-label">نسبة العمولة</div>
                   <div className="profile-field-value">
-                    {form.commission ? `${form.commission}%` : "غير محددة"}
+                    {loadingStore ? "جاري التحميل..." : (form.commission ? `${form.commission}%` : "غير محددة")}
                   </div>
                 </div>
                 <div className="profile-field">
