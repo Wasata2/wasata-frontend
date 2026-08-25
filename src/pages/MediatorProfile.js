@@ -6,7 +6,7 @@ export default function MediatorProfile() {
   const [isEditing, setIsEditing] = useState(false);
   const [error, setError] = useState("");
 
-  const storedUser = JSON.parse(localStorage.getItem('user')) || {};
+  const storedUser = JSON.parse(localStorage.getItem("user")) || {};
 
   const [form, setForm] = useState({
     fullName: storedUser.full_name || "",
@@ -14,11 +14,22 @@ export default function MediatorProfile() {
     city: storedUser.city || storedUser.store?.city || "",
   });
 
+  const [imageFile, setImageFile] = useState(null);
+  const [imagePreview, setImagePreview] = useState(storedUser.image || null);
+
   const userInitial = (form.fullName || "م").charAt(0);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
     setForm((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const handleImageChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      setImageFile(file);
+      setImagePreview(URL.createObjectURL(file));
+    }
   };
 
   const handleSave = () => {
@@ -28,17 +39,16 @@ export default function MediatorProfile() {
     }
     setError("");
 
-    // تحديث البيانات محليًا (localStorage)
     const updatedUser = {
       ...storedUser,
       full_name: form.fullName,
       phone: form.phone,
       city: form.city,
+      image: imagePreview,
     };
-    localStorage.setItem('user', JSON.stringify(updatedUser));
+    localStorage.setItem("user", JSON.stringify(updatedUser));
 
-    // TODO: إرسال التحديث فعليًا للباك اند عند توفر الـ endpoint المناسب
-    // مثال متوقع: apiPostWithAuth('/api/profile/update', { full_name, phone, city })
+    // TODO: إرسال التحديث فعليًا للباك اند (بما فيها الصورة عبر FormData) عند توفر الـ endpoint
 
     setIsEditing(false);
   };
@@ -49,6 +59,8 @@ export default function MediatorProfile() {
       phone: storedUser.phone || "",
       city: storedUser.city || storedUser.store?.city || "",
     });
+    setImagePreview(storedUser.image || null);
+    setImageFile(null);
     setError("");
     setIsEditing(false);
   };
@@ -112,16 +124,53 @@ export default function MediatorProfile() {
             <div className="user-avatar">{userInitial}</div>
           </div>
         </div>
-
-        <div className="dashboard-welcome">
+        <div className="dashboard-welcome profile-title-centered">
           <h1>الملف الشخصي</h1>
           <p>معلوماتك الأساسية كما تظهر للزبائن.</p>
         </div>
 
         <div className="profile-card">
           <div className="profile-photo-wrap">
-            <div className="profile-photo">{userInitial}</div>
-            <span className={`availability-badge ${acceptingOrders ? "available" : "unavailable"}`}>
+            {isEditing ? (
+              <label
+                htmlFor="profileImage"
+                className="profile-photo"
+                style={{
+                  cursor: "pointer",
+                  backgroundImage: imagePreview
+                    ? `url(${imagePreview})`
+                    : "none",
+                  backgroundSize: "cover",
+                  backgroundPosition: "center",
+                }}
+              >
+                {!imagePreview && userInitial}
+                <span className="photo-edit-overlay">📷</span>
+              </label>
+            ) : (
+              <div
+                className="profile-photo"
+                style={{
+                  backgroundImage: imagePreview
+                    ? `url(${imagePreview})`
+                    : "none",
+                  backgroundSize: "cover",
+                  backgroundPosition: "center",
+                }}
+              >
+                {!imagePreview && userInitial}
+              </div>
+            )}
+            <input
+              id="profileImage"
+              type="file"
+              accept="image/*"
+              onChange={handleImageChange}
+              style={{ display: "none" }}
+            />
+            <span
+              className={`availability-badge ${acceptingOrders ? "available" : "unavailable"}`}
+            >
               {acceptingOrders ? "متاحة" : "غير متاحة"}
             </span>
           </div>
@@ -131,12 +180,16 @@ export default function MediatorProfile() {
               <div className="profile-info">
                 <div className="profile-field">
                   <div className="profile-field-label">الاسم الكامل</div>
-                  <div className="profile-field-value">{form.fullName || "—"}</div>
+                  <div className="profile-field-value">
+                    {form.fullName || "—"}
+                  </div>
                 </div>
 
                 <div className="profile-field">
                   <div className="profile-field-label">الموقع</div>
-                  <div className="profile-field-value">{form.city || "غير محدد"}</div>
+                  <div className="profile-field-value">
+                    {form.city || "غير محدد"}
+                  </div>
                 </div>
 
                 <div className="profile-field">
@@ -145,16 +198,23 @@ export default function MediatorProfile() {
                 </div>
 
                 <div className="profile-field">
-                  <div className="profile-field-label">حالة استقبال الطلبات</div>
+                  <div className="profile-field-label">
+                    حالة استقبال الطلبات
+                  </div>
                   <div className="profile-field-value">
-                    <span className={`status-badge ${acceptingOrders ? "progress" : "pending"}`}>
+                    <span
+                      className={`status-badge ${acceptingOrders ? "progress" : "pending"}`}
+                    >
                       {acceptingOrders ? "متاحة الآن" : "غير متاحة"}
                     </span>
                   </div>
                 </div>
               </div>
 
-              <button className="btn btn-outline profile-edit-btn" onClick={() => setIsEditing(true)}>
+              <button
+                className="btn btn-outline profile-edit-btn"
+                onClick={() => setIsEditing(true)}
+              >
                 تعديل البيانات
               </button>
             </>
@@ -170,7 +230,12 @@ export default function MediatorProfile() {
               />
 
               <label htmlFor="city">الموقع</label>
-              <select id="city" name="city" value={form.city} onChange={handleChange}>
+              <select
+                id="city"
+                name="city"
+                value={form.city}
+                onChange={handleChange}
+              >
                 <option value="">اختر المدينة</option>
                 <option value="غزة">غزة</option>
                 <option value="خانيونس">خانيونس</option>
@@ -191,8 +256,12 @@ export default function MediatorProfile() {
               {error && <p className="form-error">{error}</p>}
 
               <div className="profile-edit-actions">
-                <button className="btn btn-outline" onClick={handleCancel}>إلغاء</button>
-                <button className="btn btn-primary" onClick={handleSave}>حفظ التغييرات</button>
+                <button className="btn btn-outline" onClick={handleCancel}>
+                  إلغاء
+                </button>
+                <button className="btn btn-primary" onClick={handleSave}>
+                  حفظ التغييرات
+                </button>
               </div>
             </div>
           )}
