@@ -7,6 +7,7 @@ import CreateStore from "./pages/CreateStore";
 import Login from "./pages/Login";
 import MediatorDashboard from './pages/MediatorDashboard';
 import CustomerDashboard from "./pages/CustomerDashboard";
+import MediatorProfile from './pages/MediatorProfile';
 
 function App() {
   return (
@@ -19,6 +20,7 @@ function App() {
       <Route path="/login" element={<Login />} />
       <Route path="/mediator-dashboard" element={<MediatorDashboard />} />
       <Route path="/customer-dashboard" element={<CustomerDashboard />} />
+      <Route path="/mediator-profile" element={<MediatorProfile />} />
     </Routes>
   );
 }
