@@ -53,7 +53,7 @@ export default function CreateStore() {
         image: imageFile,
       });
       console.log("نجح إنشاء المتجر:", result);
-      navigate("/");
+      navigate("/mediator-dashboard");
     } catch (err) {
       setError(err.message);
     } finally {
@@ -94,20 +94,22 @@ export default function CreateStore() {
                   htmlFor="storeImage"
                   className="store-photo-circle"
                   style={{
-                    cursor: 'pointer',
-                    backgroundImage: imagePreview ? `url(${imagePreview})` : 'none',
-                    backgroundSize: 'cover',
-                    backgroundPosition: 'center',
+                    cursor: "pointer",
+                    backgroundImage: imagePreview
+                      ? `url(${imagePreview})`
+                      : "none",
+                    backgroundSize: "cover",
+                    backgroundPosition: "center",
                   }}
                 >
-                  {!imagePreview && '📷'}
+                  {!imagePreview && "📷"}
                 </label>
                 <input
                   id="storeImage"
                   type="file"
                   accept="image/*"
                   onChange={handleImageChange}
-                  style={{ display: 'none' }}
+                  style={{ display: "none" }}
                 />
                 <div className="store-photo-label">صورة المتجر</div>
                 <div className="store-photo-sub">(اختياري، أقصى حجم 4MB)</div>
@@ -198,7 +200,11 @@ export default function CreateStore() {
                 <button type="button" className="btn btn-outline">
                   إلغاء
                 </button>
-                <button type="submit" className="btn btn-primary" disabled={loading}>
+                <button
+                  type="submit"
+                  className="btn btn-primary"
+                  disabled={loading}
+                >
                   {loading ? "جاري الإنشاء..." : "إنشاء المتجر"}
                 </button>
               </div>
