@@ -12,6 +12,7 @@ export default function MediatorProfile() {
     fullName: storedUser.full_name || "",
     phone: storedUser.phone || "",
     city: storedUser.city || storedUser.store?.city || "",
+    commission: storedUser.commission || storedUser.store?.commission || "",
   });
 
   const [imageFile, setImageFile] = useState(null);
@@ -39,13 +40,14 @@ export default function MediatorProfile() {
     }
     setError("");
 
-    const updatedUser = {
-      ...storedUser,
-      full_name: form.fullName,
-      phone: form.phone,
-      city: form.city,
-      image: imagePreview,
-    };
+   const updatedUser = {
+  ...storedUser,
+  full_name: form.fullName,
+  phone: form.phone,
+  city: form.city,
+  commission: form.commission,
+  image: imagePreview,
+};
     localStorage.setItem("user", JSON.stringify(updatedUser));
 
     // TODO: إرسال التحديث فعليًا للباك اند (بما فيها الصورة عبر FormData) عند توفر الـ endpoint
@@ -54,11 +56,12 @@ export default function MediatorProfile() {
   };
 
   const handleCancel = () => {
-    setForm({
-      fullName: storedUser.full_name || "",
-      phone: storedUser.phone || "",
-      city: storedUser.city || storedUser.store?.city || "",
-    });
+  setForm({
+    fullName: storedUser.full_name || "",
+    phone: storedUser.phone || "",
+    city: storedUser.city || storedUser.store?.city || "",
+    commission: storedUser.commission || storedUser.store?.commission || "",
+  });
     setImagePreview(storedUser.image || null);
     setImageFile(null);
     setError("");
@@ -198,6 +201,12 @@ export default function MediatorProfile() {
                 </div>
 
                 <div className="profile-field">
+                  <div className="profile-field-label">نسبة العمولة</div>
+                  <div className="profile-field-value">
+                    {form.commission ? `${form.commission}%` : "غير محددة"}
+                  </div>
+                </div>
+                <div className="profile-field">
                   <div className="profile-field-label">
                     حالة استقبال الطلبات
                   </div>
@@ -252,7 +261,16 @@ export default function MediatorProfile() {
                 value={form.phone}
                 onChange={handleChange}
               />
-
+              <label htmlFor="commission">نسبة العمولة (%)</label>
+              <input
+                id="commission"
+                name="commission"
+                type="number"
+                min="0"
+                max="100"
+                value={form.commission}
+                onChange={handleChange}
+              />
               {error && <p className="form-error">{error}</p>}
 
               <div className="profile-edit-actions">
