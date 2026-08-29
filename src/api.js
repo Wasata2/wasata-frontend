@@ -131,3 +131,20 @@ export async function getMyStore() {
 
   return result;
 }
+export async function logoutUser() {
+  const token = localStorage.getItem('token');
+  try {
+    await fetch(`${BASE_URL}/api/auth/logout`, {
+      method: 'POST',
+      credentials: 'include',
+      headers: {
+        'Accept': 'application/json',
+        'Authorization': `Bearer ${token}`,
+      },
+    });
+  } catch (err) {
+    console.log('logout error (ignored):', err);
+  } finally {
+    localStorage.clear();
+  }
+}
