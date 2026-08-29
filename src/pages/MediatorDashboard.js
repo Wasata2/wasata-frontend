@@ -1,20 +1,12 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Link } from "react-router-dom";
-import { getMyStore } from "../api";
 
 export default function MediatorDashboard() {
   const [acceptingOrders, setAcceptingOrders] = useState(true);
-  const [storeData, setStoreData] = useState(null);
 
   const storedUser = JSON.parse(localStorage.getItem("user")) || {};
   const userName = storedUser.full_name || "مستخدمة";
   const userInitial = userName.charAt(0);
-
-  useEffect(() => {
-    getMyStore()
-      .then((data) => setStoreData(data.store || data))
-      .catch((err) => console.log(err.message));
-  }, []);
 
   const [orders, setOrders] = useState([
     {
@@ -90,9 +82,7 @@ export default function MediatorDashboard() {
           <div className="topbar-user">
             <div className="user-info">
               <div className="user-name">{userName}</div>
-              <div className="user-store">
-                {storeData?.name || "وسيطة"}
-              </div>
+              <div className="user-store">وسيطة</div>
             </div>
             <div className="user-avatar">{userInitial}</div>
           </div>
