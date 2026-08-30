@@ -92,11 +92,11 @@ export default function CustomerDashboard() {
         </div>
 
         <nav className="sidebar-nav">
-          <Link to="/" className="sidebar-link">
-            <span className="sidebar-icon">🏠</span> الرئيسية
-          </Link>
           <Link to="/customer-dashboard" className="sidebar-link active">
             <span className="sidebar-icon">▦</span> لوحة التحكم
+          </Link>
+          <Link to="/" className="sidebar-link">
+            <span className="sidebar-icon">🏠</span> الرئيسية
           </Link>
           <Link to="/my-orders" className="sidebar-link">
             <span className="sidebar-icon">📋</span> طلباتي
