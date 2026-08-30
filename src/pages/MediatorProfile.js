@@ -105,12 +105,7 @@ export default function MediatorProfile() {
           <a href="#" className="sidebar-link">
             <span className="sidebar-icon">🛍</span> الخدمات
           </a>
-          <a href="#" className="sidebar-link">
-            <span className="sidebar-icon">📅</span> الجدول والسعة
-          </a>
-          <a href="#" className="sidebar-link">
-            <span className="sidebar-icon">💳</span> المالية
-          </a>
+        
           <a href="#" className="sidebar-link">
             <span className="sidebar-icon">⭐</span> التقييمات
           </a>
