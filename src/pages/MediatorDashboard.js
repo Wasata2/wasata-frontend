@@ -115,7 +115,7 @@ export default function MediatorDashboard() {
           <h3>إجراءات سريعة</h3>
           <div className="quick-actions-grid">
             <button className="btn btn-primary">+ إضافة خدمة</button>
-            <button className="btn btn-outline">تعديل الجدول والسعة</button>
+            <button className="btn btn-outline">  عرض التقييمات</button>
             <button className="btn btn-outline">عرض الطلبات</button>
             <button className="btn btn-outline">الملف الشخصي</button>
           </div>
