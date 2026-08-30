@@ -1,14 +1,26 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { Link } from "react-router-dom";
 
 export default function CustomerDashboard() {
   // بيانات المستخدمة المخزّنة محليًا بعد تسجيل الدخول (نفس الفكرة المستخدمة في MediatorDashboard.js)
+  // ملاحظة: بنجرب أكثر من اسم حقل محتمل (full_name / name / fullName) لأن التسمية الدقيقة
+  // بتعتمد على شكل الرد القادم من الـ API — لو الاسم لسه مش ظاهر صح، لازم نتأكد من اسم الحقل الحقيقي
   const storedUser = JSON.parse(localStorage.getItem("user")) || {};
-  const userName = storedUser.full_name || "زبونة";
+  const userName =
+    storedUser.full_name || storedUser.name || storedUser.fullName || "زبونة";
   const userFirstName = userName.split(" ")[0];
   const userInitial = userName.charAt(0);
 
   const [searchTerm, setSearchTerm] = useState("");
+  const [showFilters, setShowFilters] = useState(false);
+  const [filters, setFilters] = useState({ name: "", city: "", commission: "" });
+
+  const suggestedScrollRef = useRef(null);
+  const scrollSuggested = () => {
+    if (suggestedScrollRef.current) {
+      suggestedScrollRef.current.scrollBy({ left: 260, behavior: "smooth" });
+    }
+  };
 
   // خطوات تتبع الطلب الحالي — كل خطوة عندها حالة: done (اكتملت) أو current (الحالية) أو upcoming (لسه)
   const orderSteps = [
@@ -80,8 +92,11 @@ export default function CustomerDashboard() {
         </div>
 
         <nav className="sidebar-nav">
+          <Link to="/" className="sidebar-link">
+            <span className="sidebar-icon">🏠</span> الرئيسية
+          </Link>
           <Link to="/customer-dashboard" className="sidebar-link active">
-            <span className="sidebar-icon">▦</span> الرئيسية
+            <span className="sidebar-icon">▦</span> لوحة التحكم
           </Link>
           <Link to="/my-orders" className="sidebar-link">
             <span className="sidebar-icon">📋</span> طلباتي
@@ -117,21 +132,66 @@ export default function CustomerDashboard() {
           <p>اختاري الوسيطة المناسبة وابدئي طلبك بسهولة.</p>
         </div>
 
-        {/* شريط البحث — تم حذف صف الفلاتر (الموقع/العمولة/التقييم/متاحة الآن) بناءً على طلبك */}
+        {/* شريط البحث — الحقل أولاً (يظهر يمين) وبعده زري التصفية والبحث (يظهروا يسار) */}
         <form className="dashboard-search" onSubmit={handleSearch}>
-          <button type="button" className="filter-btn">
-            ⚙ تصفية
-          </button>
-          <button type="submit" className="btn btn-primary">
-            بحث
-          </button>
           <input
             type="text"
             placeholder="ابحثي عن وسيطة بالاسم أو الموقع"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
+          <button type="submit" className="btn btn-primary">
+            بحث
+          </button>
+          <button
+            type="button"
+            className="filter-btn"
+            onClick={() => setShowFilters((v) => !v)}
+          >
+            ⚙ تصفية
+          </button>
         </form>
+
+        {/* لوحة التصفية — بتظهر/بتختفي بالضغط على زر تصفية */}
+        {showFilters && (
+          <div className="filter-panel">
+            <div className="filter-field">
+              <label>اسم الوسيطة</label>
+              <input
+                type="text"
+                placeholder="ابحثي بالاسم"
+                value={filters.name}
+                onChange={(e) => setFilters({ ...filters, name: e.target.value })}
+              />
+            </div>
+            <div className="filter-field">
+              <label>الموقع</label>
+              <input
+                type="text"
+                placeholder="المدينة"
+                value={filters.city}
+                onChange={(e) => setFilters({ ...filters, city: e.target.value })}
+              />
+            </div>
+            <div className="filter-field">
+              <label>نسبة العمولة</label>
+              <select
+                value={filters.commission}
+                onChange={(e) =>
+                  setFilters({ ...filters, commission: e.target.value })
+                }
+              >
+                <option value="">الكل</option>
+                <option value="low">أقل من 10%</option>
+                <option value="mid">10% - 15%</option>
+                <option value="high">أكثر من 15%</option>
+              </select>
+            </div>
+            <button type="button" className="btn btn-primary filter-apply-btn">
+              تطبيق
+            </button>
+          </div>
+        )}
 
         {/* قسم: ابدئي طلبك بثلاث خطوات — تم نقله ليكون تحت شريط البحث مباشرة */}
         <section className="dashboard-steps">
@@ -170,9 +230,6 @@ export default function CustomerDashboard() {
           </div>
 
           <div className="order-actions">
-            <Link to="#" className="btn btn-primary">
-              🚚 تتبع الطلب
-            </Link>
             <Link to="#" className="btn btn-outline">
               📄 عرض التفاصيل
             </Link>
@@ -197,10 +254,17 @@ export default function CustomerDashboard() {
         <section className="suggested-section">
           <div className="suggested-header">
             <h2>وسيطات مقترحة لك</h2>
-            <Link to="/explore-mediators">عرض الكل ‹</Link>
+            <button
+              type="button"
+              className="scroll-arrow-btn"
+              onClick={scrollSuggested}
+              aria-label="عرض المزيد من الوسيطات"
+            >
+              ‹
+            </button>
           </div>
 
-          <div className="suggested-grid">
+          <div className="suggested-grid" ref={suggestedScrollRef}>
             {suggestedMediators.map((m) => (
               <div className="mediator-card" key={m.id}>
                 <div className="mediator-card-top">

@@ -954,7 +954,7 @@ footer .copyright{font-size:12px;color:var(--gray-light);}
 .icon-btn.reject{ background:#fee2e2; color:#b91c1c; }
 
 /* ============ خاص بلوحة الزبونة (CustomerDashboard) ============ */
-.dashboard-search{display:flex;gap:10px;margin-bottom:32px;}
+.dashboard-search{display:flex;gap:10px;margin-bottom:16px;}
 .dashboard-search input{
   flex:1;
   border:1.5px solid var(--line);
@@ -973,6 +973,36 @@ footer .copyright{font-size:12px;color:var(--gray-light);}
   font-size:14px;font-weight:700;color:var(--ink);
   background:#fff;cursor:pointer;white-space:nowrap;
 }
+/* لوحة التصفية (تظهر عند الضغط على زر تصفية) */
+.filter-panel{
+  display:flex;
+  align-items:flex-end;
+  gap:14px;
+  flex-wrap:wrap;
+  background:#fff;
+  border:1px solid var(--line);
+  border-radius:12px;
+  padding:16px 20px;
+  margin-bottom:32px;
+}
+.filter-field{
+  display:flex;
+  flex-direction:column;
+  gap:6px;
+  min-width:160px;
+}
+.filter-field label{ font-size:12px; font-weight:700; color:var(--gray); }
+.filter-field input,
+.filter-field select{
+  border:1px solid var(--line);
+  border-radius:10px;
+  padding:10px 12px;
+  font-family:inherit;
+  font-size:13px;
+}
+.filter-field input:focus,
+.filter-field select:focus{ outline:none; border-color:var(--blue); }
+.filter-apply-btn{ padding:11px 22px; font-size:13px; }
 
 /* قسم "ابدئي طلبك بثلاث خطوات" — بيعيد استخدام .steps/.step-card الموجودين أصلاً */
 .dashboard-steps{margin-bottom:36px;}
@@ -1067,11 +1097,12 @@ footer .copyright{font-size:12px;color:var(--gray-light);}
   flex:1;position:relative;
 }
 .timeline-line{
-  position:absolute;top:14px;right:50%;width:100%;height:2px;
+  position:absolute;top:14px;left:50%;width:100%;height:2px;
   background:var(--line);z-index:1;
 }
 .timeline-step:first-child .timeline-line{display:none;}
 .timeline-step.done .timeline-line{background:var(--blue);}
+.timeline-step.current .timeline-line{background:var(--blue);}
 .timeline-dot{
   width:28px;height:28px;border-radius:50%;
   display:flex;align-items:center;justify-content:center;
@@ -1089,18 +1120,38 @@ footer .copyright{font-size:12px;color:var(--gray-light);}
 .order-updated{font-size:12px;color:var(--gray-light);margin-top:18px;}
 
 /* وسيطات مقترحة */
+/* وسيطات مقترحة */
 .suggested-section{margin-bottom:20px;}
 .suggested-header{
   display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;
 }
 .suggested-header h2{font-size:18px;font-weight:800;}
-.suggested-header a{font-size:13px;color:var(--blue);font-weight:700;}
-.suggested-grid{
-  display:grid;grid-template-columns:repeat(4,1fr);gap:16px;
+.scroll-arrow-btn{
+  width:36px;height:36px;
+  border-radius:50%;
+  border:1px solid var(--line);
+  background:#fff;
+  color:var(--blue);
+  font-size:18px;
+  font-weight:900;
+  cursor:pointer;
+  display:flex;align-items:center;justify-content:center;
+  transition:background .15s ease;
 }
+.scroll-arrow-btn:hover{ background:var(--blue-tint); }
+.suggested-grid{
+  display:flex;
+  gap:16px;
+  overflow-x:auto;
+  scroll-behavior:smooth;
+  padding-bottom:4px;
+}
+.suggested-grid::-webkit-scrollbar{ height:6px; }
+.suggested-grid::-webkit-scrollbar-thumb{ background:var(--line); border-radius:10px; }
 .mediator-card{
   background:#fff;border:1px solid var(--line);
   border-radius:16px;padding:18px;
+  flex:0 0 240px;
 }
 .mediator-card-top{
   display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px;
@@ -1188,8 +1239,6 @@ footer .copyright{font-size:12px;color:var(--gray-light);}
 }
 
 /* ============ Responsive ============ */
-@media (max-width:1024px){
-  .suggested-grid{grid-template-columns:repeat(2,1fr);}}
 @media (max-width:900px){
   .dashboard-layout{ flex-direction:column; }
   .dashboard-sidebar{ width:100%; }
@@ -1200,6 +1249,6 @@ footer .copyright{font-size:12px;color:var(--gray-light);}
   .timeline-line{display:none;}
 }
 @media (max-width:520px){
-  .suggested-grid{grid-template-columns:1fr;}
   .dashboard-main{padding:20px 16px 40px;}
+  .mediator-card{ flex-basis:200px; }
 }
