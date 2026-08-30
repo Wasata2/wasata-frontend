@@ -39,11 +39,13 @@ export default function Login() {
 
       // التوجيه حسب نوع الحساب (role.name)
 
-      const roleName = result.user.role.name;
+      const roleName = result.user.role.role_name;
       if (roleName === "broker") {
         navigate("/mediator-dashboard");
+      } else if (roleName === "customer") {
+        navigate("/customer-dashboard");
       } else {
-        navigate("/");
+        navigate("/"); // احتياطي لأي دور غير متوقع
       }
     } catch (err) {
       setError(err.message);

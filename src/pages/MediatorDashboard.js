@@ -49,12 +49,6 @@ export default function MediatorDashboard() {
             <span className="sidebar-icon">🛍</span> الخدمات
           </a>
           <a href="#" className="sidebar-link">
-            <span className="sidebar-icon">📅</span> الجدول والسعة
-          </a>
-          <a href="#" className="sidebar-link">
-            <span className="sidebar-icon">💳</span> المالية
-          </a>
-          <a href="#" className="sidebar-link">
             <span className="sidebar-icon">⭐</span> التقييمات
           </a>
           <Link to="/mediator-profile" className="sidebar-link">
