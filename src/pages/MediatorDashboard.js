@@ -42,9 +42,9 @@ export default function MediatorDashboard() {
           <Link to="/mediator-dashboard" className="sidebar-link active">
             <span className="sidebar-icon">▦</span> لوحة التحكم
           </Link>
-          <a href="#" className="sidebar-link">
+          <Link to="/mediator-orders" className="sidebar-link">
             <span className="sidebar-icon">📋</span> الطلبات
-          </a>
+          </Link>
           <a href="#" className="sidebar-link">
             <span className="sidebar-icon">🛍</span> الخدمات
           </a>
@@ -115,7 +115,7 @@ export default function MediatorDashboard() {
           <h3>إجراءات سريعة</h3>
           <div className="quick-actions-grid">
             <button className="btn btn-primary">+ إضافة خدمة</button>
-            <button className="btn btn-outline">  عرض التقييمات</button>
+            <button className="btn btn-outline"> عرض التقييمات</button>
             <button className="btn btn-outline">عرض الطلبات</button>
             <button className="btn btn-outline">الملف الشخصي</button>
           </div>

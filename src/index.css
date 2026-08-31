@@ -741,6 +741,12 @@ footer .copyright{font-size:12px;color:var(--gray-light);}
   border-left:1px solid var(--line);
   padding:24px 18px;
   flex-shrink:0;
+  
+  position:sticky;
+  top:0;
+  height:100vh;
+  overflow-y:auto;
+
 }
 .sidebar-logo{
   display:flex;
@@ -910,13 +916,17 @@ footer .copyright{font-size:12px;color:var(--gray-light);}
   color:var(--blue);
   font-weight:700;
 }
-.orders-table-wrap{ overflow-x:auto; }
+.orders-table-wrap{ overflow-x:auto;max-height:480px;overflow-y:auto; }
 .orders-table{
   width:100%;
   border-collapse:collapse;
   font-size:13px;
 }
-.orders-table th{
+.orders-table thead th{   
+  position:sticky;   
+  top:0;             
+  background:#fff;   
+  z-index:2;
   text-align:right;
   color:var(--gray-light);
   font-weight:700;
@@ -1237,16 +1247,119 @@ footer .copyright{font-size:12px;color:var(--gray-light);}
   font-weight:800;
   position:relative;
 }
+/* ============ صفحة الطلبات (MediatorOrders) ============ */
+.orders-filters-bar{
+  display:flex;
+  align-items:center;
+  gap:12px;
+  background:#fff;
+  border:1px solid var(--line);
+  border-radius:14px;
+  padding:16px 20px;
+  margin-bottom:20px;
+  flex-wrap:wrap;
+}
+.filter-date-input,
+.filter-status-select,
+.filter-search-input{
+  border:1px solid var(--line);
+  border-radius:10px;
+  padding:10px 14px;
+  font-family:inherit;
+  font-size:13px;
+}
+.filter-search-input{ flex:1; min-width:200px; }
+.clear-filters-btn{
+  background:none;
+  border:none;
+  color:var(--blue);
+  font-weight:700;
+  font-size:13px;
+  cursor:pointer;
+  white-space:nowrap;
+}
+ 
+.status-tabs{
+  display:flex;
+  flex-wrap:wrap;
+  gap:10px;
+  margin-bottom:20px;
+}
+.status-tab{
+  display:flex;
+  align-items:center;
+  gap:6px;
+  background:#fff;
+  border:1px solid var(--line);
+  border-radius:20px;
+  padding:8px 16px;
+  font-size:13px;
+  font-weight:700;
+  color:var(--gray);
+  cursor:pointer;
+}
+.status-tab-count{
+  background:var(--blue-tint);
+  color:var(--blue);
+  border-radius:10px;
+  padding:1px 8px;
+  font-size:12px;
+}
+.status-tab.active{
+  background:var(--blue);
+  color:#fff;
+  border-color:var(--blue);
+}
+.status-tab.active .status-tab-count{
+  background:rgba(255,255,255,.25);
+  color:#fff;
+}
+.status-badge.new{ background:#fef3c7; color:#b45309; }
+.status-badge.shipped{ background:#e0f2fe; color:#0369a1; }
+.status-badge.ready{ background:#ede9fe; color:#6d28d9; }
+.status-badge.done{ background:#dcfce7; color:#15803d; }
+.status-badge.rejected{ background:#fee2e2; color:#b91c1c; }
+ 
+.orders-pagination{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  justify-content:flex-end;
+  padding:16px 4px 4px;
+}
+.page-arrow{
+  width:28px;height:28px;
+  border-radius:50%;
+  border:1px solid var(--line);
+  background:#fff;
+  cursor:pointer;
+  font-size:14px;
+}
+.page-arrow:disabled{ opacity:.4; cursor:default; }
+.page-number{
+  width:28px;height:28px;
+  border-radius:50%;
+  background:var(--blue);
+  color:#fff;
+  display:flex;align-items:center;justify-content:center;
+  font-size:13px;font-weight:700;
+}
+.pagination-summary{
+  font-size:12px;
+  color:var(--gray-light);
+  margin-inline-start:8px;
+}
 
 /* ============ Responsive ============ */
 @media (max-width:900px){
   .dashboard-layout{ flex-direction:column; }
-  .dashboard-sidebar{ width:100%; }
+  .dashboard-sidebar{ width:100%;position:static; height:auto; }
   .dashboard-stats{ grid-template-columns:1fr; }
   .quick-actions-grid{ grid-template-columns:1fr 1fr; }
   .dashboard-search{flex-wrap:wrap;}
   .order-timeline{flex-wrap:wrap;gap:16px;}
   .timeline-line{display:none;}
+  .orders-table-wrap{ max-height:none; }
 }
 @media (max-width:520px){
   .dashboard-main{padding:20px 16px 40px;}

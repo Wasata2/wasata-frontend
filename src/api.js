@@ -148,3 +148,66 @@ export async function logoutUser() {
     localStorage.clear();
   }
 }
+export async function updateStore(storeId, data) {
+  const token = localStorage.getItem('token');
+
+  const formData = new FormData();
+  if (data.name !== undefined) formData.append('name', data.name);
+  if (data.bio !== undefined) formData.append('bio', data.bio);
+  if (data.phone !== undefined) formData.append('phone', data.phone);
+  if (data.city !== undefined) formData.append('city', data.city);
+  if (data.accepts_whatsapp_orders !== undefined) {
+    formData.append('accepts_whatsapp_orders', data.accepts_whatsapp_orders ? 1 : 0);
+  }
+  if (data.image) {
+    formData.append('image', data.image); // لازم ملف حقيقي، مش blob URL
+  }
+
+  const response = await fetch(`${BASE_URL}/api/stores/${storeId}`, {
+    method: 'PUT',
+    credentials: 'include',
+    headers: {
+      'Accept': 'application/json',
+      'Authorization': `Bearer ${token}`,
+      // ما نحدد Content-Type يدويًا — نفس مبدأ createStore
+    },
+    body: formData,
+  });
+
+  const result = await response.json();
+
+  if (!response.ok) {
+    throw new Error(result.message || 'حدث خطأ أثناء تحديث بيانات المتجر');
+  }
+
+  return result;
+}
+export async function updateProfile(data) {
+  const token = localStorage.getItem('token');
+
+  const body = {};
+  if (data.full_name !== undefined) body.full_name = data.full_name;
+  if (data.phone !== undefined) body.phone = data.phone;
+
+  const response = await fetch(`${BASE_URL}/api/auth/profile`, {
+    method: 'PUT',
+    credentials: 'include',
+    headers: {
+      'Content-Type': 'application/json',
+      'Accept': 'application/json',
+      'Authorization': `Bearer ${token}`,
+    },
+    body: JSON.stringify(body),
+  });
+
+  const result = await response.json();
+
+  if (!response.ok) {
+    throw new Error(result.message || 'حدث خطأ أثناء تحديث البيانات');
+  }
+
+  // نحدّث localStorage بالبيانات الحقيقية الراجعة من الباك اند (مش بس محليًا متل قبل)
+  localStorage.setItem('user', JSON.stringify(result.user));
+
+  return result;
+}

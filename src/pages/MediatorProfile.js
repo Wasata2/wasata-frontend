@@ -99,13 +99,12 @@ export default function MediatorProfile() {
           <Link to="/mediator-dashboard" className="sidebar-link">
             <span className="sidebar-icon">▦</span> لوحة التحكم
           </Link>
-          <a href="#" className="sidebar-link">
+          <Link to="/mediator-orders" className="sidebar-link">
             <span className="sidebar-icon">📋</span> الطلبات
-          </a>
+          </Link>
           <a href="#" className="sidebar-link">
             <span className="sidebar-icon">🛍</span> الخدمات
           </a>
-        
           <a href="#" className="sidebar-link">
             <span className="sidebar-icon">⭐</span> التقييمات
           </a>
@@ -203,7 +202,7 @@ export default function MediatorProfile() {
                 <div className="profile-field">
                   <div className="profile-field-label">الموقع</div>
                   <div className="profile-field-value">
-                    {loadingStore ? "جاري التحميل..." : (form.city || "غير محدد")}
+                    {loadingStore ? "جاري التحميل..." : form.city || "غير محدد"}
                   </div>
                 </div>
 
@@ -215,7 +214,11 @@ export default function MediatorProfile() {
                 <div className="profile-field">
                   <div className="profile-field-label">نسبة العمولة</div>
                   <div className="profile-field-value">
-                    {loadingStore ? "جاري التحميل..." : (form.commission ? `${form.commission}%` : "غير محددة")}
+                    {loadingStore
+                      ? "جاري التحميل..."
+                      : form.commission
+                        ? `${form.commission}%`
+                        : "غير محددة"}
                   </div>
                 </div>
                 <div className="profile-field">
