@@ -856,6 +856,10 @@ footer .copyright{font-size:12px;color:var(--gray-light);}
   gap:16px;
   margin-bottom:20px;
 }
+
+.dashboard-stats.cols-4{
+  grid-template-columns:repeat(4,1fr);
+}
 .stat-card{
   background:#fff;
   border:1px solid var(--line);
@@ -1360,6 +1364,7 @@ footer .copyright{font-size:12px;color:var(--gray-light);}
   .order-timeline{flex-wrap:wrap;gap:16px;}
   .timeline-line{display:none;}
   .orders-table-wrap{ max-height:none; }
+  .dashboard-stats.cols-4{ grid-template-columns:1fr; }
 }
 @media (max-width:520px){
   .dashboard-main{padding:20px 16px 40px;}

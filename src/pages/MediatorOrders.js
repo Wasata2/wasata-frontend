@@ -134,7 +134,7 @@ export default function MediatorOrders() {
         </div>
 
         {/* بطاقات الإحصائيات */}
-        <div className="dashboard-stats">
+      <div className="dashboard-stats cols-4">
           <div className="stat-card">
             <div>
               <div className="stat-label">مكتملة</div>
