@@ -773,9 +773,7 @@ footer .copyright{font-size:12px;color:var(--gray-light);}
   font-size:14px;
   font-weight:600;
   color:var(--ink);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  
 }
 .sidebar-link:hover{ background:var(--blue-tint); }
 .sidebar-link.active{
