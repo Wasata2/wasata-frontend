@@ -38,7 +38,8 @@ export default function Login() {
       console.log("نجح تسجيل الدخول:", result);
 
       // التوجيه حسب نوع الحساب (role.name)
-      const roleName = result.user.role.name;
+      
+      const roleName = result.user.role.role_name;
       if (roleName === "broker") {
         navigate("/create-store");
       } else {
