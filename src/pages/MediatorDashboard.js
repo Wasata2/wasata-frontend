@@ -115,13 +115,13 @@ export default function MediatorDashboard() {
           <h3>إجراءات سريعة</h3>
           <div className="quick-actions-grid">
             <button className="btn btn-primary">+ إضافة خدمة</button>
-           <Link to="/mediator-reviews" className="sidebar-link">
+           <Link to="/mediator-reviews" className="btn btn-primary">
             <span className="sidebar-icon">⭐</span> التقييمات
           </Link>
-           <Link to="/mediator-orders" className="sidebar-link">
+           <Link to="/mediator-orders" className="btn btn-primary">
             <span className="sidebar-icon">📋</span> الطلبات
           </Link>
-           <Link to="/mediator-profile" className="sidebar-link">
+           <Link to="/mediator-profile" className="btn btn-primary">
             <span className="sidebar-icon">👤</span> الملف الشخصي
           </Link>
           </div>
