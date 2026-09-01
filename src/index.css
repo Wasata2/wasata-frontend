@@ -1287,6 +1287,7 @@ footer .copyright{font-size:12px;color:var(--gray-light);}
   flex-wrap:wrap;
   gap:10px;
   margin-bottom:20px;
+  font-family:'El Messiri', sans-serif;
 }
 .status-tab{
   display:flex;
