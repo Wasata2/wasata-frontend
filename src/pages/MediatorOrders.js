@@ -104,9 +104,9 @@ export default function MediatorOrders() {
           <a href="#" className="sidebar-link">
             <span className="sidebar-icon">🛍</span> الخدمات
           </a>
-          <a href="#" className="sidebar-link">
+         <Link to="/mediator-reviews" className="sidebar-link">
             <span className="sidebar-icon">⭐</span> التقييمات
-          </a>
+          </Link>
           <Link to="/mediator-profile" className="sidebar-link">
             <span className="sidebar-icon">👤</span> الملف الشخصي
           </Link>
@@ -167,6 +167,16 @@ export default function MediatorOrders() {
 
         {/* شريط الفلاتر: تاريخ + حالة + بحث */}
         <div className="orders-filters-bar">
+          <input
+            type="text"
+            className="filter-search-input"
+            placeholder="ابحثي برقم الطلب أو اسم الزبونة"
+            value={search}
+            onChange={(e) => {
+              setSearch(e.target.value);
+              setPage(1);
+            }}
+          />
           {hasActiveFilters && (
             <button className="clear-filters-btn" onClick={clearFilters}>
               مسح الفلاتر ✕
@@ -196,16 +206,7 @@ export default function MediatorOrders() {
               </option>
             ))}
           </select>
-          <input
-            type="text"
-            className="filter-search-input"
-            placeholder="ابحثي برقم الطلب أو اسم الزبونة"
-            value={search}
-            onChange={(e) => {
-              setSearch(e.target.value);
-              setPage(1);
-            }}
-          />
+          
         </div>
 
         {/* تبويبات فلترة سريعة حسب الحالة */}
