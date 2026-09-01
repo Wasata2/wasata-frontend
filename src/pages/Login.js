@@ -38,12 +38,14 @@ export default function Login() {
       console.log("نجح تسجيل الدخول:", result);
 
       // التوجيه حسب نوع الحساب (role.name)
-      
+
       const roleName = result.user.role.role_name;
       if (roleName === "broker") {
-        navigate("/create-store");
-      } else {
+        navigate("/mediator-dashboard");
+      } else if (roleName === "customer") {
         navigate("/customer-dashboard");
+      } else {
+        navigate("/");
       }
     } catch (err) {
       setError(err.message);
@@ -108,12 +110,18 @@ export default function Login() {
                   />
                   <label htmlFor="remember">تذكرني</label>
                 </div>
-                <a href="#" className="forgot-link">نسيت كلمة المرور؟</a>
+                <a href="#" className="forgot-link">
+                  نسيت كلمة المرور؟
+                </a>
               </div>
 
               {error && <p className="form-error">{error}</p>}
 
-              <button type="submit" className="btn btn-primary signup-submit" disabled={loading}>
+              <button
+                type="submit"
+                className="btn btn-primary signup-submit"
+                disabled={loading}
+              >
                 {loading ? "جاري تسجيل الدخول..." : "تسجيل الدخول ←"}
               </button>
             </form>
