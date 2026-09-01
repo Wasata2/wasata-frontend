@@ -26,9 +26,9 @@ export default function CustomerDashboard() {
   const orderSteps = [
     { label: "تم الطلب", status: "done" },
     { label: "تم الطلب من SHEIN", status: "done" },
-    { label: "تم الفحص", status: "done" },
     { label: "تم الشحن", status: "current" },
     { label: "وصلت", status: "upcoming" },
+    { label: "تم الفحص", status: "upcoming" },
     { label: "تم الاستلام", status: "upcoming" },
   ];
 
@@ -92,11 +92,11 @@ export default function CustomerDashboard() {
         </div>
 
         <nav className="sidebar-nav">
-          <Link to="/customer-dashboard" className="sidebar-link active">
-            <span className="sidebar-icon">▦</span> لوحة التحكم
-          </Link>
           <Link to="/" className="sidebar-link">
             <span className="sidebar-icon">🏠</span> الرئيسية
+          </Link>
+          <Link to="/customer-dashboard" className="sidebar-link active">
+            <span className="sidebar-icon">▦</span> لوحة التحكم
           </Link>
           <Link to="/my-orders" className="sidebar-link">
             <span className="sidebar-icon">📋</span> طلباتي
