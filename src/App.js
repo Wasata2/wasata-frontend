@@ -10,6 +10,7 @@ import CustomerDashboard from "./pages/CustomerDashboard";
 import MediatorProfile from './pages/MediatorProfile';
 import MediatorOrders from "./pages/MediatorOrders";
 import MediatorReviews from "./pages/MediatorReviews";
+import MyOrders from "./pages/MyOrders";
 
 function App() {
   return (
@@ -25,6 +26,7 @@ function App() {
       <Route path="/mediator-profile" element={<MediatorProfile />} />
       <Route path="/mediator-orders" element={<MediatorOrders />} />
       <Route path="/mediator-reviews" element={<MediatorReviews />} />
+      <Route path="/my-orders" element={<MyOrders />} />
     </Routes>
   );
 }
