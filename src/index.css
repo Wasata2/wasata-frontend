@@ -1693,7 +1693,7 @@ footer .copyright{font-size:12px;color:var(--gray-light);}
   margin-bottom:6px;
 }
 .page-icon-badge{
-  width:44px;height:44px;
+  width:100px;height:100px;
   border-radius:50%;
   background:var(--blue-tint);
   color:var(--blue);
