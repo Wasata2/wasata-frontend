@@ -5,12 +5,14 @@ import SignupCustomer from "./pages/SignupCustomer";
 import SignupMediator from "./pages/SignupMediator";
 import CreateStore from "./pages/CreateStore";
 import Login from "./pages/Login";
-import MediatorDashboard from './pages/MediatorDashboard';
+import MediatorDashboard from "./pages/MediatorDashboard";
 import CustomerDashboard from "./pages/CustomerDashboard";
-import MediatorProfile from './pages/MediatorProfile';
+import MediatorProfile from "./pages/MediatorProfile";
 import MediatorOrders from "./pages/MediatorOrders";
 import MediatorReviews from "./pages/MediatorReviews";
 import MyOrders from "./pages/MyOrders";
+import ForgotPassword from "./pages/ForgotPassword";
+import ResetPassword from "./pages/ResetPassword";
 
 function App() {
   return (
@@ -27,6 +29,8 @@ function App() {
       <Route path="/mediator-orders" element={<MediatorOrders />} />
       <Route path="/mediator-reviews" element={<MediatorReviews />} />
       <Route path="/my-orders" element={<MyOrders />} />
+      <Route path="/forgot-password" element={<ForgotPassword />} />
+      <Route path="/reset-password" element={<ResetPassword />} />
     </Routes>
   );
 }

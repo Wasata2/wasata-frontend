@@ -110,9 +110,9 @@ export default function Login() {
                   />
                   <label htmlFor="remember">تذكرني</label>
                 </div>
-                <a href="#" className="forgot-link">
+                <Link to="/forgot-password" className="forgot-link">
                   نسيت كلمة المرور؟
-                </a>
+                </Link>
               </div>
 
               {error && <p className="form-error">{error}</p>}
