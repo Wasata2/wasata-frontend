@@ -45,15 +45,15 @@ export default function ForgotPassword() {
       </header>
 
       <section className="signup-section">
-        <div className="container">
-          <div className="signup-card">
+        <div className="container forgot-password-container">
+          <div className="signup-card forgot-password-card">
             <div className="signup-header">
               <div>
                 <div className="page-icon-title">
                   <span className="page-icon-badge">🔒</span>
                   <h1>نسيت كلمة المرور؟</h1>
                 </div>
-                <p>أدخلي البريد الإلكتروني لتغيير كلمة المرور.</p>
+                <p>أدخل البريد الإلكتروني  </p>
               </div>
             </div>
 
