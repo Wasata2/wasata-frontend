@@ -53,7 +53,7 @@ export default function ForgotPassword() {
                   <span className="page-icon-badge">🔒</span>
                   <h1>نسيت كلمة المرور؟</h1>
                 </div>
-                <p>أدخل البريد الإلكتروني  </p>
+                <p>أدخل البريد الإلكتروني لتغيير كلمة المرور.</p>
               </div>
             </div>
 
@@ -68,7 +68,7 @@ export default function ForgotPassword() {
                   id="email"
                   name="email"
                   type="email"
-                  placeholder="أدخلي البريد الإلكتروني لتغيير كلمة المرور"
+                  placeholder="أدخل البريد الإلكتروني   "
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                 />

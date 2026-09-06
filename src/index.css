@@ -1,7 +1,8 @@
 :root{
-  --blue:#7c3aed;
-  --blue-dark:#6025c9;
-  --blue-tint:#f3eefe;
+  --blue:#493E84;
+  --blue-dark:#3A3169;
+  --blue-tint:#F5F3FC;
+  --brand-gradient: linear-gradient(135deg, #493E84 0%, #8A157D 100%);
   --ink:#101828;
   --gray:#667085;
   --gray-light:#98a2b3;
@@ -9,6 +10,7 @@
   --bg:#ffffff;
   --green:#12b76a;
 }
+
 
 *{margin:0;padding:0;box-sizing:border-box;}
 html{scroll-behavior:smooth;}
@@ -83,8 +85,8 @@ nav a.active{
   transition:all .15s ease;
   display:inline-block;
 }
-.btn-primary{background:var(--blue);color:#fff;}
-.btn-primary:hover{background:var(--blue-dark);}
+.btn-primary{background:var(--brand-gradient);color:#fff;}
+.btn-primary:hover{filter:brightness(0.92);}
 .btn-outline{background:#fff;color:var(--ink);border-color:var(--line);}
 .btn-outline:hover{border-color:var(--blue);color:var(--blue);}
 .btn-outline-white{background:#fff;color:var(--blue);border-color:#fff;}
@@ -243,7 +245,7 @@ section{
   transition:box-shadow .15s ease;
 }
 .contact-item:hover{
-  box-shadow:0 12px 32px rgba(114, 4, 211, 0.14);
+  box-shadow:0 12px 32px rgba(73, 62, 132, 0.14);
 }
 .contact-icon{
   width:42px;height:42px;
@@ -259,7 +261,7 @@ section{
 
 /* CTA band */
 .cta-band{
-  background:var(--blue);
+  background:var(--brand-gradient);
   color:#fff;
   text-align:center;
   padding:64px 0;
@@ -1684,8 +1686,7 @@ footer .copyright{font-size:12px;color:var(--gray-light);}
   font-weight:700;
   padding:4px 12px;
   border-radius:8px;
-}
-/* ============ صفحة نسيت كلمة المرور (ForgotPassword) ============ */
+}* ============ صفحة نسيت كلمة المرور (ForgotPassword) ============ */
 .page-icon-title{
   display:flex;
   align-items:center;
@@ -1710,14 +1711,17 @@ footer .copyright{font-size:12px;color:var(--gray-light);}
   margin-top:8px;
 }
  
-/* بطاقة صفحة "نسيت كلمة المرور" — نفس أقصى عرض بطاقات التسجيل، وتباعد أفضل بين حقل الإيميل والزر */
+/* بطاقة صفحة "نسيت كلمة المرور" — نفس أقصى عرض بطاقات التسجيل، ومحتوى متوسّط عموديًا داخل البطاقة */
 .signup-card.forgot-password-card{
   margin:0 auto;
   padding:56px 70px;
   min-height:440px;
+  display:flex;
+  flex-direction:column;
+  justify-content:center;
 }
 .forgot-password-card .signup-form label{
-  margin-bottom:0;
+  margin-bottom:8px;
 }
 .forgot-password-card .signup-form input{
   margin-bottom:20px;
