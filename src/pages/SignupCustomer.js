@@ -71,7 +71,7 @@ export default function SignupCustomer() {
       <header className="account-header">
         <div className="container">
           <div className="logo">
-            <img src="/logo.PNG" alt="وساطة" className="logo-img" />
+            <img src="/logo.svg" alt="وساطة" className="logo-img" />
             وساطة
           </div>
           <Link to="/account-type" className="back-link">العودة →</Link>

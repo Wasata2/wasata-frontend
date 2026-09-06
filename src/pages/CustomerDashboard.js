@@ -87,7 +87,7 @@ export default function CustomerDashboard() {
       {/* ===== الشريط الجانبي (Sidebar) ===== */}
       <aside className="dashboard-sidebar">
         <div className="sidebar-logo">
-          <img src="/logo.PNG" alt="وساطة" className="logo-img" />
+          <img src="/logo.svg" alt="وساطة" className="logo-img" />
           وساطة
         </div>
 

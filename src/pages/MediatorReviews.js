@@ -67,7 +67,7 @@ export default function MediatorReviews() {
       {/* ===== نفس القائمة الجانبية الموجودة بباقي صفحات لوحة التحكم ===== */}
       <aside className="dashboard-sidebar">
         <div className="sidebar-logo">
-          <img src="/logo.PNG" alt="وساطة" className="logo-img" />
+          <img src="/logo.svg" alt="وساطة" className="logo-img" />
           وساطة
         </div>
         <nav className="sidebar-nav">
