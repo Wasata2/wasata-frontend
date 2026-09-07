@@ -102,9 +102,9 @@ export default function MediatorProfile() {
           <Link to="/mediator-orders" className="sidebar-link">
             <span className="sidebar-icon">📋</span> الطلبات
           </Link>
-          <a href="#" className="sidebar-link">
+         <Link to="/mediator-services" className="sidebar-link">
             <span className="sidebar-icon">🛍</span> الخدمات
-          </a>
+          </Link>
          <Link to="/mediator-reviews" className="sidebar-link">
             <span className="sidebar-icon">⭐</span> التقييمات
           </Link>
