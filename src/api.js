@@ -211,3 +211,104 @@ export async function updateProfile(data) {
 
   return result;
 }
+// ===== الخدمات (Services) =====
+// ملاحظة: أسماء الحقول بالباك اند (fee_type, fee_value, is_available) افتراض بناءً
+// على أسلوب snake_case المستخدم بباقي الـ endpoints (زي is_accepting_orders) —
+// إذا طلعت مختلفة وقت التجربة، بس عدّلي الأسماء بالدالتين هدول.
+function mapServiceFromApi(s) {
+  return {
+    id: s.id,
+    icon: s.icon,
+    name: s.name,
+    description: s.description,
+    feeType: s.fee_type,
+    feeValue: s.fee_value,
+    notes: s.notes || '',
+    available: !!s.is_available,
+  };
+}
+
+function mapServiceToApi(service) {
+  return {
+    icon: service.icon,
+    name: service.name,
+    description: service.description,
+    fee_type: service.feeType,
+    fee_value: service.feeValue || null,
+    notes: service.notes || '',
+    is_available: service.available,
+  };
+}
+
+export async function getServices() {
+  const token = localStorage.getItem('token');
+  const response = await fetch(`${BASE_URL}/api/services`, {
+    method: 'GET',
+    credentials: 'include',
+    headers: {
+      'Accept': 'application/json',
+      'Authorization': `Bearer ${token}`,
+    },
+  });
+  const result = await response.json();
+  if (!response.ok) {
+    throw new Error(result.message || 'تعذر جلب الخدمات');
+  }
+  const list = result.services || result.data || result;
+  return Array.isArray(list) ? list.map(mapServiceFromApi) : [];
+}
+
+export async function createService(service) {
+  const token = localStorage.getItem('token');
+  const response = await fetch(`${BASE_URL}/api/services`, {
+    method: 'POST',
+    credentials: 'include',
+    headers: {
+      'Content-Type': 'application/json',
+      'Accept': 'application/json',
+      'Authorization': `Bearer ${token}`,
+    },
+    body: JSON.stringify(mapServiceToApi(service)),
+  });
+  const result = await response.json();
+  if (!response.ok) {
+    throw new Error(result.message || 'حدث خطأ أثناء إضافة الخدمة');
+  }
+  return mapServiceFromApi(result.service || result);
+}
+
+export async function updateService(id, service) {
+  const token = localStorage.getItem('token');
+  const response = await fetch(`${BASE_URL}/api/services/${id}`, {
+    method: 'PATCH',
+    credentials: 'include',
+    headers: {
+      'Content-Type': 'application/json',
+      'Accept': 'application/json',
+      'Authorization': `Bearer ${token}`,
+    },
+    body: JSON.stringify(mapServiceToApi(service)),
+  });
+  const result = await response.json();
+  if (!response.ok) {
+    throw new Error(result.message || 'حدث خطأ أثناء تعديل الخدمة');
+  }
+  return mapServiceFromApi(result.service || result);
+}
+
+export async function toggleService(id) {
+  const token = localStorage.getItem('token');
+  const response = await fetch(`${BASE_URL}/api/services/${id}/toggle`, {
+    method: 'PATCH',
+    credentials: 'include',
+    headers: {
+      'Accept': 'application/json',
+      'Authorization': `Bearer ${token}`,
+    },
+  });
+  const result = await response.json();
+  if (!response.ok) {
+    throw new Error(result.message || 'حدث خطأ أثناء تغيير حالة الخدمة');
+  }
+  return mapServiceFromApi(result.service || result);
+}

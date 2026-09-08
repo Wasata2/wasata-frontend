@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
+import { getServices, createService, updateService, toggleService } from "../api";
 
 // أيقونات الخدمة المتاحة للاختيار من بينها
 const ICONS = ["🔍", "💎", "✂️", "🎁", "📦", "💬", "🔄", "📍", "🚚", "🖼️"];
@@ -30,75 +31,32 @@ const emptyForm = {
   available: true,
 };
 
-// الخدمات الافتراضية الخمس — نفس القيم يلي بالتصميم المرجعي بالضبط
-const INITIAL_SERVICES = [
-  {
-    id: 1,
-    icon: "📁",
-    name: "تجميع الطلبات",
-    description: "تجميع عدة منتجات للزبونة ضمن طلب واحد لتوفير تكاليف الشحن.",
-    feeType: "percentage",
-    feeValue: 5,
-    notes: "",
-    available: true,
-  },
-  {
-    id: 2,
-    icon: "📍",
-    name: "متابعة الطلب حتى الوصول",
-    description: "متابعة حالة الطلب وإعلام الزبونة بكل تحديث حتى استلامه.",
-    feeType: "free",
-    feeValue: "",
-    notes: "",
-    available: true,
-  },
-  {
-    id: 3,
-    icon: "🚚",
-    name: "التوصيل إلى المنزل",
-    description: "توصيل الطلب للزبونة بعد وصوله إلى الوسيطة.",
-    feeType: "fixed",
-    feeValue: 10,
-    notes: "خلال 1-2 يوم بعد وصول الطلب",
-    available: true,
-  },
-  {
-    id: 4,
-    icon: "📍",
-    name: "الاستلام من نقطة الاستلام",
-    description: "استلام الطلب مباشرة من موقع أو نقطة استلام تحددها الوسيطة.",
-    feeType: "free",
-    feeValue: "",
-    notes: "",
-    available: true,
-  },
-  {
-    id: 5,
-    icon: "🖼️",
-    name: "القطع الراكدة",
-    description:
-      "إدارة المنتجات غير المستلمة أو الراكدة عند الوسيطة وتنسيق استلامها أو التصرف فيها.",
-    feeType: "case",
-    feeValue: "",
-    notes: "",
-    available: false,
-  },
-];
-
 export default function MediatorServices() {
   const storedUser = JSON.parse(localStorage.getItem("user")) || {};
   const userName = storedUser.full_name || "مستخدمة";
   const userInitial = userName.charAt(0);
 
-  // TODO: لسا ما في endpoint من الباك اند لجلب/حفظ الخدمات — هاي خمس خدمات افتراضية
-  // للبدء (نفس التصميم المرجعي)، وبتضل تتعدل محليًا بس لحد ما نربطها بالباك اند
-  const [services, setServices] = useState(INITIAL_SERVICES);
-  const [nextId, setNextId] = useState(6);
+  const [services, setServices] = useState([]);
+  const [loadingServices, setLoadingServices] = useState(true);
+  const [loadError, setLoadError] = useState("");
+
+  useEffect(() => {
+    getServices()
+      .then((data) => {
+        setServices(data);
+        setLoadingServices(false);
+      })
+      .catch((err) => {
+        setLoadError(err.message);
+        setLoadingServices(false);
+      });
+  }, []);
 
   const [modalOpen, setModalOpen] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [form, setForm] = useState(emptyForm);
   const [formError, setFormError] = useState("");
+  const [saving, setSaving] = useState(false);
 
   const [confirmToggle, setConfirmToggle] = useState(null); // الخدمة يلي عم نأكد تفعيلها/تعطيلها
   const [toast, setToast] = useState("");
@@ -129,7 +87,7 @@ export default function MediatorServices() {
     setForm((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleSave = (e) => {
+  const handleSave = async (e) => {
     e.preventDefault();
     if (!form.name || !form.description) {
       setFormError("يرجى تعبئة اسم الخدمة ووصفها.");
@@ -140,30 +98,38 @@ export default function MediatorServices() {
       return;
     }
     setFormError("");
+    setSaving(true);
 
-    if (editingId) {
-      setServices((prev) =>
-        prev.map((s) => (s.id === editingId ? { ...form, id: editingId } : s)),
-      );
-      showToast("تم حفظ التغييرات بنجاح ✓");
-    } else {
-      setServices((prev) => [...prev, { ...form, id: nextId }]);
-      setNextId((n) => n + 1);
-      showToast("تمت إضافة الخدمة بنجاح ✓");
+    try {
+      if (editingId) {
+        const updated = await updateService(editingId, form);
+        setServices((prev) => prev.map((s) => (s.id === editingId ? updated : s)));
+        showToast("تم حفظ التغييرات بنجاح ✓");
+      } else {
+        const created = await createService(form);
+        setServices((prev) => [...prev, created]);
+        showToast("تمت إضافة الخدمة بنجاح ✓");
+      }
+      setModalOpen(false);
+    } catch (err) {
+      setFormError(err.message);
+    } finally {
+      setSaving(false);
     }
-    setModalOpen(false);
   };
 
-  const confirmToggleAvailability = () => {
+  const confirmToggleAvailability = async () => {
     if (!confirmToggle) return;
     const willEnable = !confirmToggle.available;
-    setServices((prev) =>
-      prev.map((s) =>
-        s.id === confirmToggle.id ? { ...s, available: willEnable } : s,
-      ),
-    );
-    showToast(willEnable ? "تم تفعيل الخدمة بنجاح ✓" : "تم تعطيل الخدمة بنجاح ✓");
-    setConfirmToggle(null);
+    try {
+      const updated = await toggleService(confirmToggle.id);
+      setServices((prev) => prev.map((s) => (s.id === confirmToggle.id ? updated : s)));
+      showToast(willEnable ? "تم تفعيل الخدمة بنجاح ✓" : "تم تعطيل الخدمة بنجاح ✓");
+    } catch (err) {
+      showToast(err.message);
+    } finally {
+      setConfirmToggle(null);
+    }
   };
 
   return (
@@ -221,7 +187,15 @@ export default function MediatorServices() {
           </button>
         </div>
 
-        {services.length === 0 ? (
+        {loadingServices ? (
+          <div className="empty-orders">
+            <p>جاري تحميل الخدمات...</p>
+          </div>
+        ) : loadError ? (
+          <div className="empty-orders">
+            <p>تعذر تحميل الخدمات: {loadError}</p>
+          </div>
+        ) : services.length === 0 ? (
           <div className="empty-orders">
             <p>ما في خدمات مضافة بعد. اضغطي "إضافة خدمة" لتبدئي.</p>
           </div>
@@ -358,10 +332,19 @@ export default function MediatorServices() {
                 {formError && <p className="form-error">{formError}</p>}
 
                 <div className="modal-actions">
-                  <button type="submit" className="btn btn-primary">
-                    {editingId ? "حفظ التغييرات" : "إضافة الخدمة"}
+                  <button type="submit" className="btn btn-primary" disabled={saving}>
+                    {saving
+                      ? "جاري الحفظ..."
+                      : editingId
+                        ? "حفظ التغييرات"
+                        : "إضافة الخدمة"}
                   </button>
-                  <button type="button" className="btn btn-outline" onClick={closeModal}>
+                  <button
+                    type="button"
+                    className="btn btn-outline"
+                    onClick={closeModal}
+                    disabled={saving}
+                  >
                     إلغاء
                   </button>
                 </div>
