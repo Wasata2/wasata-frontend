@@ -218,7 +218,7 @@ function mapServiceFromApi(s) {
     name: s.title,
     description: s.description,
     feeType: s.fee_type,
-    feeValue: s.fee_value,
+    feeValue: s.fee_amount,
     notes: s.notes || '',
     available: !!s.is_available,
   };
@@ -230,7 +230,7 @@ function mapServiceToApi(service) {
     title: service.name,
     description: service.description,
     fee_type: service.feeType,
-    fee_value: service.feeValue || null,
+    fee_amount: service.feeValue || null,
     notes: service.notes || '',
     is_available: service.available,
   };

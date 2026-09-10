@@ -20,9 +20,9 @@ function iconEmoji(value) {
   return ICONS.find((i) => i.value === value)?.label || "❔";
 }
 
-// أنواع الرسوم المتاحة
+// أنواع الرسوم المتاحة — القيم لازم تطابق القيم المقبولة بالباك اند بالظبط
 const FEE_TYPES = [
-  { key: "case", label: "حسب الحالة" },
+  { key: "variable", label: "حسب الحالة" },
   { key: "percentage", label: "نسبة مئوية" },
   { key: "fixed", label: "مبلغ ثابت" },
   { key: "free", label: "مجاني" },
@@ -30,7 +30,7 @@ const FEE_TYPES = [
 
 function feeLabel(service) {
   if (service.feeType === "free") return "مجاني";
-  if (service.feeType === "case") return "حسب الحالة";
+  if (service.feeType === "variable") return "حسب الحالة";
   if (service.feeType === "percentage") return `عمولة ${service.feeValue}%`;
   if (service.feeType === "fixed") return `ابتداء من ${service.feeValue} ₪`;
   return "";
