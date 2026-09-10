@@ -312,3 +312,51 @@ export async function toggleService(id) {
   }
   return mapServiceFromApi(result.service || result);
 }
+export async function forgotPassword(email) {
+  await getCsrfCookie();
+
+  const response = await fetch(`${BASE_URL}/api/auth/forgot-password`, {
+    method: 'POST',
+    credentials: 'include',
+    headers: {
+      'Content-Type': 'application/json',
+      'Accept': 'application/json',
+    },
+    body: JSON.stringify({ email }),
+  });
+
+  const result = await response.json();
+
+  if (!response.ok) {
+    throw new Error(result.message || 'حدث خطأ ما');
+  }
+
+  return result; // { message, reset_token }
+}
+
+export async function resetPassword({ email, token, password, passwordConfirmation }) {
+  await getCsrfCookie();
+
+  const response = await fetch(`${BASE_URL}/api/auth/reset-password`, {
+    method: 'POST',
+    credentials: 'include',
+    headers: {
+      'Content-Type': 'application/json',
+      'Accept': 'application/json',
+    },
+    body: JSON.stringify({
+      email,
+      token,
+      password,
+      password_confirmation: passwordConfirmation,
+    }),
+  });
+
+  const result = await response.json();
+
+  if (!response.ok) {
+    throw new Error(result.message || 'حدث خطأ أثناء تعيين كلمة المرور');
+  }
+
+  return result;
+}

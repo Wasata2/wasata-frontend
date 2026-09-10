@@ -1,7 +1,12 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams, Link } from "react-router-dom";
+import { resetPassword } from "../api";
 
 export default function ResetPassword() {
+  const [searchParams] = useSearchParams();
+  const email = searchParams.get("email");
+  const token = searchParams.get("token");
+
   const [form, setForm] = useState({
     password: "",
     confirmPassword: "",
@@ -20,6 +25,10 @@ export default function ResetPassword() {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
+    if (!email || !token) {
+      setError("رابط تعيين كلمة المرور غير صالح. يرجى طلب رابط جديد.");
+      return;
+    }
     if (!form.password || !form.confirmPassword) {
       setError("يرجى تعبئة جميع الحقول.");
       return;
@@ -37,9 +46,13 @@ export default function ResetPassword() {
     setLoading(true);
 
     try {
-      // TODO: ربط فعلي بالباك اند لما يصير عندنا endpoint لتعيين كلمة مرور جديدة
-      // (مثلاً POST /api/auth/reset-password مع التوكن المرسل بإيميل المستخدمة)
-      console.log("تعيين كلمة مرور جديدة:", form.password);
+      await resetPassword({
+        email,
+        token,
+        password: form.password,
+        passwordConfirmation: form.confirmPassword,
+      });
+      // نفس سلوك الباك اند: كل جلسات الدخول القديمة تنلغى تلقائيًا بعد النجاح
       navigate("/login");
     } catch (err) {
       setError(err.message);

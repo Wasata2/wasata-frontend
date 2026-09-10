@@ -1,11 +1,12 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
+import { forgotPassword } from "../api";
 
 export default function ForgotPassword() {
   const [email, setEmail] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-  const [submitted, setSubmitted] = useState(false);
+  const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -19,10 +20,13 @@ export default function ForgotPassword() {
     setLoading(true);
 
     try {
-      // TODO: ربط فعلي بالباك اند لما يصير عندنا endpoint لإرسال رابط/رمز تغيير كلمة المرور
-      // (مثلاً POST /api/auth/forgot-password مع البريد الإلكتروني)
-      console.log("طلب تغيير كلمة المرور لـ:", email);
-      setSubmitted(true);
+      const result = await forgotPassword(email);
+      // ملاحظة: لسا ما في بريد إلكتروني حقيقي (SMTP) مفعّل، فالباك اند بيرجع
+      // reset_token مباشرة بالـ response — منستخدمه فورًا ونوديها لصفحة
+      // تعيين كلمة المرور. هاد مؤقت 100% وبيتغيّر لما ينفعّل الإيميل الحقيقي.
+      navigate(
+        `/reset-password?email=${encodeURIComponent(email)}&token=${encodeURIComponent(result.reset_token)}`,
+      );
     } catch (err) {
       setError(err.message);
     } finally {
@@ -53,37 +57,31 @@ export default function ForgotPassword() {
                   <span className="page-icon-badge">🔒</span>
                   <h1>نسيت كلمة المرور؟</h1>
                 </div>
-                <p>أدخل البريد الإلكتروني لتغيير كلمة المرور.</p>
+                <p>أدخلي البريد الإلكتروني لتغيير كلمة المرور.</p>
               </div>
             </div>
 
-            {submitted ? (
-              <p className="form-success">
-                تم إرسال رابط تغيير كلمة المرور إلى بريدك الإلكتروني، تفقّدي صندوق الوارد.
-              </p>
-            ) : (
-              <form className="signup-form" onSubmit={handleSubmit}>
-                <label htmlFor="email">البريد الإلكتروني</label>
-                <input
-                  id="email"
-                  name="email"
-                  type="email"
-                  placeholder="أدخل البريد الإلكتروني   "
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                />
+            <form className="signup-form" onSubmit={handleSubmit}>
+              <label htmlFor="email">البريد الإلكتروني</label>
+              <input
+                id="email"
+                name="email"
+                type="email"
+                placeholder="أدخلي البريد الإلكتروني لتغيير كلمة المرور"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+              />
 
-                {error && <p className="form-error">{error}</p>}
+              {error && <p className="form-error">{error}</p>}
 
-                <button
-                  type="submit"
-                  className="btn btn-primary signup-submit"
-                  disabled={loading}
-                >
-                  {loading ? "جاري الإرسال..." : "متابعة"}
-                </button>
-              </form>
-            )}
+              <button
+                type="submit"
+                className="btn btn-primary signup-submit"
+                disabled={loading}
+              >
+                {loading ? "جاري الإرسال..." : "متابعة"}
+              </button>
+            </form>
 
             <p className="signup-footer">
               تذكرت كلمة المرور؟ <Link to="/login">تسجيل الدخول</Link>
