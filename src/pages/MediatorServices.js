@@ -2,8 +2,23 @@ import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { getServices, createService, updateService, toggleService } from "../api";
 
-// أيقونات الخدمة المتاحة للاختيار من بينها
-const ICONS = ["🔍", "💎", "✂️", "🎁", "📦", "💬", "🔄", "📍", "🚚", "🖼️"];
+// أيقونات الخدمة المتاحة للاختيار من بينها — value لازم يطابق القيم المقبولة بالباك اند بالظبط
+const ICONS = [
+  { value: "search", label: "🔍" },
+  { value: "diamond", label: "💎" },
+  { value: "scissors", label: "✂️" },
+  { value: "gift", label: "🎁" },
+  { value: "tag", label: "🏷️" },
+  { value: "chat", label: "💬" },
+  { value: "refresh", label: "🔄" },
+  { value: "pin", label: "📍" },
+  { value: "truck", label: "🚚" },
+  { value: "photo", label: "🖼️" },
+];
+
+function iconEmoji(value) {
+  return ICONS.find((i) => i.value === value)?.label || "❔";
+}
 
 // أنواع الرسوم المتاحة
 const FEE_TYPES = [
@@ -22,7 +37,7 @@ function feeLabel(service) {
 }
 
 const emptyForm = {
-  icon: ICONS[0],
+  icon: ICONS[0].value,
   name: "",
   description: "",
   feeType: "free",
@@ -194,6 +209,9 @@ export default function MediatorServices() {
         ) : loadError ? (
           <div className="empty-orders">
             <p>تعذر تحميل الخدمات: {loadError}</p>
+            <Link to="/create-store" className="btn btn-primary" style={{ marginTop: "12px", display: "inline-block" }}>
+              الذهاب لإنشاء المتجر
+            </Link>
           </div>
         ) : services.length === 0 ? (
           <div className="empty-orders">
@@ -202,7 +220,7 @@ export default function MediatorServices() {
         ) : (
           services.map((service) => (
             <div className="service-card" key={service.id}>
-              <div className="service-icon-badge">{service.icon}</div>
+              <div className="service-icon-badge">{iconEmoji(service.icon)}</div>
 
               <div className="service-content">
                 <div className="service-name">{service.name}</div>
@@ -248,11 +266,11 @@ export default function MediatorServices() {
                   {ICONS.map((icon) => (
                     <button
                       type="button"
-                      key={icon}
-                      className={`icon-picker-btn ${form.icon === icon ? "selected" : ""}`}
-                      onClick={() => setForm((prev) => ({ ...prev, icon }))}
+                      key={icon.value}
+                      className={`icon-picker-btn ${form.icon === icon.value ? "selected" : ""}`}
+                      onClick={() => setForm((prev) => ({ ...prev, icon: icon.value }))}
                     >
-                      {icon}
+                      {icon.label}
                     </button>
                   ))}
                 </div>

@@ -160,7 +160,7 @@ export async function updateStore(storeId, data) {
     formData.append('accepts_whatsapp_orders', data.accepts_whatsapp_orders ? 1 : 0);
   }
   if (data.image) {
-    formData.append('image', data.image); // لازم ملف حقيقي، مش blob URL
+    formData.append('image', data.image); 
   }
 
   const response = await fetch(`${BASE_URL}/api/stores/${storeId}`, {
@@ -211,15 +211,11 @@ export async function updateProfile(data) {
 
   return result;
 }
-// ===== الخدمات (Services) =====
-// ملاحظة: أسماء الحقول بالباك اند (fee_type, fee_value, is_available) افتراض بناءً
-// على أسلوب snake_case المستخدم بباقي الـ endpoints (زي is_accepting_orders) —
-// إذا طلعت مختلفة وقت التجربة، بس عدّلي الأسماء بالدالتين هدول.
 function mapServiceFromApi(s) {
   return {
     id: s.id,
     icon: s.icon,
-    name: s.name,
+    name: s.title,
     description: s.description,
     feeType: s.fee_type,
     feeValue: s.fee_value,
@@ -231,7 +227,7 @@ function mapServiceFromApi(s) {
 function mapServiceToApi(service) {
   return {
     icon: service.icon,
-    name: service.name,
+    title: service.name,
     description: service.description,
     fee_type: service.feeType,
     fee_value: service.feeValue || null,
@@ -271,9 +267,12 @@ export async function createService(service) {
     body: JSON.stringify(mapServiceToApi(service)),
   });
   const result = await response.json();
-  if (!response.ok) {
-    throw new Error(result.message || 'حدث خطأ أثناء إضافة الخدمة');
-  }
+ if (!response.ok) {
+  const details = result.errors
+    ? Object.values(result.errors).flat().join(' / ')
+    : '';
+  throw new Error(details || result.message || 'حدث خطأ أثناء إضافة الخدمة');
+}
   return mapServiceFromApi(result.service || result);
 }
 
@@ -290,9 +289,12 @@ export async function updateService(id, service) {
     body: JSON.stringify(mapServiceToApi(service)),
   });
   const result = await response.json();
-  if (!response.ok) {
-    throw new Error(result.message || 'حدث خطأ أثناء تعديل الخدمة');
-  }
+ if (!response.ok) {
+  const details = result.errors
+    ? Object.values(result.errors).flat().join(' / ')
+    : '';
+  throw new Error(details || result.message || 'حدث خطأ أثناء إضافة الخدمة');
+}
   return mapServiceFromApi(result.service || result);
 }
 
