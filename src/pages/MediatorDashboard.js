@@ -63,6 +63,12 @@ export default function MediatorDashboard() {
           <Link to="/mediator-services" className="sidebar-link">
             <span className="sidebar-icon">🛍</span> الخدمات
           </Link>
+          <a href="#" className="sidebar-link">
+            <span className="sidebar-icon">📅</span> الجدول والسعة
+          </a>
+          <a href="#" className="sidebar-link">
+            <span className="sidebar-icon">💳</span> المالية
+          </a>
           <Link to="/mediator-reviews" className="sidebar-link">
             <span className="sidebar-icon">⭐</span> التقييمات
           </Link>
@@ -131,17 +137,17 @@ export default function MediatorDashboard() {
         <div className="dashboard-quick-actions full-width">
           <h3>إجراءات سريعة</h3>
           <div className="quick-actions-grid">
-             <Link to="/mediator-services" className="sidebar-link">
-            <span className="btn btn-outline">+ </span>  إضافة خدمة
+           <Link to="/mediator-services" className="btn btn-primary">
+            <span className="sidebar-icon">🛍</span> + إضافة خدمة
           </Link>
-          <Link to="/mediator-reviews" >
-            <span className="btn btn-outline">⭐</span>عرض التقييمات 
+           <Link to="/mediator-reviews" className="btn btn-primary">
+            <span className="sidebar-icon">⭐</span> التقييمات
           </Link>
-          <Link to="/mediator-orders" >
-            <span className="btn btn-outline">📋 </span> عرض الطلبات 
+           <Link to="/mediator-orders" className="btn btn-primary">
+            <span className="sidebar-icon">📋</span> الطلبات
           </Link>
-          <Link to="/mediator-profile" >
-            <span className="btn btn-outline">👤</span> الملف الشخصي
+           <Link to="/mediator-profile" className="btn btn-primary">
+            <span className="sidebar-icon">👤</span> الملف الشخصي
           </Link>
           </div>
         </div>
