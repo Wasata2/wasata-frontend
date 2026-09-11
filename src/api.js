@@ -314,6 +314,27 @@ export async function toggleService(id) {
   }
   return mapServiceFromApi(result.service || result);
 }
+export async function deleteService(id) {
+  const token = localStorage.getItem('token');
+
+  const response = await fetch(`${BASE_URL}/api/services/${id}`, {
+    method: 'DELETE',
+    credentials: 'include',
+    headers: {
+      'Accept': 'application/json',
+      'Authorization': `Bearer ${token}`,
+    },
+  });
+
+  if (!response.ok) {
+    let result = {};
+    try { result = await response.json(); } catch (e) {}
+    const details = result.errors ? Object.values(result.errors).flat().join(' / ') : '';
+    throw new Error(details || result.message || 'حدث خطأ أثناء حذف الخدمة');
+  }
+
+  return true;
+}
 export async function forgotPassword(email) {
   await getCsrfCookie();
 
@@ -362,3 +383,4 @@ export async function resetPassword({ email, token, password, passwordConfirmati
 
   return result;
 }
+

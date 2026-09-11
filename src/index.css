@@ -1799,7 +1799,12 @@ footer .copyright{font-size:12px;color:var(--gray-light);}
   color:var(--gray-light);
   margin-top:4px;
 }
-
+.service-meta-row{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  flex-wrap:wrap;
+}
 .service-fee-tag{
   font-size:12px;
   font-weight:700;
@@ -1824,12 +1829,6 @@ footer .copyright{font-size:12px;color:var(--gray-light);}
 .service-status-tag.available{ background:#dcfce7; color:#15803d; }
 .service-status-tag.unavailable{ background:#f1f2f6; color:var(--gray-light); }
  
-.service-meta-row{
-  display:flex;
-  align-items:center;
-  gap:10px;
-  flex-wrap:wrap;
-}
 .btn-edit-service{
   background:#fff;
   border:1.5px solid var(--blue);
@@ -1856,6 +1855,17 @@ footer .copyright{font-size:12px;color:var(--gray-light);}
   background:#fff;
   border:1.5px solid #d92d20;
   color:#d92d20;
+  border-radius:10px;
+  padding:8px 16px;
+  font-size:13px;
+  font-weight:700;
+  cursor:pointer;
+  white-space:nowrap;
+}
+.btn-delete-service{
+  background:#fee2e2;
+  border:1.5px solid #fee2e2;
+  color:#b91c1c;
   border-radius:10px;
   padding:8px 16px;
   font-size:13px;
@@ -2054,8 +2064,7 @@ footer .copyright{font-size:12px;color:var(--gray-light);}
   z-index:300;
   box-shadow:0 12px 32px rgba(16,24,40,.24);
 }
-
-
+ 
 /* ============ Responsive ============ */
 @media (max-width:1024px){
   .suggested-grid{grid-template-columns:repeat(2,1fr);}}

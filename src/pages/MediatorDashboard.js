@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
+import { getServices } from "../api";
 
 export default function MediatorDashboard() {
   const [acceptingOrders, setAcceptingOrders] = useState(true);
@@ -20,7 +21,21 @@ export default function MediatorDashboard() {
     },
   ]);
 
-  const activeServicesCount = 4;
+  // عدد الخدمات النشطة — بيتجاب فعليًا من نفس بيانات صفحة الخدمات، مش رقم ثابت
+  const [activeServicesCount, setActiveServicesCount] = useState(0);
+  const [loadingServicesCount, setLoadingServicesCount] = useState(true);
+
+  useEffect(() => {
+    getServices()
+      .then((data) => {
+        setActiveServicesCount(data.filter((s) => s.available).length);
+        setLoadingServicesCount(false);
+      })
+      .catch(() => {
+        setLoadingServicesCount(false);
+      });
+  }, []);
+
   const inProgressCount = orders.filter(
     (o) => o.statusClass === "progress" || o.statusClass === "ordered",
   ).length;
@@ -45,7 +60,7 @@ export default function MediatorDashboard() {
           <Link to="/mediator-orders" className="sidebar-link">
             <span className="sidebar-icon">📋</span> الطلبات
           </Link>
-         <Link to="/mediator-services" className="sidebar-link">
+          <Link to="/mediator-services" className="sidebar-link">
             <span className="sidebar-icon">🛍</span> الخدمات
           </Link>
           <Link to="/mediator-reviews" className="sidebar-link">
@@ -91,7 +106,9 @@ export default function MediatorDashboard() {
           <div className="stat-card">
             <div>
               <div className="stat-label">الخدمات النشطة</div>
-              <div className="stat-value">{activeServicesCount}</div>
+              <div className="stat-value">
+                {loadingServicesCount ? "…" : activeServicesCount}
+              </div>
             </div>
             <div className="stat-icon">🛍</div>
           </div>
@@ -114,18 +131,10 @@ export default function MediatorDashboard() {
         <div className="dashboard-quick-actions full-width">
           <h3>إجراءات سريعة</h3>
           <div className="quick-actions-grid">
-           <Link to="/mediator-services" className="btn btn-primary">
-            <span className="sidebar-icon">🛍</span> + إضافة خدمة
-          </Link>
-           <Link to="/mediator-reviews" className="btn btn-primary">
-            <span className="sidebar-icon">⭐</span> التقييمات
-          </Link>
-           <Link to="/mediator-orders" className="btn btn-primary">
-            <span className="sidebar-icon">📋</span> الطلبات
-          </Link>
-           <Link to="/mediator-profile" className="btn btn-primary">
-            <span className="sidebar-icon">👤</span> الملف الشخصي
-          </Link>
+            <button className="btn btn-primary">+ إضافة خدمة</button>
+            <button className="btn btn-outline">تعديل الجدول والسعة</button>
+            <button className="btn btn-outline">عرض الطلبات</button>
+            <button className="btn btn-outline">الملف الشخصي</button>
           </div>
         </div>
 

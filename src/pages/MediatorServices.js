@@ -1,8 +1,7 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
-import { getServices, createService, updateService, toggleService } from "../api";
+import { getServices, createService, updateService, toggleService, deleteService } from "../api";
 
-// أيقونات الخدمة المتاحة للاختيار من بينها — value لازم يطابق القيم المقبولة بالباك اند بالظبط
 const ICONS = [
   { value: "search", label: "🔍" },
   { value: "diamond", label: "💎" },
@@ -20,7 +19,6 @@ function iconEmoji(value) {
   return ICONS.find((i) => i.value === value)?.label || "❔";
 }
 
-// أنواع الرسوم المتاحة — القيم لازم تطابق القيم المقبولة بالباك اند بالظبط
 const FEE_TYPES = [
   { key: "variable", label: "حسب الحالة" },
   { key: "percentage", label: "نسبة مئوية" },
@@ -74,6 +72,7 @@ export default function MediatorServices() {
   const [saving, setSaving] = useState(false);
 
   const [confirmToggle, setConfirmToggle] = useState(null); // الخدمة يلي عم نأكد تفعيلها/تعطيلها
+  const [confirmDelete, setConfirmDelete] = useState(null); // الخدمة يلي عم نأكد حذفها
   const [toast, setToast] = useState("");
 
   const showToast = (message) => {
@@ -144,6 +143,19 @@ export default function MediatorServices() {
       showToast(err.message);
     } finally {
       setConfirmToggle(null);
+    }
+  };
+
+  const confirmDeleteService = async () => {
+    if (!confirmDelete) return;
+    try {
+      await deleteService(confirmDelete.id);
+      setServices((prev) => prev.filter((s) => s.id !== confirmDelete.id));
+      showToast("تم حذف الخدمة بنجاح ✓");
+    } catch (err) {
+      showToast(err.message);
+    } finally {
+      setConfirmDelete(null);
     }
   };
 
@@ -243,6 +255,9 @@ export default function MediatorServices() {
                   onClick={() => setConfirmToggle(service)}
                 >
                   {service.available ? "تعطيل" : "تفعيل"}
+                </button>
+                <button className="btn-delete-service" onClick={() => setConfirmDelete(service)}>
+                  🗑 حذف
                 </button>
               </div>
             </div>
@@ -396,6 +411,28 @@ export default function MediatorServices() {
                   {confirmToggle.available ? "تعطيل الخدمة" : "تفعيل الخدمة"}
                 </button>
                 <button className="btn btn-outline" onClick={() => setConfirmToggle(null)}>
+                  إلغاء
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ===== نافذة تأكيد الحذف ===== */}
+        {confirmDelete && (
+          <div className="modal-overlay" onClick={() => setConfirmDelete(null)}>
+            <div className="confirm-modal-card" onClick={(e) => e.stopPropagation()}>
+              <div className="confirm-icon-badge danger">🗑</div>
+              <h3>حذف الخدمة</h3>
+              <p>
+                هل متأكدة من حذف خدمة «{confirmDelete.name}»؟ هذا الإجراء نهائي ولا يمكن
+                التراجع عنه.
+              </p>
+              <div className="confirm-modal-actions">
+                <button className="btn-danger" onClick={confirmDeleteService}>
+                  حذف نهائيًا
+                </button>
+                <button className="btn btn-outline" onClick={() => setConfirmDelete(null)}>
                   إلغاء
                 </button>
               </div>
