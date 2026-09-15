@@ -14,6 +14,7 @@ import MyOrders from "./pages/MyOrders";
 import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
 import MediatorServices from "./pages/MediatorServices";
+import NewOrder from "./pages/NewOrder";
 
 function App() {
   return (
@@ -33,6 +34,7 @@ function App() {
       <Route path="/forgot-password" element={<ForgotPassword />} />
       <Route path="/reset-password" element={<ResetPassword />} />
       <Route path="/mediator-services" element={<MediatorServices />} />
+      <Route path="/new-order" element={<NewOrder />} />
     </Routes>
   );
 }
