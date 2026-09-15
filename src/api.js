@@ -384,3 +384,101 @@ export async function resetPassword({ email, token, password, passwordConfirmati
   return result;
 }
 
+export async function getOrderStats() {
+  const token = localStorage.getItem('token');
+
+  const response = await fetch(`${BASE_URL}/api/orders/stats`, {
+    method: 'GET',
+    credentials: 'include',
+    headers: {
+      'Accept': 'application/json',
+      'Authorization': `Bearer ${token}`,
+    },
+  });
+
+  const result = await response.json();
+
+  if (!response.ok) {
+    throw new Error(result.message || 'تعذر جلب إحصائيات الطلبات');
+  }
+
+  return {
+    newCount: result.new_count ?? 0,
+    inProgressCount: result.in_progress_count ?? 0,
+    completedCount: result.completed_count ?? 0,
+    rejectedCount: result.rejected_count ?? 0,
+    total: result.total ?? 0,
+  };
+}
+
+function mapOrderItemFromApi(item) {
+  return {
+    id: item.id,
+    name: item.product_name,
+    image: item.image_url,
+    sheinUrl: item.shein_url,
+    color: item.color,
+    size: item.size,
+    quantity: item.quantity,
+    notes: item.notes,
+  };
+}
+
+function mapOrderFromApi(o) {
+  return {
+    id: o.id,
+    customer: o.customer_name,
+    date: o.created_at,
+    itemsCount: o.items_count ?? (o.items ? o.items.length : 0),
+    amount: o.total_amount,
+    status: o.status,
+    items: (o.items || []).map(mapOrderItemFromApi),
+  };
+}
+
+export async function getOrders(filters = {}) {
+  const token = localStorage.getItem('token');
+  const params = new URLSearchParams();
+  if (filters.status) params.append('status', filters.status);
+  if (filters.date) params.append('date', filters.date);
+  if (filters.search) params.append('search', filters.search);
+
+  const response = await fetch(`${BASE_URL}/api/orders?${params.toString()}`, {
+    method: 'GET',
+    credentials: 'include',
+    headers: {
+      'Accept': 'application/json',
+      'Authorization': `Bearer ${token}`,
+    },
+  });
+
+  const result = await response.json();
+
+  if (!response.ok) {
+    throw new Error(result.message || 'تعذر جلب الطلبات');
+  }
+
+  const list = result.orders || result.data || result;
+  return Array.isArray(list) ? list.map(mapOrderFromApi) : [];
+}
+
+export async function getOrderDetails(id) {
+  const token = localStorage.getItem('token');
+
+  const response = await fetch(`${BASE_URL}/api/orders/${id}`, {
+    method: 'GET',
+    credentials: 'include',
+    headers: {
+      'Accept': 'application/json',
+      'Authorization': `Bearer ${token}`,
+    },
+  });
+
+  const result = await response.json();
+
+  if (!response.ok) {
+    throw new Error(result.message || 'تعذر جلب تفاصيل الطلب');
+  }
+
+  return mapOrderFromApi(result.order || result);
+}

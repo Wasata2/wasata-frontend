@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
-import { getServices } from "../api";
+import { getServices, getOrders, getOrderStats } from "../api";
 
 export default function MediatorDashboard() {
   const [acceptingOrders, setAcceptingOrders] = useState(true);
@@ -9,17 +9,9 @@ export default function MediatorDashboard() {
   const userName = storedUser.full_name || "مستخدمة";
   const userInitial = userName.charAt(0);
 
-  const [orders, setOrders] = useState([
-    {
-      id: "#1042",
-      customer: "ريم العتيبي",
-      date: "24 أغسطس 2026",
-      items: 3,
-      amount: "245 ر.س",
-      status: "قيد الانتظار",
-      statusClass: "pending",
-    },
-  ]);
+  const [orders, setOrders] = useState([]);
+  const [stats, setStats] = useState(null);
+  const [loadingOrders, setLoadingOrders] = useState(true);
 
   // عدد الخدمات النشطة — بيتجاب فعليًا من نفس بيانات صفحة الخدمات، مش رقم ثابت
   const [activeServicesCount, setActiveServicesCount] = useState(0);
@@ -34,14 +26,23 @@ export default function MediatorDashboard() {
       .catch(() => {
         setLoadingServicesCount(false);
       });
+
+    Promise.all([getOrders(), getOrderStats()])
+      .then(([ordersData, statsData]) => {
+        setOrders(ordersData);
+        setStats(statsData);
+        setLoadingOrders(false);
+      })
+      .catch(() => {
+        setLoadingOrders(false);
+      });
   }, []);
 
-  const inProgressCount = orders.filter(
-    (o) => o.statusClass === "progress" || o.statusClass === "ordered",
-  ).length;
-  const newOrdersCount = orders.filter(
-    (o) => o.statusClass === "pending",
-  ).length;
+  // أحدث طلب جديد (إذا وجد) — لعرض بانر "لديك طلب جديد" بس لما يكون فعليًا في طلب جديد
+  const latestNewOrder = orders.find((o) => o.status === "new");
+
+  const inProgressCount = stats ? stats.inProgressCount : 0;
+  const newOrdersCount = stats ? stats.newCount : 0;
 
   return (
     <div className="dashboard-layout">
@@ -59,6 +60,7 @@ export default function MediatorDashboard() {
           </Link>
           <Link to="/mediator-orders" className="sidebar-link">
             <span className="sidebar-icon">📋</span> الطلبات
+            {newOrdersCount > 0 && <span className="sidebar-badge">{newOrdersCount}</span>}
           </Link>
           <Link to="/mediator-services" className="sidebar-link">
             <span className="sidebar-icon">🛍</span> الخدمات
@@ -121,46 +123,65 @@ export default function MediatorDashboard() {
           <div className="stat-card">
             <div>
               <div className="stat-label">طلبات قيد التنفيذ</div>
-              <div className="stat-value">{inProgressCount}</div>
+              <div className="stat-value">{loadingOrders ? "…" : inProgressCount}</div>
             </div>
             <div className="stat-icon">📈</div>
           </div>
           <div className="stat-card">
             <div>
               <div className="stat-label">طلبات جديدة</div>
-              <div className="stat-value">{newOrdersCount}</div>
+              <div className="stat-value">{loadingOrders ? "…" : newOrdersCount}</div>
             </div>
             <div className="stat-icon">📦</div>
           </div>
         </div>
 
+        {/* بانر "لديك طلب جديد" — بيظهر بس لو فعليًا في طلب جديد بانتظار الرد */}
+        {latestNewOrder && (
+          <div className="new-order-banner">
+            <Link to={`/mediator-orders/${latestNewOrder.id}`} className="btn btn-primary">
+              عرض الطلب
+            </Link>
+            <div className="new-order-banner-text">
+              <span className="new-order-badge">جديد</span>
+              لديك طلب جديد من <strong>{latestNewOrder.customer}</strong>
+              <div className="new-order-banner-sub">
+                طلب #{latestNewOrder.id} · {latestNewOrder.itemsCount} منتجات
+              </div>
+            </div>
+            <div className="new-order-banner-icon">📦</div>
+          </div>
+        )}
+
         <div className="dashboard-quick-actions full-width">
           <h3>إجراءات سريعة</h3>
           <div className="quick-actions-grid">
-           <Link to="/mediator-services" className="btn btn-primary">
-            <span className="sidebar-icon">🛍</span> + إضافة خدمة
-          </Link>
-           <Link to="/mediator-reviews" className="btn btn-primary">
-            <span className="sidebar-icon">⭐</span> التقييمات
-          </Link>
-           <Link to="/mediator-orders" className="btn btn-primary">
-            <span className="sidebar-icon">📋</span> الطلبات
-          </Link>
-           <Link to="/mediator-profile" className="btn btn-primary">
-            <span className="sidebar-icon">👤</span> الملف الشخصي
-          </Link>
+            <Link to="/mediator-services" className="btn btn-primary">
+              + إضافة خدمة
+            </Link>
+            <button className="btn btn-outline">تعديل الجدول والسعة</button>
+            <Link to="/mediator-orders" className="btn btn-outline">
+              عرض الطلبات
+            </Link>
+            <Link to="/mediator-profile" className="btn btn-outline">
+              الملف الشخصي
+            </Link>
           </div>
         </div>
 
         <div className="dashboard-orders">
           <div className="orders-header">
             <h3>الطلبات الواردة</h3>
-            <a href="#" className="view-all-link">
+            <Link to="/mediator-orders" className="view-all-link">
               عرض جميع الطلبات ⟵
-            </a>
+            </Link>
           </div>
 
-          {orders.length === 0 ? (
+          {loadingOrders ? (
+            <div className="empty-orders">
+              <p>جاري التحميل...</p>
+            </div>
+          ) : orders.length === 0 ? (
             <div className="empty-orders">
               <p>لا توجد طلبات واردة حاليًا.</p>
             </div>
@@ -179,28 +200,20 @@ export default function MediatorDashboard() {
                   </tr>
                 </thead>
                 <tbody>
-                  {orders.map((order) => (
+                  {orders.slice(0, 5).map((order) => (
                     <tr key={order.id}>
-                      <td>{order.id}</td>
+                      <td>#{order.id}</td>
                       <td>{order.customer}</td>
                       <td>{order.date}</td>
-                      <td>{order.items}</td>
-                      <td>{order.amount}</td>
+                      <td>{order.itemsCount}</td>
+                      <td>{order.amount} ر.س</td>
                       <td>
-                        <span className={`status-badge ${order.statusClass}`}>
-                          {order.status}
-                        </span>
+                        <span className={`status-badge ${order.status}`}>{order.status}</span>
                       </td>
                       <td>
-                        <a href="#" className="details-link">
+                        <Link to={`/mediator-orders/${order.id}`} className="details-link">
                           عرض التفاصيل
-                        </a>
-                        {order.statusClass === "pending" && (
-                          <span className="row-actions">
-                            <button className="icon-btn accept">✓</button>
-                            <button className="icon-btn reject">✕</button>
-                          </span>
-                        )}
+                        </Link>
                       </td>
                     </tr>
                   ))}

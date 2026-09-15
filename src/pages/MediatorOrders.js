@@ -1,15 +1,13 @@
-import { useState, useMemo } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Link } from "react-router-dom";
+import { getOrders, getOrderStats } from "../api";
 
 // وصف كل حالة طلب: النص الظاهر وصنف الـ CSS الخاص فيها (status-badge.<className>)
 const STATUS_META = {
   new: { label: "جديد", className: "new" },
   in_progress: { label: "قيد التنفيذ", className: "progress" },
-  ordered_shein: { label: "تم الطلب من SHEIN", className: "ordered" },
-  shipped: { label: "تم الشحن", className: "shipped" },
-  ready: { label: "جاهزة للاستلام", className: "ready" },
-  done: { label: "مكتمل", className: "done" },
-  rejected: { label: "مرفوضة", className: "rejected" },
+  completed: { label: "مكتمل", className: "done" },
+  rejected: { label: "مرفوض", className: "rejected" },
 };
 
 const PAGE_SIZE = 6;
@@ -19,14 +17,29 @@ export default function MediatorOrders() {
   const userName = storedUser.full_name || "مستخدمة";
   const userInitial = userName.charAt(0);
 
-  // TODO: نجيب الطلبات الحقيقية من الباك اند لما يصير عندنا endpoint لهيك (متل getMyStore بصفحة MediatorProfile)
-  // لهلق القائمة فاضية وبتتعبى تلقائيًا أول ما توصل طلبات فعلية من الزبونات
-  const [orders] = useState([]);
+  const [orders, setOrders] = useState([]);
+  const [stats, setStats] = useState(null);
+  const [loadingOrders, setLoadingOrders] = useState(true);
+  const [loadError, setLoadError] = useState("");
+
   const [activeTab, setActiveTab] = useState("all");
   const [dateFilter, setDateFilter] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
+
+  useEffect(() => {
+    Promise.all([getOrders(), getOrderStats()])
+      .then(([ordersData, statsData]) => {
+        setOrders(ordersData);
+        setStats(statsData);
+        setLoadingOrders(false);
+      })
+      .catch((err) => {
+        setLoadError(err.message);
+        setLoadingOrders(false);
+      });
+  }, []);
 
   // عدد الطلبات لكل حالة، لعرضه جوا تبويبات الفلترة
   const counts = useMemo(() => {
@@ -36,18 +49,6 @@ export default function MediatorOrders() {
     });
     return c;
   }, [orders]);
-
-  // إحصائيات البطاقات العلوية — "قيد التنفيذ" هون بتجمع كل الحالات يلي الطلب لسا فيها بالطريق
-  const summary = useMemo(
-    () => ({
-      done: counts.done || 0,
-      inProgress:
-        (counts.in_progress || 0) + (counts.ordered_shein || 0) + (counts.shipped || 0),
-      new: counts.new || 0,
-      total: orders.length,
-    }),
-    [counts, orders.length],
-  );
 
   const hasActiveFilters = dateFilter || statusFilter || search || activeTab !== "all";
 
@@ -74,10 +75,7 @@ export default function MediatorOrders() {
 
   const tabs = [
     { key: "rejected", label: "مرفوضة" },
-    { key: "done", label: "مكتملة" },
-    { key: "ready", label: "جاهزة للاستلام" },
-    { key: "shipped", label: "تم الشحن" },
-    { key: "ordered_shein", label: "تم الطلب من SHEIN" },
+    { key: "completed", label: "مكتملة" },
     { key: "in_progress", label: "قيد التنفيذ" },
     { key: "new", label: "جديدة" },
     { key: "all", label: "الكل" },
@@ -85,7 +83,7 @@ export default function MediatorOrders() {
 
   return (
     <div className="dashboard-layout">
-      {/* ===== نفس القائمة الجانبية الموجودة بـ MediatorDashboard بالضبط ===== */}
+      {/* ===== نفس القائمة الجانبية الموجودة بباقي صفحات لوحة التحكم ===== */}
       <aside className="dashboard-sidebar">
         <div className="sidebar-logo">
           <img src="/logo.svg" alt="وساطة" className="logo-img" />
@@ -100,11 +98,20 @@ export default function MediatorOrders() {
           </Link>
           <Link to="/mediator-orders" className="sidebar-link active">
             <span className="sidebar-icon">📋</span> الطلبات
+            {stats && stats.newCount > 0 && (
+              <span className="sidebar-badge">{stats.newCount}</span>
+            )}
           </Link>
-         <Link to="/mediator-services" className="sidebar-link">
+          <Link to="/mediator-services" className="sidebar-link">
             <span className="sidebar-icon">🛍</span> الخدمات
           </Link>
-         <Link to="/mediator-reviews" className="sidebar-link">
+          <a href="#" className="sidebar-link">
+            <span className="sidebar-icon">📅</span> الجدول والسعة
+          </a>
+          <a href="#" className="sidebar-link">
+            <span className="sidebar-icon">💳</span> المالية
+          </a>
+          <Link to="/mediator-reviews" className="sidebar-link">
             <span className="sidebar-icon">⭐</span> التقييمات
           </Link>
           <Link to="/mediator-profile" className="sidebar-link">
@@ -133,50 +140,48 @@ export default function MediatorOrders() {
           <p>إدارة ومتابعة جميع طلبات الزبائن.</p>
         </div>
 
+        {loadError && (
+          <div className="empty-orders">
+            <p>تعذر تحميل الطلبات: {loadError}</p>
+          </div>
+        )}
+
         {/* بطاقات الإحصائيات */}
-      <div className="dashboard-stats cols-4">
-          <div className="stat-card">
-            <div>
-              <div className="stat-label">مكتملة</div>
-              <div className="stat-value">{summary.done}</div>
+        {stats && (
+          <div className="dashboard-stats cols-4">
+            <div className="stat-card">
+              <div>
+                <div className="stat-label">مكتملة</div>
+                <div className="stat-value">{stats.completedCount}</div>
+              </div>
+              <div className="stat-icon">✅</div>
             </div>
-            <div className="stat-icon">✅</div>
-          </div>
-          <div className="stat-card">
-            <div>
-              <div className="stat-label">قيد التنفيذ</div>
-              <div className="stat-value">{summary.inProgress}</div>
+            <div className="stat-card">
+              <div>
+                <div className="stat-label">قيد التنفيذ</div>
+                <div className="stat-value">{stats.inProgressCount}</div>
+              </div>
+              <div className="stat-icon">📈</div>
             </div>
-            <div className="stat-icon">📈</div>
-          </div>
-          <div className="stat-card">
-            <div>
-              <div className="stat-label">طلبات جديدة</div>
-              <div className="stat-value">{summary.new}</div>
+            <div className="stat-card">
+              <div>
+                <div className="stat-label">طلبات جديدة</div>
+                <div className="stat-value">{stats.newCount}</div>
+              </div>
+              <div className="stat-icon">📦</div>
             </div>
-            <div className="stat-icon">📦</div>
-          </div>
-          <div className="stat-card">
-            <div>
-              <div className="stat-label">إجمالي الطلبات</div>
-              <div className="stat-value">{summary.total}</div>
+            <div className="stat-card">
+              <div>
+                <div className="stat-label">إجمالي الطلبات</div>
+                <div className="stat-value">{stats.total}</div>
+              </div>
+              <div className="stat-icon">🧾</div>
             </div>
-            <div className="stat-icon">🧾</div>
           </div>
-        </div>
+        )}
 
         {/* شريط الفلاتر: تاريخ + حالة + بحث */}
         <div className="orders-filters-bar">
-          <input
-            type="text"
-            className="filter-search-input"
-            placeholder="ابحثي برقم الطلب أو اسم الزبونة"
-            value={search}
-            onChange={(e) => {
-              setSearch(e.target.value);
-              setPage(1);
-            }}
-          />
           {hasActiveFilters && (
             <button className="clear-filters-btn" onClick={clearFilters}>
               مسح الفلاتر ✕
@@ -206,7 +211,16 @@ export default function MediatorOrders() {
               </option>
             ))}
           </select>
-          
+          <input
+            type="text"
+            className="filter-search-input"
+            placeholder="ابحثي برقم الطلب أو اسم الزبونة"
+            value={search}
+            onChange={(e) => {
+              setSearch(e.target.value);
+              setPage(1);
+            }}
+          />
         </div>
 
         {/* تبويبات فلترة سريعة حسب الحالة */}
@@ -227,7 +241,11 @@ export default function MediatorOrders() {
 
         {/* جدول الطلبات */}
         <div className="dashboard-orders">
-          {pagedOrders.length === 0 ? (
+          {loadingOrders ? (
+            <div className="empty-orders">
+              <p>جاري تحميل الطلبات...</p>
+            </div>
+          ) : pagedOrders.length === 0 ? (
             <div className="empty-orders">
               <p>لا توجد طلبات مطابقة.</p>
             </div>
@@ -249,20 +267,22 @@ export default function MediatorOrders() {
                   <tbody>
                     {pagedOrders.map((order) => (
                       <tr key={order.id}>
-                        <td>{order.id}#</td>
+                        <td>#{order.id}</td>
                         <td>{order.customer}</td>
                         <td>{order.date}</td>
-                        <td>{order.items}</td>
+                        <td>{order.itemsCount}</td>
                         <td>{order.amount} ر.س</td>
                         <td>
-                          <span className={`status-badge ${STATUS_META[order.status].className}`}>
-                            {STATUS_META[order.status].label}
+                          <span
+                            className={`status-badge ${STATUS_META[order.status]?.className || ""}`}
+                          >
+                            {STATUS_META[order.status]?.label || order.status}
                           </span>
                         </td>
                         <td>
-                          <a href="#" className="details-link">
+                          <Link to={`/mediator-orders/${order.id}`} className="details-link">
                             عرض التفاصيل
-                          </a>
+                          </Link>
                           {order.status === "new" && (
                             <span className="row-actions">
                               <button className="icon-btn accept">✓</button>
