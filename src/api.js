@@ -152,6 +152,7 @@ export async function updateStore(storeId, data) {
   const token = localStorage.getItem('token');
 
   const formData = new FormData();
+  formData.append('_method', 'PUT');
   if (data.name !== undefined) formData.append('name', data.name);
   if (data.bio !== undefined) formData.append('bio', data.bio);
   if (data.phone !== undefined) formData.append('phone', data.phone);
@@ -164,12 +165,11 @@ export async function updateStore(storeId, data) {
   }
 
   const response = await fetch(`${BASE_URL}/api/stores/${storeId}`, {
-    method: 'PUT',
+     method: 'POST',
     credentials: 'include',
     headers: {
       'Accept': 'application/json',
       'Authorization': `Bearer ${token}`,
-      // ما نحدد Content-Type يدويًا — نفس مبدأ createStore
     },
     body: formData,
   });
