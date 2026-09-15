@@ -14,8 +14,12 @@ import MyOrders from "./pages/MyOrders";
 import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
 import MediatorServices from "./pages/MediatorServices";
+<<<<<<< HEAD
 import NewOrder from "./pages/NewOrder";
 
+=======
+import OrderDetails from "./pages/OrderDetails";  
+>>>>>>> d3df4d8e84fed700cf319dceac232cf8fd1c0c57
 function App() {
   return (
     <Routes>
@@ -34,7 +38,11 @@ function App() {
       <Route path="/forgot-password" element={<ForgotPassword />} />
       <Route path="/reset-password" element={<ResetPassword />} />
       <Route path="/mediator-services" element={<MediatorServices />} />
+<<<<<<< HEAD
       <Route path="/new-order" element={<NewOrder />} />
+=======
+      <Route path="/mediator-orders/:id" element={<OrderDetails />} />
+>>>>>>> d3df4d8e84fed700cf319dceac232cf8fd1c0c57
     </Routes>
   );
 }

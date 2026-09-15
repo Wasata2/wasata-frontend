@@ -1,12 +1,14 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
-import { getMyStore } from "../api";
+import { getMyStore, updateProfile, updateStore } from "../api";
 
 export default function MediatorProfile() {
   const [acceptingOrders, setAcceptingOrders] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
   const [error, setError] = useState("");
   const [loadingStore, setLoadingStore] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [storeId, setStoreId] = useState(null);
 
   const storedUser = JSON.parse(localStorage.getItem("user")) || {};
 
@@ -27,6 +29,7 @@ export default function MediatorProfile() {
     getMyStore()
       .then((data) => {
         const store = data.store || data;
+        setStoreId(store.id || null);
         setForm((prev) => ({
           ...prev,
           city: store.city || "",
@@ -53,24 +56,51 @@ export default function MediatorProfile() {
     }
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!form.fullName || !form.phone) {
       setError("يرجى تعبئة الحقول الإلزامية.");
       return;
     }
     setError("");
+    setSaving(true);
 
-    const updatedUser = {
-      ...storedUser,
-      full_name: form.fullName,
-      phone: form.phone,
-      image: imagePreview,
-    };
-    localStorage.setItem("user", JSON.stringify(updatedUser));
+    try {
+      // ١) تحديث بيانات المستخدم نفسه (الاسم + الهاتف) — endpoint /api/auth/profile
+      await updateProfile({
+        full_name: form.fullName,
+        phone: form.phone,
+      });
 
-    // TODO: إرسال التحديث فعليًا للباك اند (بما فيها الصورة والمدينة والعمولة) عند توفر الـ endpoint المناسب
+      // ٢) تحديث بيانات المتجر (المدينة + الصورة الجديدة إذا انتخبت وحدة) — endpoint /api/stores/{id}
+      if (storeId) {
+        const storeData = {};
+        if (form.city) storeData.city = form.city;
+        if (imageFile) storeData.image = imageFile;
 
-    setIsEditing(false);
+        if (Object.keys(storeData).length > 0) {
+          const storeResult = await updateStore(storeId, storeData);
+          const updatedStore = storeResult.store || {};
+          if (updatedStore.city) {
+            setForm((prev) => ({ ...prev, city: updatedStore.city }));
+          }
+        }
+      }
+
+      // TODO: نسبة العمولة (commission) لسا مش موجودة ضمن حقول endpoint تحديث المتجر
+      // الموثقة من الباك اند — بتضل تتخزن محليًا بس لحد ما نتأكد منها
+      const latestUser = JSON.parse(localStorage.getItem("user")) || {};
+      localStorage.setItem(
+        "user",
+        JSON.stringify({ ...latestUser, commission: form.commission }),
+      );
+
+      setImageFile(null);
+      setIsEditing(false);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setSaving(false);
+    }
   };
 
   const handleCancel = () => {
@@ -102,10 +132,10 @@ export default function MediatorProfile() {
           <Link to="/mediator-orders" className="sidebar-link">
             <span className="sidebar-icon">📋</span> الطلبات
           </Link>
-         <Link to="/mediator-services" className="sidebar-link">
+          <Link to="/mediator-services" className="sidebar-link">
             <span className="sidebar-icon">🛍</span> الخدمات
           </Link>
-         <Link to="/mediator-reviews" className="sidebar-link">
+          <Link to="/mediator-reviews" className="sidebar-link">
             <span className="sidebar-icon">⭐</span> التقييمات
           </Link>
           <Link to="/mediator-profile" className="sidebar-link active">
@@ -202,7 +232,7 @@ export default function MediatorProfile() {
                 <div className="profile-field">
                   <div className="profile-field-label">الموقع</div>
                   <div className="profile-field-value">
-                    {loadingStore ? "جاري التحميل..." : form.city || "غير محدد"}
+                    {loadingStore ? "جاري التحميل..." : (form.city || "غير محدد")}
                   </div>
                 </div>
 
@@ -214,11 +244,7 @@ export default function MediatorProfile() {
                 <div className="profile-field">
                   <div className="profile-field-label">نسبة العمولة</div>
                   <div className="profile-field-value">
-                    {loadingStore
-                      ? "جاري التحميل..."
-                      : form.commission
-                        ? `${form.commission}%`
-                        : "غير محددة"}
+                    {loadingStore ? "جاري التحميل..." : (form.commission ? `${form.commission}%` : "غير محددة")}
                   </div>
                 </div>
                 <div className="profile-field">
@@ -289,11 +315,11 @@ export default function MediatorProfile() {
               {error && <p className="form-error">{error}</p>}
 
               <div className="profile-edit-actions">
-                <button className="btn btn-outline" onClick={handleCancel}>
+                <button className="btn btn-outline" onClick={handleCancel} disabled={saving}>
                   إلغاء
                 </button>
-                <button className="btn btn-primary" onClick={handleSave}>
-                  حفظ التغييرات
+                <button className="btn btn-primary" onClick={handleSave} disabled={saving}>
+                  {saving ? "جاري الحفظ..." : "حفظ التغييرات"}
                 </button>
               </div>
             </div>

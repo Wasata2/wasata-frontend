@@ -1,13 +1,28 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
-import { getServices, createService, updateService, toggleService } from "../api";
+import { getServices, createService, updateService, toggleService, deleteService } from "../api";
 
-// أيقونات الخدمة المتاحة للاختيار من بينها
-const ICONS = ["🔍", "💎", "✂️", "🎁", "📦", "💬", "🔄", "📍", "🚚", "🖼️"];
+// أيقونات الخدمة المتاحة للاختيار من بينها — value لازم يطابق القيم المقبولة بالباك اند بالظبط
+const ICONS = [
+  { value: "search", label: "🔍" },
+  { value: "diamond", label: "💎" },
+  { value: "scissors", label: "✂️" },
+  { value: "gift", label: "🎁" },
+  { value: "tag", label: "🏷️" },
+  { value: "chat", label: "💬" },
+  { value: "refresh", label: "🔄" },
+  { value: "pin", label: "📍" },
+  { value: "truck", label: "🚚" },
+  { value: "photo", label: "🖼️" },
+];
 
-// أنواع الرسوم المتاحة
+function iconEmoji(value) {
+  return ICONS.find((i) => i.value === value)?.label || "❔";
+}
+
+// أنواع الرسوم المتاحة — القيم لازم تطابق القيم المقبولة بالباك اند بالظبط
 const FEE_TYPES = [
-  { key: "case", label: "حسب الحالة" },
+  { key: "variable", label: "حسب الحالة" },
   { key: "percentage", label: "نسبة مئوية" },
   { key: "fixed", label: "مبلغ ثابت" },
   { key: "free", label: "مجاني" },
@@ -15,14 +30,14 @@ const FEE_TYPES = [
 
 function feeLabel(service) {
   if (service.feeType === "free") return "مجاني";
-  if (service.feeType === "case") return "حسب الحالة";
+  if (service.feeType === "variable") return "حسب الحالة";
   if (service.feeType === "percentage") return `عمولة ${service.feeValue}%`;
   if (service.feeType === "fixed") return `ابتداء من ${service.feeValue} ₪`;
   return "";
 }
 
 const emptyForm = {
-  icon: ICONS[0],
+  icon: ICONS[0].value,
   name: "",
   description: "",
   feeType: "free",
@@ -59,6 +74,7 @@ export default function MediatorServices() {
   const [saving, setSaving] = useState(false);
 
   const [confirmToggle, setConfirmToggle] = useState(null); // الخدمة يلي عم نأكد تفعيلها/تعطيلها
+  const [confirmDelete, setConfirmDelete] = useState(null); // الخدمة يلي عم نأكد حذفها
   const [toast, setToast] = useState("");
 
   const showToast = (message) => {
@@ -132,6 +148,23 @@ export default function MediatorServices() {
     }
   };
 
+  const [deleteError, setDeleteError] = useState("");
+
+  const confirmDeleteService = async () => {
+    if (!confirmDelete) return;
+    setDeleteError("");
+    try {
+      await deleteService(confirmDelete.id);
+      setServices((prev) => prev.filter((s) => s.id !== confirmDelete.id));
+      showToast("تم حذف الخدمة بنجاح ✓");
+      setConfirmDelete(null);
+    } catch (err) {
+      // نخلي النافذة مفتوحة والرسالة ظاهرة (متل رسالة "الخدمة مستخدمة بطلب سابق")
+      // بدل ما تختفي بسرعة كـ toast عابر
+      setDeleteError(err.message);
+    }
+  };
+
   return (
     <div className="dashboard-layout">
       {/* ===== نفس القائمة الجانبية الموجودة بباقي صفحات لوحة التحكم ===== */}
@@ -194,6 +227,9 @@ export default function MediatorServices() {
         ) : loadError ? (
           <div className="empty-orders">
             <p>تعذر تحميل الخدمات: {loadError}</p>
+            <Link to="/create-store" className="btn btn-primary" style={{ marginTop: "12px", display: "inline-block" }}>
+              الذهاب لإنشاء المتجر
+            </Link>
           </div>
         ) : services.length === 0 ? (
           <div className="empty-orders">
@@ -202,7 +238,7 @@ export default function MediatorServices() {
         ) : (
           services.map((service) => (
             <div className="service-card" key={service.id}>
-              <div className="service-icon-badge">{service.icon}</div>
+              <div className="service-icon-badge">{iconEmoji(service.icon)}</div>
 
               <div className="service-content">
                 <div className="service-name">{service.name}</div>
@@ -226,6 +262,15 @@ export default function MediatorServices() {
                 >
                   {service.available ? "تعطيل" : "تفعيل"}
                 </button>
+                <button
+                  className="btn-delete-service"
+                  onClick={() => {
+                    setConfirmDelete(service);
+                    setDeleteError("");
+                  }}
+                >
+                  🗑 حذف
+                </button>
               </div>
             </div>
           ))
@@ -248,11 +293,11 @@ export default function MediatorServices() {
                   {ICONS.map((icon) => (
                     <button
                       type="button"
-                      key={icon}
-                      className={`icon-picker-btn ${form.icon === icon ? "selected" : ""}`}
-                      onClick={() => setForm((prev) => ({ ...prev, icon }))}
+                      key={icon.value}
+                      className={`icon-picker-btn ${form.icon === icon.value ? "selected" : ""}`}
+                      onClick={() => setForm((prev) => ({ ...prev, icon: icon.value }))}
                     >
-                      {icon}
+                      {icon.label}
                     </button>
                   ))}
                 </div>
@@ -378,6 +423,41 @@ export default function MediatorServices() {
                   {confirmToggle.available ? "تعطيل الخدمة" : "تفعيل الخدمة"}
                 </button>
                 <button className="btn btn-outline" onClick={() => setConfirmToggle(null)}>
+                  إلغاء
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ===== نافذة تأكيد الحذف ===== */}
+        {confirmDelete && (
+          <div
+            className="modal-overlay"
+            onClick={() => {
+              setConfirmDelete(null);
+              setDeleteError("");
+            }}
+          >
+            <div className="confirm-modal-card" onClick={(e) => e.stopPropagation()}>
+              <div className="confirm-icon-badge danger">🗑</div>
+              <h3>حذف الخدمة</h3>
+              <p>
+                هل متأكدة من حذف خدمة «{confirmDelete.name}»؟ هذا الإجراء نهائي ولا يمكن
+                التراجع عنه.
+              </p>
+              {deleteError && <p className="form-error">{deleteError}</p>}
+              <div className="confirm-modal-actions">
+                <button className="btn-danger" onClick={confirmDeleteService}>
+                  حذف نهائيًا
+                </button>
+                <button
+                  className="btn btn-outline"
+                  onClick={() => {
+                    setConfirmDelete(null);
+                    setDeleteError("");
+                  }}
+                >
                   إلغاء
                 </button>
               </div>

@@ -152,6 +152,7 @@ export async function updateStore(storeId, data) {
   const token = localStorage.getItem('token');
 
   const formData = new FormData();
+  formData.append('_method', 'PUT');
   if (data.name !== undefined) formData.append('name', data.name);
   if (data.bio !== undefined) formData.append('bio', data.bio);
   if (data.phone !== undefined) formData.append('phone', data.phone);
@@ -160,16 +161,15 @@ export async function updateStore(storeId, data) {
     formData.append('accepts_whatsapp_orders', data.accepts_whatsapp_orders ? 1 : 0);
   }
   if (data.image) {
-    formData.append('image', data.image); // لازم ملف حقيقي، مش blob URL
+    formData.append('image', data.image); 
   }
 
   const response = await fetch(`${BASE_URL}/api/stores/${storeId}`, {
-    method: 'PUT',
+     method: 'POST',
     credentials: 'include',
     headers: {
       'Accept': 'application/json',
       'Authorization': `Bearer ${token}`,
-      // ما نحدد Content-Type يدويًا — نفس مبدأ createStore
     },
     body: formData,
   });
@@ -211,18 +211,14 @@ export async function updateProfile(data) {
 
   return result;
 }
-// ===== الخدمات (Services) =====
-// ملاحظة: أسماء الحقول بالباك اند (fee_type, fee_value, is_available) افتراض بناءً
-// على أسلوب snake_case المستخدم بباقي الـ endpoints (زي is_accepting_orders) —
-// إذا طلعت مختلفة وقت التجربة، بس عدّلي الأسماء بالدالتين هدول.
 function mapServiceFromApi(s) {
   return {
     id: s.id,
     icon: s.icon,
-    name: s.name,
+    name: s.title,
     description: s.description,
     feeType: s.fee_type,
-    feeValue: s.fee_value,
+    feeValue: s.fee_amount,
     notes: s.notes || '',
     available: !!s.is_available,
   };
@@ -231,10 +227,10 @@ function mapServiceFromApi(s) {
 function mapServiceToApi(service) {
   return {
     icon: service.icon,
-    name: service.name,
+    title: service.name,
     description: service.description,
     fee_type: service.feeType,
-    fee_value: service.feeValue || null,
+    fee_amount: service.feeValue || null,
     notes: service.notes || '',
     is_available: service.available,
   };
@@ -271,9 +267,12 @@ export async function createService(service) {
     body: JSON.stringify(mapServiceToApi(service)),
   });
   const result = await response.json();
-  if (!response.ok) {
-    throw new Error(result.message || 'حدث خطأ أثناء إضافة الخدمة');
-  }
+ if (!response.ok) {
+  const details = result.errors
+    ? Object.values(result.errors).flat().join(' / ')
+    : '';
+  throw new Error(details || result.message || 'حدث خطأ أثناء إضافة الخدمة');
+}
   return mapServiceFromApi(result.service || result);
 }
 
@@ -290,9 +289,12 @@ export async function updateService(id, service) {
     body: JSON.stringify(mapServiceToApi(service)),
   });
   const result = await response.json();
-  if (!response.ok) {
-    throw new Error(result.message || 'حدث خطأ أثناء تعديل الخدمة');
-  }
+ if (!response.ok) {
+  const details = result.errors
+    ? Object.values(result.errors).flat().join(' / ')
+    : '';
+  throw new Error(details || result.message || 'حدث خطأ أثناء إضافة الخدمة');
+}
   return mapServiceFromApi(result.service || result);
 }
 
@@ -311,6 +313,27 @@ export async function toggleService(id) {
     throw new Error(result.message || 'حدث خطأ أثناء تغيير حالة الخدمة');
   }
   return mapServiceFromApi(result.service || result);
+}
+export async function deleteService(id) {
+  const token = localStorage.getItem('token');
+
+  const response = await fetch(`${BASE_URL}/api/services/${id}`, {
+    method: 'DELETE',
+    credentials: 'include',
+    headers: {
+      'Accept': 'application/json',
+      'Authorization': `Bearer ${token}`,
+    },
+  });
+
+  if (!response.ok) {
+    let result = {};
+    try { result = await response.json(); } catch (e) {}
+    const details = result.errors ? Object.values(result.errors).flat().join(' / ') : '';
+    throw new Error(details || result.message || 'حدث خطأ أثناء حذف الخدمة');
+  }
+
+  return true;
 }
 export async function forgotPassword(email) {
   await getCsrfCookie();
@@ -359,4 +382,103 @@ export async function resetPassword({ email, token, password, passwordConfirmati
   }
 
   return result;
+}
+
+export async function getOrderStats() {
+  const token = localStorage.getItem('token');
+
+  const response = await fetch(`${BASE_URL}/api/orders/stats`, {
+    method: 'GET',
+    credentials: 'include',
+    headers: {
+      'Accept': 'application/json',
+      'Authorization': `Bearer ${token}`,
+    },
+  });
+
+  const result = await response.json();
+
+  if (!response.ok) {
+    throw new Error(result.message || 'تعذر جلب إحصائيات الطلبات');
+  }
+
+  return {
+    newCount: result.new_count ?? 0,
+    inProgressCount: result.in_progress_count ?? 0,
+    completedCount: result.completed_count ?? 0,
+    rejectedCount: result.rejected_count ?? 0,
+    total: result.total ?? 0,
+  };
+}
+
+function mapOrderItemFromApi(item) {
+  return {
+    id: item.id,
+    name: item.product_name,
+    image: item.image_url,
+    sheinUrl: item.shein_url,
+    color: item.color,
+    size: item.size,
+    quantity: item.quantity,
+    notes: item.notes,
+  };
+}
+
+function mapOrderFromApi(o) {
+  return {
+    id: o.id,
+    customer: o.customer_name,
+    date: o.created_at,
+    itemsCount: o.items_count ?? (o.items ? o.items.length : 0),
+    amount: o.total_amount,
+    status: o.status,
+    items: (o.items || []).map(mapOrderItemFromApi),
+  };
+}
+
+export async function getOrders(filters = {}) {
+  const token = localStorage.getItem('token');
+  const params = new URLSearchParams();
+  if (filters.status) params.append('status', filters.status);
+  if (filters.date) params.append('date', filters.date);
+  if (filters.search) params.append('search', filters.search);
+
+  const response = await fetch(`${BASE_URL}/api/orders?${params.toString()}`, {
+    method: 'GET',
+    credentials: 'include',
+    headers: {
+      'Accept': 'application/json',
+      'Authorization': `Bearer ${token}`,
+    },
+  });
+
+  const result = await response.json();
+
+  if (!response.ok) {
+    throw new Error(result.message || 'تعذر جلب الطلبات');
+  }
+
+  const list = result.orders || result.data || result;
+  return Array.isArray(list) ? list.map(mapOrderFromApi) : [];
+}
+
+export async function getOrderDetails(id) {
+  const token = localStorage.getItem('token');
+
+  const response = await fetch(`${BASE_URL}/api/orders/${id}`, {
+    method: 'GET',
+    credentials: 'include',
+    headers: {
+      'Accept': 'application/json',
+      'Authorization': `Bearer ${token}`,
+    },
+  });
+
+  const result = await response.json();
+
+  if (!response.ok) {
+    throw new Error(result.message || 'تعذر جلب تفاصيل الطلب');
+  }
+
+  return mapOrderFromApi(result.order || result);
 }
