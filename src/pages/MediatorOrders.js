@@ -105,12 +105,6 @@ export default function MediatorOrders() {
           <Link to="/mediator-services" className="sidebar-link">
             <span className="sidebar-icon">🛍</span> الخدمات
           </Link>
-          <a href="#" className="sidebar-link">
-            <span className="sidebar-icon">📅</span> الجدول والسعة
-          </a>
-          <a href="#" className="sidebar-link">
-            <span className="sidebar-icon">💳</span> المالية
-          </a>
           <Link to="/mediator-reviews" className="sidebar-link">
             <span className="sidebar-icon">⭐</span> التقييمات
           </Link>
