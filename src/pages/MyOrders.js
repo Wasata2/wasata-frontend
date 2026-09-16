@@ -1,4 +1,16 @@
 import { useState, useMemo } from "react";
+
+// تحويل وقت مخزّن (timestamp) لنص "منذ كذا" — بيتحسب وقت العرض، مش وقت الإنشاء
+function getRelativeTime(timestamp) {
+  const diffSeconds = Math.floor((Date.now() - timestamp) / 1000);
+  if (diffSeconds < 60) return "الآن";
+  const diffMinutes = Math.floor(diffSeconds / 60);
+  if (diffMinutes < 60) return `منذ ${diffMinutes} دقيقة`;
+  const diffHours = Math.floor(diffMinutes / 60);
+  if (diffHours < 24) return `منذ ${diffHours} ساعة`;
+  const diffDays = Math.floor(diffHours / 24);
+  return `منذ ${diffDays} يوم`;
+}
 import { Link } from "react-router-dom";
 
 export default function MyOrders() {
@@ -11,17 +23,7 @@ export default function MyOrders() {
   // حطينا طلب وهمي واحد بس بحالة "نشطة" حتى تبين الصفحة شكلها وهي شغالة.
   // لاحقًا هاد المصفوفة بتتجاب من الـ API بدل ما تكون ثابتة هون.
   const [orders] = useState([
-    {
-      id: "1042",
-      type: "active", // active | completed | cancelled
-      price: "245",
-      store: "متجر ريم الدولي",
-      itemsCount: 3,
-      date: "20 أغسطس 2026",
-      statusLabel: "تم الشحن",
-      updatedAgo: "منذ 3 ساعات",
-      currentStepIndex: 2, // فهرس الخطوة الحالية بمصفوفة timelineSteps
-    },
+    ...(JSON.parse(localStorage.getItem("wasata_new_orders")) || []),
   ]);
 
   // خطوات مسار الطلب — بنفس الترتيب المتفق عليه بلوحة التحكم
@@ -134,9 +136,14 @@ export default function MyOrders() {
           </div>
         </div>
 
-        <div className="dashboard-welcome">
-          <h1>طلباتي</h1>
-          <p>تابعي طلباتك الحالية وراجعي سجل طلباتك السابقة.</p>
+        <div className="dashboard-welcome-row">
+          <div className="dashboard-welcome">
+            <h1>طلباتي</h1>
+            <p>تابعي طلباتك الحالية وراجعي سجل طلباتك السابقة.</p>
+          </div>
+          <Link to="/new-order" className="new-order-btn">
+            + طلب جديد
+          </Link>
         </div>
 
         {/* بطاقات الإحصائيات — ثابتة للعرض فقط، النشطة يمين والملغاة/المرفوضة يسار */}
@@ -237,7 +244,7 @@ export default function MyOrders() {
             <div className="order-list-card" key={order.id}>
               <div className="order-list-top">
                 <div className="order-list-info-col">
-                                    <div className="order-list-badge-row">
+                  <div className="order-list-badge-row">
                     <span
                       className={`order-list-status-badge status-${order.type}`}
                     >
@@ -250,7 +257,7 @@ export default function MyOrders() {
                     📦 {order.itemsCount} منتجات &nbsp; 🗓 {order.date}
                   </div>
                 </div>
-                <div className="order-list-price">{order.price} ر.س</div>
+                <div className="order-list-price">{order.price} ₪</div>
               </div>
 
               <div className="order-list-divider"></div>
@@ -264,8 +271,8 @@ export default function MyOrders() {
                         index < order.currentStepIndex
                           ? "done"
                           : index === order.currentStepIndex
-                          ? "current"
-                          : "upcoming";
+                            ? "current"
+                            : "upcoming";
                       return (
                         <div key={label} className={`timeline-step ${status}`}>
                           <div className="timeline-line"></div>
@@ -277,7 +284,9 @@ export default function MyOrders() {
                       );
                     })}
                   </div>
-                  <div className="order-updated">آخر تحديث: {order.updatedAgo}</div>
+                  <div className="order-updated">
+                    آخر تحديث: {order.updatedAt ? getRelativeTime(order.updatedAt) : order.updatedAgo}
+                  </div>
                   <div className="order-actions">
                     <Link to="#" className="btn btn-outline">
                       عرض التفاصيل
