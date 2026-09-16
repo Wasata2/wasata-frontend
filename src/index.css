@@ -2187,6 +2187,376 @@ footer .copyright{font-size:12px;color:var(--gray-light);}
   gap:8px;
   margin-bottom:6px;
 }
+/* ============ إعادة تصميم الملف الشخصي للوسيطة (MediatorProfile) ============ */
+.profile-hero-card{
+  background:#fff;
+  border:1px solid var(--line);
+  border-radius:18px;
+  overflow:hidden;
+  margin-bottom:24px;
+}
+.profile-hero-banner{
+  height:140px;
+  background:var(--brand-gradient);
+  position:relative;
+}
+.profile-preview-link{
+  position:absolute;
+  bottom:14px;
+  right:24px;
+  background:#fff;
+  border:none;
+  color:var(--blue);
+  font-size:13px;
+  font-weight:700;
+  padding:9px 18px;
+  border-radius:20px;
+  cursor:pointer;
+  box-shadow:0 4px 14px rgba(16,24,40,.12);
+}
+.profile-preview-link:hover{ filter:brightness(0.97); }
+.profile-hero-body{
+  display:flex;
+  align-items:flex-start;
+  gap:20px;
+  padding:0 28px 24px;
+  flex-wrap:wrap;
+}
+.profile-hero-avatar-wrap{
+  position:relative;
+  flex-shrink:0;
+  margin-top:-40px;
+}
+.profile-hero-avatar{
+  width:96px;height:96px;
+  border-radius:50%;
+  background:var(--blue);
+  color:#fff;
+  border:4px solid #fff;
+  display:flex;align-items:center;justify-content:center;
+  font-size:32px;
+  font-weight:800;
+  background-size:cover;
+  background-position:center;
+}
+.hero-availability-dot{
+  position:absolute;
+  bottom:6px;
+  left:2px;
+  width:16px;height:16px;
+  border-radius:50%;
+  border:3px solid #fff;
+}
+.hero-availability-dot.online{ background:var(--green); }
+.hero-availability-dot.offline{ background:var(--gray-light); }
+.profile-hero-info{
+  padding-top:16px;
+  flex:1;
+  min-width:220px;
+}
+.profile-hero-name-row{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  margin-bottom:8px;
+  flex-wrap:wrap;
+}
+.profile-hero-name-row h2{ font-size:22px; font-weight:900; }
+.profile-role-badge{
+  background:var(--blue-tint);
+  color:var(--blue);
+  font-size:12px;
+  font-weight:700;
+  padding:4px 14px;
+  border-radius:20px;
+}
+.profile-hero-rating{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  margin-bottom:8px;
+  flex-wrap:wrap;
+}
+.profile-hero-rating-number{ font-size:15px; font-weight:800; }
+.reviews-count-pill.sm{ padding:3px 10px; font-size:11px; margin-top:0; }
+.commission-pill{
+  background:#fdf2fa;
+  color:#8A157D;
+  font-size:12px;
+  font-weight:700;
+  padding:4px 12px;
+  border-radius:20px;
+}
+.profile-hero-location{
+  font-size:13px;
+  color:var(--gray-light);
+}
+
+/* ===== رأس القسم المشترك: عنوان + رابط/زر تعديل ===== */
+.section-header-row{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  margin-bottom:18px;
+  flex-wrap:wrap;
+  gap:10px;
+}
+.section-header-row h3{ font-size:16px; font-weight:800; }
+.edit-link-btn{
+  background:none;
+  border:none;
+  color:var(--blue);
+  font-size:13px;
+  font-weight:700;
+  cursor:pointer;
+  display:inline-flex;
+  align-items:center;
+  gap:4px;
+}
+.edit-link-btn:hover{ opacity:.75; }
+.btn-sm{ padding:9px 18px; font-size:13px; }
+
+/* ===== بطاقة بيانات الحساب ===== */
+.account-data-card{
+  background:#fff;
+  border:1px solid var(--line);
+  border-radius:18px;
+  padding:24px 28px;
+  margin-bottom:24px;
+}
+.account-data-rows{ display:flex; flex-direction:column; }
+.account-data-row{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  padding:13px 0;
+  border-bottom:1px solid var(--line);
+  font-size:14px;
+}
+.account-data-row:last-child{ border-bottom:none; }
+.account-data-label{ color:var(--gray-light); }
+.account-data-value{ font-weight:700; }
+
+/* ===== بطاقة معلومات تظهر للزبائن / الخدمات ===== */
+.public-info-card{
+  background:#fff;
+  border:1px solid var(--line);
+  border-radius:18px;
+  padding:24px 28px;
+  margin-bottom:24px;
+}
+.public-info-card-title{ font-size:16px; font-weight:800; margin-bottom:14px; }
+.public-info-bio{ margin-bottom:20px; }
+.public-info-bio-text{
+  font-size:14px;
+  color:var(--ink);
+  line-height:1.9;
+  background:#f7f8fc;
+  border-radius:12px;
+  padding:16px;
+  margin-top:6px;
+}
+.public-info-stats{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:16px;
+}
+.public-stat-box{
+  background:#f7f8fc;
+  border-radius:14px;
+  padding:18px 20px;
+}
+.public-stat-box.center{ text-align:center; }
+.public-stat-title{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  font-size:14px;
+  font-weight:800;
+  margin-bottom:4px;
+}
+.status-dot{
+  width:9px;height:9px;
+  border-radius:50%;
+  display:inline-block;
+}
+.status-dot.on{ background:var(--green); }
+.status-dot.off{ background:var(--gray-light); }
+.public-stat-value{
+  font-size:24px;
+  font-weight:900;
+  color:var(--blue);
+  margin-bottom:4px;
+}
+.public-stat-sub{ font-size:12px; color:var(--gray-light); }
+
+.services-tags-row{ display:flex; flex-wrap:wrap; gap:10px; }
+.service-tag{
+  background:var(--blue-tint);
+  color:var(--blue);
+  font-size:13px;
+  font-weight:700;
+  padding:7px 16px;
+  border-radius:20px;
+}
+
+/* ===== وضع معاينة الملف كما يظهر للزبائن ===== */
+.preview-topbar{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  padding:16px 0 24px;
+}
+.preview-topbar .back-link{
+  background:none;
+  border:none;
+  cursor:pointer;
+  font-family:'El Messiri', sans-serif;
+}
+.profile-preview-wrap{
+  max-width:640px;
+  margin:0 auto;
+  padding-bottom:40px;
+}
+.rating-average.standalone{
+  border-inline-start:none;
+  padding-inline-start:0;
+  margin-bottom:18px;
+}
+.preview-bottom-bar{
+  position:sticky;
+  bottom:0;
+  background:#f7f8fc;
+  padding:16px 0;
+  max-width:640px;
+  margin:0 auto;
+}
+.preview-cta{
+  display:block;
+  width:100%;
+  text-align:center;
+  padding:15px;
+  font-size:15px;
+}
+/* ============ مسار الطلب (Order Tracking) — صفحة تفاصيل الطلب ============ */
+.order-track-row{
+  display:flex;
+  align-items:flex-start;
+  gap:0;
+  padding:8px 0 4px;
+}
+.order-track-step{
+  flex:1;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  text-align:center;
+  min-width:0;
+}
+.order-track-step-top{
+  display:flex;
+  align-items:center;
+  width:100%;
+}
+.order-track-step-top:first-child{ margin-inline-start:auto; }
+.order-track-circle{
+  width:40px;height:40px;
+  border-radius:50%;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-size:14px;
+  font-weight:800;
+  flex-shrink:0;
+  margin:0 auto;
+}
+.order-track-circle.upcoming{ background:var(--blue-tint); color:var(--gray-light); }
+.order-track-circle.current{ background:var(--blue); color:#fff; }
+.order-track-circle.done{ background:var(--blue); color:#fff; }
+.order-track-connector{
+  flex:1;
+  height:2px;
+  background:var(--line);
+  margin-top:20px;
+}
+.order-track-connector.filled{ background:var(--blue); }
+.order-track-label{
+  font-size:13px;
+  color:var(--gray-light);
+  margin-top:10px;
+  font-weight:600;
+}
+.order-track-label.active{ color:var(--ink); font-weight:800; }
+.order-track-date{
+  font-size:11px;
+  color:var(--gray-light);
+  margin-top:4px;
+}
+.order-track-progress-bar-wrap{
+  height:8px;
+  background:var(--blue-tint);
+  border-radius:20px;
+  margin-top:20px;
+  overflow:hidden;
+}
+.order-track-progress-bar{
+  height:100%;
+  width:100%;
+  background:var(--brand-gradient);
+  border-radius:20px;
+}
+.order-track-updated-at{
+  font-size:13px;
+  color:var(--gray-light);
+  margin-top:16px;
+  text-align:left;
+}
+
+/* ===== بطاقة تحديث حالة الطلب ===== */
+.order-status-update-card{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:16px;
+  flex-wrap:wrap;
+}
+.current-status-pill{
+  display:inline-flex;
+  align-items:center;
+  gap:8px;
+  background:var(--blue-tint);
+  color:var(--blue);
+  font-size:13px;
+  font-weight:700;
+  padding:6px 14px;
+  border-radius:20px;
+  margin-top:10px;
+}
+.current-status-dot{
+  width:8px;height:8px;
+  border-radius:50%;
+  background:var(--blue);
+  display:inline-block;
+}
+.order-completed-pill{
+  display:inline-flex;
+  align-items:center;
+  gap:6px;
+  background:#dcfce7;
+  color:#15803d;
+  font-size:14px;
+  font-weight:800;
+  padding:10px 22px;
+  border-radius:24px;
+}
+
+/* ===== نوافذ تحديث/تأكيد الحالة ===== */
+.current-status-line{ font-size:14px; margin-bottom:14px; }
+.next-status-btn{ width:100%; margin-top:8px; }
+.confirm-modal-card{ max-width:420px; }
+.confirm-question{ font-size:15px; margin-bottom:20px; text-align:center; }
+.confirm-actions{ display:flex; gap:12px; }
+.confirm-actions .btn{ flex:1; }
 /* ============ Responsive ============ */
 @media (max-width:1024px){
   .suggested-grid{grid-template-columns:repeat(2,1fr);}}
