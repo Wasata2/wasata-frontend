@@ -1,19 +1,6 @@
-import { useState, useMemo } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Link } from "react-router-dom";
-
-// TODO: تقييم واحد وهمي بس لتوضيح الشكل — لاحقًا لازم يتعبى من تقييمات الزبائن
-// الحقيقية عن طريق endpoint من الباك اند (نفس ملاحظة الطلبات بصفحة MediatorOrders)
-const DEMO_REVIEWS = [
-  {
-    id: 1,
-    customer: "سارة أحمد",
-    date: "2026-08-24",
-    rating: 5,
-    comment:
-      "الخدمة كانت ممتازة والطلب وصل في الموعد المحدد تمامًا. أنصح الجميع بالتعامل مع هذه الوسيطة.",
-    orderId: "1042",
-  },
-];
+import { getReviews } from "../api";
 
 function StarRating({ rating, size }) {
   return (
@@ -38,21 +25,30 @@ export default function MediatorReviews() {
   const userName = storedUser.full_name || "مستخدمة";
   const userInitial = userName.charAt(0);
 
-  const [reviews] = useState(DEMO_REVIEWS);
+  const [reviews, setReviews] = useState([]);
+  const [summary, setSummary] = useState({ total: 0, avg: "0.0", dist: [] });
+  const [loadingReviews, setLoadingReviews] = useState(true);
+  const [loadError, setLoadError] = useState("");
   const [sortBy, setSortBy] = useState("newest");
 
-  // ملخص التقييمات (المتوسط + توزيع النجوم) محسوب تلقائيًا من البيانات الفعلية —
-  // مش أرقام ثابتة، عشان يضل صحيح مهما تغيّر عدد التقييمات الحقيقي لاحقًا
-  const summary = useMemo(() => {
-    const total = reviews.length;
-    const avg = total ? reviews.reduce((sum, r) => sum + r.rating, 0) / total : 0;
-    const dist = [5, 4, 3, 2, 1].map((star) => {
-      const count = reviews.filter((r) => r.rating === star).length;
-      const pct = total ? Math.round((count / total) * 100) : 0;
-      return { star, pct };
-    });
-    return { total, avg: avg.toFixed(1), dist };
-  }, [reviews]);
+  // تقييمات الزبائن الحقيقية + ملخصها (المتوسط والتوزيع) — جاهزين من الباك اند
+  // مباشرة، ما في داعي نحسبهم يدويًا بالفرونت
+  useEffect(() => {
+    getReviews()
+      .then((data) => {
+        setReviews(data.reviews);
+        setSummary({
+          total: data.totalReviews,
+          avg: data.averageRating.toFixed(1),
+          dist: data.distribution,
+        });
+        setLoadingReviews(false);
+      })
+      .catch((err) => {
+        setLoadError(err.message);
+        setLoadingReviews(false);
+      });
+  }, []);
 
   const sortedReviews = useMemo(() => {
     const copy = [...reviews];
@@ -152,7 +148,15 @@ export default function MediatorReviews() {
         </div>
 
         {/* قائمة التقييمات */}
-        {sortedReviews.length === 0 ? (
+        {loadingReviews ? (
+          <div className="empty-orders">
+            <p>جاري التحميل...</p>
+          </div>
+        ) : loadError ? (
+          <div className="empty-orders">
+            <p>تعذر تحميل التقييمات: {loadError}</p>
+          </div>
+        ) : sortedReviews.length === 0 ? (
           <div className="empty-orders">
             <p>لا توجد تقييمات بعد.</p>
           </div>

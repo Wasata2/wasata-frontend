@@ -1,13 +1,17 @@
 import { useState, useEffect, useMemo } from "react";
 import { Link } from "react-router-dom";
-import { getOrders, getOrderStats } from "../api";
+import { getOrders, getOrderStats, acceptOrder, rejectOrder } from "../api";
 
-// وصف كل حالة طلب: النص الظاهر وصنف الـ CSS الخاص فيها (status-badge.<className>)
+// وصف كل حالة طلب: النص الظاهر وصنف الـ CSS الخاص فيها (status-badge.<className>) —
+// نفس الحالات الحقيقية السبعة القادمة من الباك اند (وليس new/in_progress/completed القديمة الوهمية)
 const STATUS_META = {
-  new: { label: "جديد", className: "new" },
-  in_progress: { label: "قيد التنفيذ", className: "progress" },
-  completed: { label: "مكتمل", className: "done" },
-  rejected: { label: "مرفوض", className: "rejected" },
+  pending: { label: "تم الطلب", className: "pending" },
+  ordered_from_shein: { label: "تم الطلب من SHEIN", className: "ordered" },
+  shipped: { label: "تم الشحن", className: "shipped" },
+  arrived: { label: "وصلت", className: "progress" },
+  inspected: { label: "تم الفحص", className: "ready" },
+  received: { label: "تم الاستلام", className: "done" },
+  cancelled: { label: "ملغي", className: "rejected" },
 };
 
 const PAGE_SIZE = 6;
@@ -21,6 +25,10 @@ export default function MediatorOrders() {
   const [stats, setStats] = useState(null);
   const [loadingOrders, setLoadingOrders] = useState(true);
   const [loadError, setLoadError] = useState("");
+
+  // معرف الطلب يلي عم تنعمل عليه عملية قبول/رفض حاليًا (لتعطيل زرارها وقت الطلب فقط)
+  const [actionOrderId, setActionOrderId] = useState(null);
+  const [actionError, setActionError] = useState("");
 
   const [activeTab, setActiveTab] = useState("all");
   const [dateFilter, setDateFilter] = useState("");
@@ -40,6 +48,32 @@ export default function MediatorOrders() {
         setLoadingOrders(false);
       });
   }, []);
+
+  const handleAccept = async (orderId) => {
+    setActionError("");
+    setActionOrderId(orderId);
+    try {
+      const updated = await acceptOrder(orderId);
+      setOrders((prev) => prev.map((o) => (o.id === orderId ? updated : o)));
+    } catch (err) {
+      setActionError(err.message);
+    } finally {
+      setActionOrderId(null);
+    }
+  };
+
+  const handleReject = async (orderId) => {
+    setActionError("");
+    setActionOrderId(orderId);
+    try {
+      const updated = await rejectOrder(orderId);
+      setOrders((prev) => prev.map((o) => (o.id === orderId ? updated : o)));
+    } catch (err) {
+      setActionError(err.message);
+    } finally {
+      setActionOrderId(null);
+    }
+  };
 
   // عدد الطلبات لكل حالة، لعرضه جوا تبويبات الفلترة
   const counts = useMemo(() => {
@@ -74,11 +108,14 @@ export default function MediatorOrders() {
   };
 
   const tabs = [
-    { key: "rejected", label: "مرفوضة" },
-    { key: "completed", label: "مكتملة" },
-    { key: "in_progress", label: "قيد التنفيذ" },
-    { key: "new", label: "جديدة" },
     { key: "all", label: "الكل" },
+    { key: "pending", label: "تم الطلب" },
+    { key: "ordered_from_shein", label: "تم الطلب من SHEIN" },
+    { key: "shipped", label: "تم الشحن" },
+    { key: "arrived", label: "وصلت" },
+    { key: "inspected", label: "تم الفحص" },
+    { key: "received", label: "تم الاستلام" },
+    { key: "cancelled", label: "ملغاة" },
   ];
 
   return (
@@ -139,6 +176,8 @@ export default function MediatorOrders() {
             <p>تعذر تحميل الطلبات: {loadError}</p>
           </div>
         )}
+
+        {actionError && <p className="form-error">{actionError}</p>}
 
         {/* بطاقات الإحصائيات */}
         {stats && (
@@ -277,10 +316,24 @@ export default function MediatorOrders() {
                           <Link to={`/mediator-orders/${order.id}`} className="details-link">
                             عرض التفاصيل
                           </Link>
-                          {order.status === "new" && (
+                          {order.status === "pending" && (
                             <span className="row-actions">
-                              <button className="icon-btn accept">✓</button>
-                              <button className="icon-btn reject">✕</button>
+                              <button
+                                className="icon-btn accept"
+                                onClick={() => handleAccept(order.id)}
+                                disabled={actionOrderId === order.id}
+                                title="قبول الطلب"
+                              >
+                                ✓
+                              </button>
+                              <button
+                                className="icon-btn reject"
+                                onClick={() => handleReject(order.id)}
+                                disabled={actionOrderId === order.id}
+                                title="رفض الطلب"
+                              >
+                                ✕
+                              </button>
                             </span>
                           )}
                         </td>
