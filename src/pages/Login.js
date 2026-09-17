@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { loginUser } from "../api";
+import { useAuth } from "../context/AuthContext";
 
 export default function Login() {
   const [form, setForm] = useState({
@@ -11,6 +11,7 @@ export default function Login() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+  const { login } = useAuth();
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -31,22 +32,11 @@ export default function Login() {
     setLoading(true);
 
     try {
-      const result = await loginUser({
+
+      const result = await login({
         email: form.email,
         password: form.password,
       });
-      console.log("نجح تسجيل الدخول:", result);
-
-      // حفظ التوكن وبيانات المستخدمة — بدون هاد السطر، أي طلب محمي لاحقًا
-      // (مثل إنشاء متجر) بيرجع "Unauthenticated"
-      if (result.token) {
-        localStorage.setItem("token", result.token);
-      }
-      if (result.user) {
-        localStorage.setItem("user", JSON.stringify(result.user));
-      }
-
-      // التوجيه حسب نوع الحساب (role.name)
 
       const roleName = result.user.role.role_name;
       if (roleName === "broker") {
