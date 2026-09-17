@@ -118,6 +118,19 @@ export default function MediatorProfile() {
     }
   };
 
+  // تبديل سريع لحالة استقبال الطلبات من الـ topbar — بيحفظ فورًا بالباك اند
+  // (بدل ما يبقى تغيير محلي بس لحد ما تفتحي نافذة "تعديل المعلومات العامة")
+  const handleQuickToggleAccepting = async (checked) => {
+    const previous = acceptingOrders;
+    setAcceptingOrders(checked); // تحديث فوري بالواجهة
+    try {
+      await updateStore({ is_accepting_orders: checked });
+    } catch (err) {
+      setAcceptingOrders(previous); // رجّعيها لو فشل الحفظ
+      showToast(err.message);
+    }
+  };
+
   // ===== إجراءات تعديل بيانات الحساب =====
   const openAccountEdit = () => {
     setAccountForm({ ...form });
@@ -427,7 +440,7 @@ export default function MediatorProfile() {
                 <input
                   type="checkbox"
                   checked={acceptingOrders}
-                  onChange={(e) => setAcceptingOrders(e.target.checked)}
+                  onChange={(e) => handleQuickToggleAccepting(e.target.checked)}
                 />
                 <span className="slider"></span>
               </label>
@@ -439,7 +452,20 @@ export default function MediatorProfile() {
               <div className="user-name">{form.fullName}</div>
               <div className="user-store">وسيطة</div>
             </div>
-            <div className="user-avatar">{userInitial}</div>
+            <div
+              className="user-avatar"
+              style={
+                imagePreview
+                  ? {
+                      backgroundImage: `url(${imagePreview})`,
+                      backgroundSize: "cover",
+                      backgroundPosition: "center",
+                    }
+                  : undefined
+              }
+            >
+              {!imagePreview && userInitial}
+            </div>
           </div>
         </div>
 
@@ -455,7 +481,7 @@ export default function MediatorProfile() {
           <div className="section-header-row">
             <h3>بيانات الحساب</h3>
             {!editingAccount && (
-              <button className="edit-link-btn" onClick={openAccountEdit}>
+              <button className="btn btn-primary btn-sm" onClick={openAccountEdit}>
                 ✎ تعديل بيانات الحساب
               </button>
             )}
