@@ -191,10 +191,10 @@ export default function MediatorDashboard() {
             <Link to="/mediator-reviews" className="btn btn-primary">
             عرض التقييمات 
             </Link>
-            <Link to="/mediator-orders" className="btn btn-outline">
+            <Link to="/mediator-orders" className="btn btn-primary">
               عرض الطلبات
             </Link>
-            <Link to="/mediator-profile" className="btn btn-outline">
+            <Link to="/mediator-profile" className="btn btn-primary">
               الملف الشخصي
             </Link>
           </div>
