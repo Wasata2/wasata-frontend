@@ -1,3 +1,4 @@
+import { Link } from "react-router-dom";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
 
@@ -22,9 +23,9 @@ export default function Home() {
               ومتابعة طلبك بسهولة، نحن نوفر بيئة آمنة وشفافة لجميع معاملاتك.
             </p>
             <div className="hero-ctas">
-              <a href="#" className="btn btn-primary">
+              <Link to="/account-type" className="btn btn-primary">
                 ابدئي الآن
-              </a>
+              </Link>
               <a href="#how" className="btn btn-outline">
                 كيف تعمل وساطة؟
               </a>
@@ -128,9 +129,9 @@ export default function Home() {
           <h2>جاهزة تبدئي طلبك؟</h2>
           <p>اختاري الوسيطة المناسبة وابدئي طلبك بخطوات بسيطة.</p>
           <div className="hero-ctas">
-            <a href="#" className="btn btn-white">
+            <Link to="/account-type" className="btn btn-white">
               ابدئي الآن
-            </a>
+            </Link>
           </div>
         </div>
       </section>

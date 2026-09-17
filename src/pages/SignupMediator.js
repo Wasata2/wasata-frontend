@@ -49,6 +49,16 @@ export default function SignupMediator() {
         role: "broker",
       });
       console.log("نجح التسجيل:", result);
+
+      // حفظ التوكن وبيانات المستخدمة — بدونها صفحة "إنشاء المتجر" اللاحقة
+      // بترجع "Unauthenticated" لأنها محمية وبتحتاج توكن دخول
+      if (result.token) {
+        localStorage.setItem("token", result.token);
+      }
+      if (result.user) {
+        localStorage.setItem("user", JSON.stringify(result.user));
+      }
+
       navigate("/create-store");
     } catch (err) {
       setError(err.message);
@@ -145,8 +155,11 @@ export default function SignupMediator() {
                   onChange={handleChange}
                 />
                 <label htmlFor="terms">
+                  {/* روابط بديلة مؤقتًا لحد ما تنعمل صفحات حقيقية للشروط والخصوصية */}
+                  {/* eslint-disable jsx-a11y/anchor-is-valid */}
                   أوافق على <a href="#">الشروط والأحكام</a> و{" "}
                   <a href="#">سياسة الخصوصية</a>.
+                  {/* eslint-enable jsx-a11y/anchor-is-valid */}
                 </label>
               </div>
 

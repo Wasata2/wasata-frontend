@@ -37,6 +37,15 @@ export default function Login() {
       });
       console.log("نجح تسجيل الدخول:", result);
 
+      // حفظ التوكن وبيانات المستخدمة — بدون هاد السطر، أي طلب محمي لاحقًا
+      // (مثل إنشاء متجر) بيرجع "Unauthenticated"
+      if (result.token) {
+        localStorage.setItem("token", result.token);
+      }
+      if (result.user) {
+        localStorage.setItem("user", JSON.stringify(result.user));
+      }
+
       // التوجيه حسب نوع الحساب (role.name)
 
       const roleName = result.user.role.role_name;

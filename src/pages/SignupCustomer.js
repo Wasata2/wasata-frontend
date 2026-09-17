@@ -152,6 +152,8 @@ export default function SignupCustomer() {
                   checked={form.agree}
                   onChange={handleChange}
                 />
+                {/* روابط بديلة مؤقتًا لحد ما تنعمل صفحات حقيقية للشروط والخصوصية */}
+                {/* eslint-disable-next-line jsx-a11y/anchor-is-valid */}
                 <label htmlFor="terms">أوافق على <a href="#">الشروط والأحكام</a> و <a href="#">سياسة الخصوصية</a>.</label>
               </div>
 
