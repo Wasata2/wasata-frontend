@@ -1,25 +1,23 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
-import {
-  getServices,
-  getOrders,
-  getOrderStats,
-  getMyStore,
-  updateStore,
-  BASE_URL,
-} from "../api";
+import { getServices, getOrders, getOrderStats, getMyStore, updateStore, BASE_URL } from "../api";
 
+// رابط صورة المتجر يجي أحيانًا من الباك اند كمسار نسبي (بدون دومين) —
+// هاي الدالة بتتأكد إنه رابط كامل قبل ما نعرضه، وإلا بترجع null
 function resolveImageUrl(path) {
   if (!path) return null;
-  if (
-    /^https?:\/\//i.test(path) ||
-    path.startsWith("blob:") ||
-    path.startsWith("data:")
-  ) {
+  if (/^https?:\/\//i.test(path) || path.startsWith("blob:") || path.startsWith("data:")) {
     return path;
   }
-  return `${BASE_URL}${path.startsWith("/") ? "" : "/"}${path}`;
+  const clean = path.startsWith("/") ? path.slice(1) : path;
+  // لو الباك اند رجع بس اسم الملف من غير أي مجلد قبله (حالة الصور غالبًا)،
+  // منضيف مجلد storage/ الافتراضي يلي بلارافيل بيخزّن فيه الملفات المرفوعة والمتاحة عالعام
+  if (!clean.includes("/")) {
+    return `${BASE_URL}/storage/${clean}`;
+  }
+  return `${BASE_URL}/${clean}`;
 }
+
 export default function MediatorDashboard() {
   const [acceptingOrders, setAcceptingOrders] = useState(true);
   const [imagePreview, setImagePreview] = useState(null);
@@ -100,9 +98,7 @@ export default function MediatorDashboard() {
           </Link>
           <Link to="/mediator-orders" className="sidebar-link">
             <span className="sidebar-icon">📋</span> الطلبات
-            {newOrdersCount > 0 && (
-              <span className="sidebar-badge">{newOrdersCount}</span>
-            )}
+            {newOrdersCount > 0 && <span className="sidebar-badge">{newOrdersCount}</span>}
           </Link>
           <Link to="/mediator-services" className="sidebar-link">
             <span className="sidebar-icon">🛍</span> الخدمات
@@ -177,18 +173,14 @@ export default function MediatorDashboard() {
           <div className="stat-card">
             <div>
               <div className="stat-label">طلبات قيد التنفيذ</div>
-              <div className="stat-value">
-                {loadingOrders ? "…" : inProgressCount}
-              </div>
+              <div className="stat-value">{loadingOrders ? "…" : inProgressCount}</div>
             </div>
             <div className="stat-icon">📈</div>
           </div>
           <div className="stat-card">
             <div>
               <div className="stat-label">طلبات جديدة</div>
-              <div className="stat-value">
-                {loadingOrders ? "…" : newOrdersCount}
-              </div>
+              <div className="stat-value">{loadingOrders ? "…" : newOrdersCount}</div>
             </div>
             <div className="stat-icon">📦</div>
           </div>
@@ -197,10 +189,7 @@ export default function MediatorDashboard() {
         {/* بانر "لديك طلب جديد" — بيظهر بس لو فعليًا في طلب جديد بانتظار الرد */}
         {latestNewOrder && (
           <div className="new-order-banner">
-            <Link
-              to={`/mediator-orders/${latestNewOrder.id}`}
-              className="btn btn-primary"
-            >
+            <Link to={`/mediator-orders/${latestNewOrder.id}`} className="btn btn-primary">
               عرض الطلب
             </Link>
             <div className="new-order-banner-text">
@@ -221,7 +210,7 @@ export default function MediatorDashboard() {
               + إضافة خدمة
             </Link>
             <Link to="/mediator-reviews" className="btn btn-primary">
-              عرض التقييمات
+            عرض التقييمات 
             </Link>
             <Link to="/mediator-orders" className="btn btn-primary">
               عرض الطلبات
@@ -271,15 +260,10 @@ export default function MediatorDashboard() {
                       <td>{order.itemsCount}</td>
                       <td>{order.amount} ر.س</td>
                       <td>
-                        <span className={`status-badge ${order.status}`}>
-                          {order.status}
-                        </span>
+                        <span className={`status-badge ${order.status}`}>{order.status}</span>
                       </td>
                       <td>
-                        <Link
-                          to={`/mediator-orders/${order.id}`}
-                          className="details-link"
-                        >
+                        <Link to={`/mediator-orders/${order.id}`} className="details-link">
                           عرض التفاصيل
                         </Link>
                       </td>
