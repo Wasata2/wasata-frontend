@@ -1,4 +1,4 @@
-const BASE_URL = 'https://wasata-backend-production-nojkxd.laravel.cloud';
+export const BASE_URL = 'https://wasata-backend-production-nojkxd.laravel.cloud';
 
 export async function getCsrfCookie() {
   await fetch(`${BASE_URL}/sanctum/csrf-cookie`, {

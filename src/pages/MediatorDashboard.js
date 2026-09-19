@@ -1,7 +1,14 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
-import { getServices, getOrders, getOrderStats, getMyStore, updateStore } from "../api";
+import { getServices, getOrders, getOrderStats, getMyStore, updateStore, BASE_URL } from "../api";
 
+function resolveImageUrl(path) {
+  if (!path) return null;
+  if (/^https?:\/\//i.test(path) || path.startsWith("blob:") || path.startsWith("data:")) {
+    return path;
+  }
+  return `${BASE_URL}${path.startsWith("/") ? "" : "/"}${path}`;
+}
 export default function MediatorDashboard() {
   const [acceptingOrders, setAcceptingOrders] = useState(true);
   const [imagePreview, setImagePreview] = useState(null);
@@ -25,8 +32,7 @@ export default function MediatorDashboard() {
       .then((data) => {
         const store = data.store || data;
         setAcceptingOrders(!!store.is_accepting_orders);
-        setImagePreview(store.image_url || store.image || null);
-      })
+setImagePreview(resolveImageUrl(store.image_url || store.image));      })
       .catch(() => {});
 
     getServices()

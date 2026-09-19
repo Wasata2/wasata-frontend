@@ -1,12 +1,34 @@
 import { useState, useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
-import { getMyStore, updateProfile, updateStore, getServices, getReviews } from "../api";
+import {
+  getMyStore,
+  updateProfile,
+  updateStore,
+  getServices,
+  getReviews,
+  BASE_URL,
+} from "../api";
+
+function resolveImageUrl(path) {
+  if (!path) return null;
+  if (
+    /^https?:\/\//i.test(path) ||
+    path.startsWith("blob:") ||
+    path.startsWith("data:")
+  ) {
+    return path;
+  }
+  return `${BASE_URL}${path.startsWith("/") ? "" : "/"}${path}`;
+}
 
 function StarRating({ rating, size }) {
   return (
     <span className={`star-rating ${size || ""}`}>
       {[1, 2, 3, 4, 5].map((n) => (
-        <span key={n} className={n <= Math.round(rating) ? "star filled" : "star"}>
+        <span
+          key={n}
+          className={n <= Math.round(rating) ? "star filled" : "star"}
+        >
           ★
         </span>
       ))}
@@ -40,7 +62,11 @@ export default function MediatorProfile() {
 
   // ===== تعديل المعلومات العامة (نبذة / نسبة العمولة / استقبال الطلبات) =====
   const [generalModalOpen, setGeneralModalOpen] = useState(false);
-  const [generalForm, setGeneralForm] = useState({ bio: "", commission: "", acceptingOrders: true });
+  const [generalForm, setGeneralForm] = useState({
+    bio: "",
+    commission: "",
+    acceptingOrders: true,
+  });
   const [generalError, setGeneralError] = useState("");
   const [savingGeneral, setSavingGeneral] = useState(false);
 
@@ -73,7 +99,7 @@ export default function MediatorProfile() {
         setAcceptingOrders(!!store.is_accepting_orders);
         // إذا صار في رفع صورة جديدة أثناء ما هالنداء كان لسا شغال، منتجاهل نتيجته القديمة
         if (!imageJustUpdatedRef.current) {
-          setImagePreview(store.image_url || store.image || null);
+          setImagePreview(resolveImageUrl(store.image_url || store.image));
         }
         setLoadingStore(false);
       })
@@ -131,8 +157,11 @@ export default function MediatorProfile() {
       const storeResult = await updateStore({ image: file });
       const updatedStore = storeResult.store || {};
       imageJustUpdatedRef.current = true; // نمنع نداء getMyStore القديم من مسح الصورة الجديدة
-      if (updatedStore.image_url || updatedStore.image) {
-        setImagePreview(updatedStore.image_url || updatedStore.image);
+      const serverImage = resolveImageUrl(
+        updatedStore.image_url || updatedStore.image,
+      );
+      if (serverImage) {
+        setImagePreview(serverImage);
       }
       setImageFile(null);
       showToast("تم تحديث الصورة بنجاح ✓");
@@ -295,7 +324,9 @@ export default function MediatorProfile() {
           ) : (
             <div
               className="profile-hero-avatar"
-              style={{ backgroundImage: imagePreview ? `url(${imagePreview})` : "none" }}
+              style={{
+                backgroundImage: imagePreview ? `url(${imagePreview})` : "none",
+              }}
             >
               {!imagePreview && userInitial}
             </div>
@@ -315,13 +346,21 @@ export default function MediatorProfile() {
           </div>
           <div className="profile-hero-facts">
             <span className="profile-hero-fact-row">🏷️ وسيطة</span>
-            <span className="profile-hero-fact-row">📍 {form.city || "غير محدد"}</span>
-            {form.phone && <span className="profile-hero-fact-row">📞 {form.phone}</span>}
+            <span className="profile-hero-fact-row">
+              📍 {form.city || "غير محدد"}
+            </span>
+            {form.phone && (
+              <span className="profile-hero-fact-row">📞 {form.phone}</span>
+            )}
             {form.commission && (
-              <span className="profile-hero-fact-row">💰 {form.commission}% عمولة</span>
+              <span className="profile-hero-fact-row">
+                💰 {form.commission}% عمولة
+              </span>
             )}
             <span className="profile-hero-fact-row">
-              <span className={`status-dot ${acceptingOrders ? "on" : "off"}`}></span>
+              <span
+                className={`status-dot ${acceptingOrders ? "on" : "off"}`}
+              ></span>
               {acceptingOrders ? "متاحة" : "غير متاحة"}
             </span>
           </div>
@@ -364,7 +403,9 @@ export default function MediatorProfile() {
               {loadingServices ? (
                 <p className="service-description">جاري التحميل...</p>
               ) : availableServices.length === 0 ? (
-                <p className="service-description">لا توجد خدمات متاحة حاليًا.</p>
+                <p className="service-description">
+                  لا توجد خدمات متاحة حاليًا.
+                </p>
               ) : (
                 <div className="services-tags-row">
                   {availableServices.map((s) => (
@@ -379,7 +420,9 @@ export default function MediatorProfile() {
             <div className="public-info-card">
               <h3 className="public-info-card-title">التقييمات</h3>
               <div className="rating-average standalone">
-                <div className="rating-average-number">{ratingSummary.avg || "0.0"}</div>
+                <div className="rating-average-number">
+                  {ratingSummary.avg || "0.0"}
+                </div>
                 <StarRating rating={ratingSummary.avg} size="lg" />
               </div>
 
@@ -400,10 +443,14 @@ export default function MediatorProfile() {
                       </div>
                       <div className="review-author">
                         <div className="review-author-info">
-                          <div className="review-author-name">{review.customer}</div>
+                          <div className="review-author-name">
+                            {review.customer}
+                          </div>
                           <StarRating rating={review.rating} />
                         </div>
-                        <div className="review-avatar">{review.customer.charAt(0)}</div>
+                        <div className="review-avatar">
+                          {review.customer.charAt(0)}
+                        </div>
                       </div>
                     </div>
                     <p className="review-comment">{review.comment}</p>
@@ -503,7 +550,10 @@ export default function MediatorProfile() {
           <div className="section-header-row">
             <h3>بيانات الحساب</h3>
             {!editingAccount && (
-              <button className="btn btn-primary btn-sm" onClick={openAccountEdit}>
+              <button
+                className="btn btn-primary btn-sm"
+                onClick={openAccountEdit}
+              >
                 ✎ تعديل بيانات الحساب
               </button>
             )}
@@ -513,7 +563,9 @@ export default function MediatorProfile() {
             <div className="account-data-rows">
               <div className="account-data-row">
                 <span className="account-data-label">الاسم الكامل</span>
-                <span className="account-data-value">{form.fullName || "—"}</span>
+                <span className="account-data-value">
+                  {form.fullName || "—"}
+                </span>
               </div>
               <div className="account-data-row">
                 <span className="account-data-label">البريد الإلكتروني</span>
@@ -536,12 +588,17 @@ export default function MediatorProfile() {
                 <div
                   className="profile-hero-avatar sm"
                   style={{
-                    backgroundImage: imagePreview ? `url(${imagePreview})` : "none",
+                    backgroundImage: imagePreview
+                      ? `url(${imagePreview})`
+                      : "none",
                   }}
                 >
                   {!imagePreview && userInitial}
                 </div>
-                <label htmlFor="profileImageEdit" className="btn btn-outline btn-sm">
+                <label
+                  htmlFor="profileImageEdit"
+                  className="btn btn-outline btn-sm"
+                >
                   📷 تغيير الصورة
                 </label>
                 <input
@@ -563,7 +620,13 @@ export default function MediatorProfile() {
               />
 
               <label htmlFor="email">البريد الإلكتروني</label>
-              <input id="email" name="email" type="email" value={accountForm.email} disabled />
+              <input
+                id="email"
+                name="email"
+                type="email"
+                value={accountForm.email}
+                disabled
+              />
 
               <label htmlFor="phone">رقم الهاتف</label>
               <input
@@ -575,7 +638,12 @@ export default function MediatorProfile() {
               />
 
               <label htmlFor="city">المنطقة</label>
-              <select id="city" name="city" value={accountForm.city} onChange={handleAccountChange}>
+              <select
+                id="city"
+                name="city"
+                value={accountForm.city}
+                onChange={handleAccountChange}
+              >
                 <option value="">اختر المدينة</option>
                 <option value="غزة">غزة</option>
                 <option value="خانيونس">خانيونس</option>
@@ -587,10 +655,18 @@ export default function MediatorProfile() {
               {accountError && <p className="form-error">{accountError}</p>}
 
               <div className="profile-edit-actions">
-                <button className="btn btn-outline" onClick={cancelAccountEdit} disabled={savingAccount}>
+                <button
+                  className="btn btn-outline"
+                  onClick={cancelAccountEdit}
+                  disabled={savingAccount}
+                >
                   إلغاء
                 </button>
-                <button className="btn btn-primary" onClick={saveAccountEdit} disabled={savingAccount}>
+                <button
+                  className="btn btn-primary"
+                  onClick={saveAccountEdit}
+                  disabled={savingAccount}
+                >
                   {savingAccount ? "جاري الحفظ..." : "حفظ التغييرات"}
                 </button>
               </div>
@@ -602,27 +678,38 @@ export default function MediatorProfile() {
         <div className="public-info-card">
           <div className="section-header-row">
             <h3>معلومات تظهر للزبائن</h3>
-            <button className="btn btn-primary btn-sm" onClick={openGeneralModal}>
+            <button
+              className="btn btn-primary btn-sm"
+              onClick={openGeneralModal}
+            >
               تعديل المعلومات العامة
             </button>
           </div>
 
           <div className="public-info-bio">
             <div className="account-data-label">نبذة عني</div>
-            <p className="public-info-bio-text">{form.bio || "لم تتم إضافة نبذة بعد."}</p>
+            <p className="public-info-bio-text">
+              {form.bio || "لم تتم إضافة نبذة بعد."}
+            </p>
           </div>
 
           <div className="public-info-stats">
             <div className="public-stat-box">
               <div className="public-stat-title">
-                <span className={`status-dot ${acceptingOrders ? "on" : "off"}`}></span>
+                <span
+                  className={`status-dot ${acceptingOrders ? "on" : "off"}`}
+                ></span>
                 {acceptingOrders ? "تستقبل طلبات" : "لا تستقبل طلبات"}
               </div>
               <div className="public-stat-sub">حالة استقبال الطلبات</div>
             </div>
             <div className="public-stat-box center">
               <div className="public-stat-value">
-                {loadingStore ? "…" : form.commission ? `${form.commission}%` : "—"}
+                {loadingStore
+                  ? "…"
+                  : form.commission
+                    ? `${form.commission}%`
+                    : "—"}
               </div>
               <div className="public-stat-sub">نسبة العمولة</div>
             </div>
@@ -690,7 +777,10 @@ export default function MediatorProfile() {
                       type="checkbox"
                       checked={generalForm.acceptingOrders}
                       onChange={(e) =>
-                        setGeneralForm((prev) => ({ ...prev, acceptingOrders: e.target.checked }))
+                        setGeneralForm((prev) => ({
+                          ...prev,
+                          acceptingOrders: e.target.checked,
+                        }))
                       }
                     />
                     <span className="slider"></span>
@@ -701,7 +791,11 @@ export default function MediatorProfile() {
                 {generalError && <p className="form-error">{generalError}</p>}
 
                 <div className="modal-actions">
-                  <button type="submit" className="btn btn-primary" disabled={savingGeneral}>
+                  <button
+                    type="submit"
+                    className="btn btn-primary"
+                    disabled={savingGeneral}
+                  >
                     {savingGeneral ? "جاري الحفظ..." : "حفظ التغييرات"}
                   </button>
                   <button
