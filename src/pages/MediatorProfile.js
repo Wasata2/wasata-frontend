@@ -307,7 +307,6 @@ export default function MediatorProfile() {
             onChange={handleImageChange}
             style={{ display: "none" }}
           />
-          <span className={`hero-availability-dot ${acceptingOrders ? "online" : "offline"}`} />
         </div>
 
         <div className="profile-hero-info">
@@ -321,6 +320,10 @@ export default function MediatorProfile() {
             {form.commission && (
               <span className="profile-hero-fact-row">💰 {form.commission}% عمولة</span>
             )}
+            <span className="profile-hero-fact-row">
+              <span className={`status-dot ${acceptingOrders ? "on" : "off"}`}></span>
+              {acceptingOrders ? "متاحة" : "غير متاحة"}
+            </span>
           </div>
         </div>
       </div>
