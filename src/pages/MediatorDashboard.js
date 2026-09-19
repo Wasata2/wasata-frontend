@@ -1,10 +1,21 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
-import { getServices, getOrders, getOrderStats, getMyStore, updateStore, BASE_URL } from "../api";
+import {
+  getServices,
+  getOrders,
+  getOrderStats,
+  getMyStore,
+  updateStore,
+  BASE_URL,
+} from "../api";
 
 function resolveImageUrl(path) {
   if (!path) return null;
-  if (/^https?:\/\//i.test(path) || path.startsWith("blob:") || path.startsWith("data:")) {
+  if (
+    /^https?:\/\//i.test(path) ||
+    path.startsWith("blob:") ||
+    path.startsWith("data:")
+  ) {
     return path;
   }
   return `${BASE_URL}${path.startsWith("/") ? "" : "/"}${path}`;
@@ -32,7 +43,8 @@ export default function MediatorDashboard() {
       .then((data) => {
         const store = data.store || data;
         setAcceptingOrders(!!store.is_accepting_orders);
-setImagePreview(resolveImageUrl(store.image_url || store.image));      })
+        setImagePreview(resolveImageUrl(store.image_url || store.image));
+      })
       .catch(() => {});
 
     getServices()
@@ -88,7 +100,9 @@ setImagePreview(resolveImageUrl(store.image_url || store.image));      })
           </Link>
           <Link to="/mediator-orders" className="sidebar-link">
             <span className="sidebar-icon">📋</span> الطلبات
-            {newOrdersCount > 0 && <span className="sidebar-badge">{newOrdersCount}</span>}
+            {newOrdersCount > 0 && (
+              <span className="sidebar-badge">{newOrdersCount}</span>
+            )}
           </Link>
           <Link to="/mediator-services" className="sidebar-link">
             <span className="sidebar-icon">🛍</span> الخدمات
@@ -105,7 +119,12 @@ setImagePreview(resolveImageUrl(store.image_url || store.image));      })
       <main className="dashboard-main">
         <div className="dashboard-topbar">
           <div className="topbar-actions">
-            <button className="notif-btn">🔔</button>
+            <Link to="/mediator-notifications" className="notif-btn-wrap">
+              <button className="notif-btn">🔔</button>
+              {stats && stats.newCount > 0 && (
+                <span className="notif-badge">{stats.newCount}</span>
+              )}
+            </Link>
             <div className="accept-toggle">
               <label className="switch">
                 <input
@@ -158,14 +177,18 @@ setImagePreview(resolveImageUrl(store.image_url || store.image));      })
           <div className="stat-card">
             <div>
               <div className="stat-label">طلبات قيد التنفيذ</div>
-              <div className="stat-value">{loadingOrders ? "…" : inProgressCount}</div>
+              <div className="stat-value">
+                {loadingOrders ? "…" : inProgressCount}
+              </div>
             </div>
             <div className="stat-icon">📈</div>
           </div>
           <div className="stat-card">
             <div>
               <div className="stat-label">طلبات جديدة</div>
-              <div className="stat-value">{loadingOrders ? "…" : newOrdersCount}</div>
+              <div className="stat-value">
+                {loadingOrders ? "…" : newOrdersCount}
+              </div>
             </div>
             <div className="stat-icon">📦</div>
           </div>
@@ -174,7 +197,10 @@ setImagePreview(resolveImageUrl(store.image_url || store.image));      })
         {/* بانر "لديك طلب جديد" — بيظهر بس لو فعليًا في طلب جديد بانتظار الرد */}
         {latestNewOrder && (
           <div className="new-order-banner">
-            <Link to={`/mediator-orders/${latestNewOrder.id}`} className="btn btn-primary">
+            <Link
+              to={`/mediator-orders/${latestNewOrder.id}`}
+              className="btn btn-primary"
+            >
               عرض الطلب
             </Link>
             <div className="new-order-banner-text">
@@ -195,7 +221,7 @@ setImagePreview(resolveImageUrl(store.image_url || store.image));      })
               + إضافة خدمة
             </Link>
             <Link to="/mediator-reviews" className="btn btn-primary">
-            عرض التقييمات 
+              عرض التقييمات
             </Link>
             <Link to="/mediator-orders" className="btn btn-primary">
               عرض الطلبات
@@ -245,10 +271,15 @@ setImagePreview(resolveImageUrl(store.image_url || store.image));      })
                       <td>{order.itemsCount}</td>
                       <td>{order.amount} ر.س</td>
                       <td>
-                        <span className={`status-badge ${order.status}`}>{order.status}</span>
+                        <span className={`status-badge ${order.status}`}>
+                          {order.status}
+                        </span>
                       </td>
                       <td>
-                        <Link to={`/mediator-orders/${order.id}`} className="details-link">
+                        <Link
+                          to={`/mediator-orders/${order.id}`}
+                          className="details-link"
+                        >
                           عرض التفاصيل
                         </Link>
                       </td>

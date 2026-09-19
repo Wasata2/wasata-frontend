@@ -16,6 +16,7 @@ import ResetPassword from "./pages/ResetPassword";
 import MediatorServices from "./pages/MediatorServices";
 import NewOrder from "./pages/NewOrder";
 import OrderDetails from "./pages/OrderDetails";
+import MediatorNotifications from "./pages/MediatorNotifications";
 
 function App() {
   return (
@@ -37,6 +38,7 @@ function App() {
       <Route path="/mediator-services" element={<MediatorServices />} />
       <Route path="/new-order" element={<NewOrder />} />
       <Route path="/mediator-orders/:id" element={<OrderDetails />} />
+      <Route path="/mediator-notifications" element={<MediatorNotifications />} />
     </Routes>
   );
 }

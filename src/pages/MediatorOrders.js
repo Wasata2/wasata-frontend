@@ -84,7 +84,8 @@ export default function MediatorOrders() {
     return c;
   }, [orders]);
 
-  const hasActiveFilters = dateFilter || statusFilter || search || activeTab !== "all";
+  const hasActiveFilters =
+    dateFilter || statusFilter || search || activeTab !== "all";
 
   const filteredOrders = useMemo(() => {
     return orders.filter((o) => {
@@ -97,7 +98,10 @@ export default function MediatorOrders() {
   }, [orders, activeTab, statusFilter, dateFilter, search]);
 
   const totalPages = Math.max(1, Math.ceil(filteredOrders.length / PAGE_SIZE));
-  const pagedOrders = filteredOrders.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+  const pagedOrders = filteredOrders.slice(
+    (page - 1) * PAGE_SIZE,
+    page * PAGE_SIZE,
+  );
 
   const clearFilters = () => {
     setActiveTab("all");
@@ -155,7 +159,12 @@ export default function MediatorOrders() {
         {/* ===== نفس الـ topbar الموجود بباقي صفحات لوحة التحكم ===== */}
         <div className="dashboard-topbar">
           <div className="topbar-actions">
-            <button className="notif-btn">🔔</button>
+            <Link to="/mediator-notifications" className="notif-btn-wrap">
+              <button className="notif-btn">🔔</button>
+              {stats && stats.newCount > 0 && (
+                <span className="notif-badge">{stats.newCount}</span>
+              )}
+            </Link>
           </div>
           <div className="topbar-user">
             <div className="user-info">
@@ -267,7 +276,8 @@ export default function MediatorOrders() {
                 setPage(1);
               }}
             >
-              <span className="status-tab-count">{counts[tab.key] || 0}</span> {tab.label}
+              <span className="status-tab-count">{counts[tab.key] || 0}</span>{" "}
+              {tab.label}
             </button>
           ))}
         </div>
@@ -313,7 +323,10 @@ export default function MediatorOrders() {
                           </span>
                         </td>
                         <td>
-                          <Link to={`/mediator-orders/${order.id}`} className="details-link">
+                          <Link
+                            to={`/mediator-orders/${order.id}`}
+                            className="details-link"
+                          >
                             عرض التفاصيل
                           </Link>
                           {order.status === "pending" && (

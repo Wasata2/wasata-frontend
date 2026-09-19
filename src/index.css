@@ -813,6 +813,59 @@ footer .copyright{font-size:12px;color:var(--gray-light);}
   width:38px;height:38px;
   font-size:16px;
   cursor:pointer;
+}.notif-btn.active{ border-color:var(--blue); }
+.notif-btn-wrap{
+  position:relative;
+  display:inline-flex;
+  text-decoration:none;
+}
+.notif-badge{
+  position:absolute;
+  top:-6px;
+  left:-6px;
+  background:#e53935;
+  color:#fff;
+  font-size:10px;
+  font-weight:800;
+  min-width:16px;
+  height:16px;
+  border-radius:9px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding:0 4px;
+  border:2px solid #fff;
+  line-height:1;
+}
+.notifications-list{
+  display:flex;
+  flex-direction:column;
+  gap:12px;
+}
+.notification-card{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:14px;
+  background:#fff;
+  border:1px solid var(--line);
+  border-radius:14px;
+  padding:16px 18px;
+  flex-wrap:wrap;
+}
+.notification-card-title{
+  font-size:14px;
+  font-weight:800;
+  margin-bottom:4px;
+}
+.notification-card-sub{
+  font-size:12px;
+  color:var(--gray-light);
+}
+.notification-card-actions{
+  display:flex;
+  align-items:center;
+  gap:10px;
 }
 .accept-toggle{
   display:flex;
