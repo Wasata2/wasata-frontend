@@ -396,11 +396,14 @@ export default function MediatorProfile() {
               ) : availableServices.length === 0 ? (
                 <p className="service-description">لا توجد خدمات متاحة حاليًا.</p>
               ) : (
-                <div className="services-tags-row">
+                <div className="public-services-list">
                   {availableServices.map((s) => (
-                    <span className="service-tag" key={s.id}>
-                      {s.name}
-                    </span>
+                    <div className="public-service-item" key={s.id}>
+                      <span className="service-tag">{s.icon} {s.name}</span>
+                      {s.description && (
+                        <p className="public-service-desc">{s.description}</p>
+                      )}
+                    </div>
                   ))}
                 </div>
               )}
@@ -677,11 +680,14 @@ export default function MediatorProfile() {
           ) : availableServices.length === 0 ? (
             <p className="service-description">لا توجد خدمات متاحة حاليًا.</p>
           ) : (
-            <div className="services-tags-row">
+            <div className="public-services-list">
               {availableServices.map((s) => (
-                <span className="service-tag" key={s.id}>
-                  {s.name}
-                </span>
+                <div className="public-service-item" key={s.id}>
+                  <span className="service-tag">{s.icon} {s.name}</span>
+                  {s.description && (
+                    <p className="public-service-desc">{s.description}</p>
+                  )}
+                </div>
               ))}
             </div>
           )}
