@@ -6,6 +6,7 @@ import {
   updateStore,
   getServices,
   getReviews,
+  getOrderStats,
   BASE_URL,
 } from "../api";
 
@@ -142,7 +143,14 @@ export default function MediatorProfile() {
   }, []);
 
   const availableServices = services.filter((s) => s.available);
+  // ===== عدد الطلبات الجديدة — بس عشان الرقم الصغير فوق زر 🔔 =====
+  const [stats, setStats] = useState(null);
 
+  useEffect(() => {
+    getOrderStats()
+      .then(setStats)
+      .catch(() => {});
+  }, []);
   const handleImageChange = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
@@ -503,7 +511,12 @@ export default function MediatorProfile() {
       <main className="dashboard-main">
         <div className="dashboard-topbar">
           <div className="topbar-actions">
-            <button className="notif-btn">🔔</button>
+            <Link to="/mediator-notifications" className="notif-btn-wrap">
+              <button className="notif-btn">🔔</button>
+              {stats && stats.newCount > 0 && (
+                <span className="notif-badge">{stats.newCount}</span>
+              )}
+            </Link>
             <div className="accept-toggle">
               <label className="switch">
                 <input

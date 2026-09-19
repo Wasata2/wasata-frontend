@@ -1,7 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { Link } from "react-router-dom";
-import { getReviews } from "../api";
-
+import { getReviews, getOrderStats } from "../api";
 function StarRating({ rating, size }) {
   return (
     <span className={`star-rating ${size || ""}`}>
@@ -30,7 +29,13 @@ export default function MediatorReviews() {
   const [loadingReviews, setLoadingReviews] = useState(true);
   const [loadError, setLoadError] = useState("");
   const [sortBy, setSortBy] = useState("newest");
-
+// ===== عدد الطلبات الجديدة — بس عشان الرقم الصغير فوق زر 🔔 =====
+const [stats, setStats] = useState(null);
+useEffect(() => {
+  getOrderStats()
+    .then(setStats)
+    .catch(() => {});
+}, []);
   // تقييمات الزبائن الحقيقية + ملخصها (المتوسط والتوزيع) — جاهزين من الباك اند
   // مباشرة، ما في داعي نحسبهم يدويًا بالفرونت
   useEffect(() => {
@@ -92,8 +97,13 @@ export default function MediatorReviews() {
         {/* ===== نفس الـ topbar الموجود بباقي صفحات لوحة التحكم ===== */}
         <div className="dashboard-topbar">
           <div className="topbar-actions">
-            <button className="notif-btn">🔔</button>
-          </div>
+  <Link to="/mediator-notifications" className="notif-btn-wrap">
+    <button className="notif-btn">🔔</button>
+    {stats && stats.newCount > 0 && (
+      <span className="notif-badge">{stats.newCount}</span>
+    )}
+  </Link>
+</div>
           <div className="topbar-user">
             <div className="user-info">
               <div className="user-name">{userName}</div>
