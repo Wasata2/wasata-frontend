@@ -2787,27 +2787,10 @@ footer .copyright{font-size:12px;color:var(--gray-light);}
   gap:8px;
   margin-bottom:8px;
 }
-.profile-hero-rating{
-  display:flex;
-  align-items:center;
-  gap:8px;
-  flex-wrap:wrap;
-}
-.profile-hero-rating-number{ font-size:15px; font-weight:800; }
-.reviews-count-pill.sm{ padding:3px 10px; font-size:11px; margin-top:0; }
-.commission-pill{
-  background:#fdf2fa;
-  color:#8A157D;
-  font-size:12px;
-  font-weight:700;
-  padding:4px 12px;
-  border-radius:20px;
-  align-self:flex-start;
-}
-.profile-hero-phone{
+.profile-hero-fact-row{
   font-size:13px;
   font-weight:700;
-  color:var(--text, #1a1a1a);
+  color:var(--gray-light);
   display:flex;
   align-items:center;
   gap:6px;

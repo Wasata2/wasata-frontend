@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
 import { getMyStore, updateProfile, updateStore, getServices, getReviews } from "../api";
 
@@ -54,6 +54,10 @@ export default function MediatorProfile() {
 
   const userInitial = (form.fullName || "م").charAt(0);
 
+  // بنستخدمه لمنع تعارض: لو المستخدمة رفعت صورة جديدة قبل ما يخلص نداء
+  // جلب بيانات المتجر (getMyStore)، ما نخلي نتيجة النداء القديم يمسح الصورة الجديدة
+  const imageJustUpdatedRef = useRef(false);
+
   // جلب بيانات متجر المستخدمة الحالية فعليًا من الباك اند (بدل الاعتماد على localStorage)
   useEffect(() => {
     getMyStore()
@@ -67,7 +71,10 @@ export default function MediatorProfile() {
         }));
         // سويتش "استقبال الطلبات" — is_accepting_orders، منفصل عن استقبال طلبات واتساب
         setAcceptingOrders(!!store.is_accepting_orders);
-        setImagePreview(store.image_url || store.image || null);
+        // إذا صار في رفع صورة جديدة أثناء ما هالنداء كان لسا شغال، منتجاهل نتيجته القديمة
+        if (!imageJustUpdatedRef.current) {
+          setImagePreview(store.image_url || store.image || null);
+        }
         setLoadingStore(false);
       })
       .catch((err) => {
@@ -123,6 +130,7 @@ export default function MediatorProfile() {
     try {
       const storeResult = await updateStore({ image: file });
       const updatedStore = storeResult.store || {};
+      imageJustUpdatedRef.current = true; // نمنع نداء getMyStore القديم من مسح الصورة الجديدة
       if (updatedStore.image_url || updatedStore.image) {
         setImagePreview(updatedStore.image_url || updatedStore.image);
       }
@@ -307,22 +315,13 @@ export default function MediatorProfile() {
             <h2>{form.fullName || "—"}</h2>
           </div>
           <div className="profile-hero-facts">
-            <span className="profile-role-badge">وسيطة</span>
-            <div className="profile-hero-rating">
-              <span className="profile-hero-rating-number">
-                {loadingReviews ? "…" : ratingSummary.avg || "0.0"}
-              </span>
-              <StarRating rating={ratingSummary.avg} />
-              {!loadingReviews && (
-                <span className="reviews-count-pill sm">{ratingSummary.total} تقييم</span>
-              )}
-            </div>
+            <span className="profile-hero-fact-row">🏷️ وسيطة</span>
+            <span className="profile-hero-fact-row">📍 {form.city || "غير محدد"}</span>
+            {form.phone && <span className="profile-hero-fact-row">📞 {form.phone}</span>}
             {form.commission && (
-              <span className="commission-pill">{form.commission}% عمولة</span>
+              <span className="profile-hero-fact-row">💰 {form.commission}% عمولة</span>
             )}
-            {form.phone && <span className="profile-hero-phone">📞 {form.phone}</span>}
           </div>
-          <div className="profile-hero-location">📍 {form.city || "غير محدد"}</div>
         </div>
       </div>
     </div>
