@@ -1362,6 +1362,18 @@ footer .copyright{font-size:12px;color:var(--gray-light);}
 }
 
 /* وضع تعديل البروفايل */
+.profile-edit-avatar-row{
+  display:flex;
+  align-items:center;
+  gap:14px;
+  margin-bottom:6px;
+}
+.profile-hero-avatar.sm{
+  width:64px;
+  height:64px;
+  font-size:20px;
+  flex-shrink:0;
+}
 .profile-edit-form{
   display:flex;
   flex-direction:column;
@@ -2700,7 +2712,7 @@ footer .copyright{font-size:12px;color:var(--gray-light);}
 .profile-preview-link{
   position:absolute;
   bottom:14px;
-  right:24px;
+  left:24px;
   background:#fff;
   border:none;
   color:var(--blue);
@@ -2755,7 +2767,7 @@ footer .copyright{font-size:12px;color:var(--gray-light);}
   display:flex;
   align-items:center;
   gap:10px;
-  margin-bottom:8px;
+  margin-bottom:10px;
   flex-wrap:wrap;
 }
 .profile-hero-name-row h2{ font-size:22px; font-weight:900; }
@@ -2766,12 +2778,19 @@ footer .copyright{font-size:12px;color:var(--gray-light);}
   font-weight:700;
   padding:4px 14px;
   border-radius:20px;
+  align-self:flex-start;
+}
+.profile-hero-facts{
+  display:flex;
+  flex-direction:column;
+  align-items:flex-start;
+  gap:8px;
+  margin-bottom:8px;
 }
 .profile-hero-rating{
   display:flex;
   align-items:center;
   gap:8px;
-  margin-bottom:8px;
   flex-wrap:wrap;
 }
 .profile-hero-rating-number{ font-size:15px; font-weight:800; }
@@ -2783,6 +2802,15 @@ footer .copyright{font-size:12px;color:var(--gray-light);}
   font-weight:700;
   padding:4px 12px;
   border-radius:20px;
+  align-self:flex-start;
+}
+.profile-hero-phone{
+  font-size:13px;
+  font-weight:700;
+  color:var(--text, #1a1a1a);
+  display:flex;
+  align-items:center;
+  gap:6px;
 }
 .profile-hero-location{
   font-size:13px;

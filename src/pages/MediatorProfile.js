@@ -110,11 +110,28 @@ export default function MediatorProfile() {
 
   const availableServices = services.filter((s) => s.available);
 
-  const handleImageChange = (e) => {
+  const handleImageChange = async (e) => {
     const file = e.target.files[0];
-    if (file) {
-      setImageFile(file);
-      setImagePreview(URL.createObjectURL(file));
+    if (!file) return;
+
+    const previousPreview = imagePreview;
+    setImageFile(file);
+    setImagePreview(URL.createObjectURL(file)); // معاينة فورية بالواجهة
+
+    // نرفع الصورة فورًا للباك اند (بدل الانتظار لحد فتح "تعديل بيانات الحساب")
+    // عشان ما تضيع الصورة إذا المستخدمة طلعت من الصفحة قبل ما تحفظ
+    try {
+      const storeResult = await updateStore({ image: file });
+      const updatedStore = storeResult.store || {};
+      if (updatedStore.image_url || updatedStore.image) {
+        setImagePreview(updatedStore.image_url || updatedStore.image);
+      }
+      setImageFile(null);
+      showToast("تم تحديث الصورة بنجاح ✓");
+    } catch (err) {
+      setImagePreview(previousPreview); // رجّعيها لو فشل الرفع
+      setImageFile(null);
+      showToast(err.message || "تعذر رفع الصورة");
     }
   };
 
@@ -288,19 +305,22 @@ export default function MediatorProfile() {
         <div className="profile-hero-info">
           <div className="profile-hero-name-row">
             <h2>{form.fullName || "—"}</h2>
-            <span className="profile-role-badge">وسيطة</span>
           </div>
-          <div className="profile-hero-rating">
-            <span className="profile-hero-rating-number">
-              {loadingReviews ? "…" : ratingSummary.avg || "0.0"}
-            </span>
-            <StarRating rating={ratingSummary.avg} />
-            {!loadingReviews && (
-              <span className="reviews-count-pill sm">{ratingSummary.total} تقييم</span>
-            )}
+          <div className="profile-hero-facts">
+            <span className="profile-role-badge">وسيطة</span>
+            <div className="profile-hero-rating">
+              <span className="profile-hero-rating-number">
+                {loadingReviews ? "…" : ratingSummary.avg || "0.0"}
+              </span>
+              <StarRating rating={ratingSummary.avg} />
+              {!loadingReviews && (
+                <span className="reviews-count-pill sm">{ratingSummary.total} تقييم</span>
+              )}
+            </div>
             {form.commission && (
               <span className="commission-pill">{form.commission}% عمولة</span>
             )}
+            {form.phone && <span className="profile-hero-phone">📞 {form.phone}</span>}
           </div>
           <div className="profile-hero-location">📍 {form.city || "غير محدد"}</div>
         </div>
@@ -510,6 +530,27 @@ export default function MediatorProfile() {
             </div>
           ) : (
             <div className="profile-edit-form">
+              <div className="profile-edit-avatar-row">
+                <div
+                  className="profile-hero-avatar sm"
+                  style={{
+                    backgroundImage: imagePreview ? `url(${imagePreview})` : "none",
+                  }}
+                >
+                  {!imagePreview && userInitial}
+                </div>
+                <label htmlFor="profileImageEdit" className="btn btn-outline btn-sm">
+                  📷 تغيير الصورة
+                </label>
+                <input
+                  id="profileImageEdit"
+                  type="file"
+                  accept="image/*"
+                  onChange={handleImageChange}
+                  style={{ display: "none" }}
+                />
+              </div>
+
               <label htmlFor="fullName">الاسم الكامل</label>
               <input
                 id="fullName"
