@@ -39,6 +39,7 @@ function App() {
       <Route path="/new-order" element={<NewOrder />} />
       <Route path="/mediator-orders/:id" element={<OrderDetails />} />
       <Route path="/mediator-notifications" element={<MediatorNotifications />} />
+      <Route path="/profile" element={<CustomerProfile />} />
     </Routes>
   );
 }
