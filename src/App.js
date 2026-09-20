@@ -17,6 +17,7 @@ import MediatorServices from "./pages/MediatorServices";
 import NewOrder from "./pages/NewOrder";
 import OrderDetails from "./pages/OrderDetails";
 import MediatorNotifications from "./pages/MediatorNotifications";
+import CustomerProfile from "./pages/CustomerProfile";
 
 function App() {
   return (
