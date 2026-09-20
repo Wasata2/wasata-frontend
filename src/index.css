@@ -2967,14 +2967,6 @@ footer .copyright{font-size:12px;color:var(--gray-light);}
   flex-direction:column;
   gap:14px;
 }
-.public-service-item{ }
-.public-service-desc{
-  font-size:13px;
-  color:var(--gray-light);
-  margin-top:6px;
-  line-height:1.6;
-}
-
 /* ===== وضع معاينة الملف كما يظهر للزبائن ===== */
 .preview-topbar{
   display:flex;

@@ -18,6 +18,32 @@ function resolveImageUrl(path) {
   return `${BASE_URL}/${clean}`;
 }
 
+// أيقونات الخدمة المتاحة — نفس القيم يلي بصفحة إدارة الخدمات، لعرض نفس الأيقونة للزبونة
+const ICONS = [
+  { value: "search", label: "🔍" },
+  { value: "diamond", label: "💎" },
+  { value: "scissors", label: "✂️" },
+  { value: "gift", label: "🎁" },
+  { value: "tag", label: "🏷️" },
+  { value: "chat", label: "💬" },
+  { value: "refresh", label: "🔄" },
+  { value: "pin", label: "📍" },
+  { value: "truck", label: "🚚" },
+  { value: "photo", label: "🖼️" },
+];
+
+function iconEmoji(value) {
+  return ICONS.find((i) => i.value === value)?.label || "❔";
+}
+
+function feeLabel(service) {
+  if (service.feeType === "free") return "مجاني";
+  if (service.feeType === "variable") return "حسب الحالة";
+  if (service.feeType === "percentage") return `عمولة ${service.feeValue}%`;
+  if (service.feeType === "fixed") return `ابتداء من ${service.feeValue} ₪`;
+  return "";
+}
+
 function StarRating({ rating, size }) {
   return (
     <span className={`star-rating ${size || ""}`}>
@@ -398,11 +424,17 @@ export default function MediatorProfile() {
               ) : (
                 <div className="public-services-list">
                   {availableServices.map((s) => (
-                    <div className="public-service-item" key={s.id}>
-                      <span className="service-tag">{s.icon} {s.name}</span>
-                      {s.description && (
-                        <p className="public-service-desc">{s.description}</p>
-                      )}
+                    <div className="service-card" key={s.id}>
+                      <div className="service-icon-badge">{iconEmoji(s.icon)}</div>
+                      <div className="service-content">
+                        <div className="service-name">{s.name}</div>
+                        <div className="service-description">{s.description}</div>
+                        {s.notes && <div className="service-notes">📌 {s.notes}</div>}
+                      </div>
+                      <div className="service-meta-row">
+                        <span className="service-fee-tag">{feeLabel(s)}</span>
+                        <span className="service-status-tag available">متاحة</span>
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -682,11 +714,17 @@ export default function MediatorProfile() {
           ) : (
             <div className="public-services-list">
               {availableServices.map((s) => (
-                <div className="public-service-item" key={s.id}>
-                  <span className="service-tag">{s.icon} {s.name}</span>
-                  {s.description && (
-                    <p className="public-service-desc">{s.description}</p>
-                  )}
+                <div className="service-card" key={s.id}>
+                  <div className="service-icon-badge">{iconEmoji(s.icon)}</div>
+                  <div className="service-content">
+                    <div className="service-name">{s.name}</div>
+                    <div className="service-description">{s.description}</div>
+                    {s.notes && <div className="service-notes">📌 {s.notes}</div>}
+                  </div>
+                  <div className="service-meta-row">
+                    <span className="service-fee-tag">{feeLabel(s)}</span>
+                    <span className="service-status-tag available">متاحة</span>
+                  </div>
                 </div>
               ))}
             </div>
