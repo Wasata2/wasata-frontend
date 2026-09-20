@@ -1,6 +1,8 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { getMyStore, updateProfile, updateStore, getServices, getReviews } from "../api";
+import DashboardLayout from "../components/DashboardLayout";
+import { useAuth } from "../context/AuthContext";
 
 function StarRating({ rating, size }) {
   return (
@@ -15,12 +17,12 @@ function StarRating({ rating, size }) {
 }
 
 export default function MediatorProfile() {
-  const storedUser = JSON.parse(localStorage.getItem("user")) || {};
+  const { user } = useAuth();
 
   const [form, setForm] = useState({
-    fullName: storedUser.full_name || "",
-    email: storedUser.email || "",
-    phone: storedUser.phone || "",
+    fullName: user?.full_name || "",
+    email: user?.email || "",
+    phone: user?.phone || "",
     city: "",
     bio: "",
     commission: "",
@@ -402,78 +404,27 @@ export default function MediatorProfile() {
   }
 
   // ===== الوضع الافتراضي: لوحة تحكم الوسيطة =====
+    const acceptToggle = (
+    <div className="accept-toggle">
+      <label className="switch">
+        <input
+          type="checkbox"
+          checked={acceptingOrders}
+          onChange={(e) => setAcceptingOrders(e.target.checked)}
+        />
+        <span className="slider"></span>
+      </label>
+      <span>استقبال الطلبات</span>
+    </div>
+  );
+
+  // ===== الوضع الافتراضي: لوحة تحكم الوسيطة =====
   return (
-    <div className="dashboard-layout">
-      <aside className="dashboard-sidebar">
-        <div className="sidebar-logo">
-          <img src="/logo.svg" alt="وساطة" className="logo-img" />
-          وساطة
-        </div>
-        <nav className="sidebar-nav">
-          <Link to="/" className="sidebar-link">
-            <span className="sidebar-icon">🏠</span> الرئيسية
-          </Link>
-          <Link to="/mediator-dashboard" className="sidebar-link">
-            <span className="sidebar-icon">▦</span> لوحة التحكم
-          </Link>
-          <Link to="/mediator-orders" className="sidebar-link">
-            <span className="sidebar-icon">📋</span> الطلبات
-          </Link>
-          <Link to="/mediator-services" className="sidebar-link">
-            <span className="sidebar-icon">🛍</span> الخدمات
-          </Link>
-          <Link to="/mediator-reviews" className="sidebar-link">
-            <span className="sidebar-icon">⭐</span> التقييمات
-          </Link>
-          <Link to="/mediator-profile" className="sidebar-link active">
-            <span className="sidebar-icon">👤</span> الملف الشخصي
-          </Link>
-        </nav>
-      </aside>
-
-      <main className="dashboard-main">
-        <div className="dashboard-topbar">
-          <div className="topbar-actions">
-            <button className="notif-btn">🔔</button>
-            <div className="accept-toggle">
-              <label className="switch">
-                <input
-                  type="checkbox"
-                  checked={acceptingOrders}
-                  onChange={(e) => handleQuickToggleAccepting(e.target.checked)}
-                />
-                <span className="slider"></span>
-              </label>
-              <span>استقبال الطلبات</span>
-            </div>
-          </div>
-          <div className="topbar-user">
-            <div className="user-info">
-              <div className="user-name">{form.fullName}</div>
-              <div className="user-store">وسيطة</div>
-            </div>
-            <div
-              className="user-avatar"
-              style={
-                imagePreview
-                  ? {
-                      backgroundImage: `url(${imagePreview})`,
-                      backgroundSize: "cover",
-                      backgroundPosition: "center",
-                    }
-                  : undefined
-              }
-            >
-              {!imagePreview && userInitial}
-            </div>
-          </div>
-        </div>
-
+    <DashboardLayout role="broker" topbarExtra={acceptToggle}>
         <div className="dashboard-welcome profile-title-centered">
           <h1>الملف الشخصي</h1>
           <p>أديري المعلومات التي تظهر للزبائن وتابعي أداء حسابك.</p>
         </div>
-
         {heroCard}
 
         {/* ===== بيانات الحساب ===== */}
@@ -675,8 +626,7 @@ export default function MediatorProfile() {
           </div>
         )}
 
-        {toast && <div className="toast-notification">{toast}</div>}
-      </main>
-    </div>
+               {toast && <div className="toast-notification">{toast}</div>}
+    </DashboardLayout>
   );
 }

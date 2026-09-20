@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { getServices, createService, updateService, toggleService, deleteService } from "../api";
+import DashboardLayout from "../components/DashboardLayout";
 
 // أيقونات الخدمة المتاحة للاختيار من بينها — value لازم يطابق القيم المقبولة بالباك اند بالظبط
 const ICONS = [
@@ -47,9 +48,6 @@ const emptyForm = {
 };
 
 export default function MediatorServices() {
-  const storedUser = JSON.parse(localStorage.getItem("user")) || {};
-  const userName = storedUser.full_name || "مستخدمة";
-  const userInitial = userName.charAt(0);
 
   const [services, setServices] = useState([]);
   const [loadingServices, setLoadingServices] = useState(true);
@@ -166,49 +164,7 @@ export default function MediatorServices() {
   };
 
   return (
-    <div className="dashboard-layout">
-      {/* ===== نفس القائمة الجانبية الموجودة بباقي صفحات لوحة التحكم ===== */}
-      <aside className="dashboard-sidebar">
-        <div className="sidebar-logo">
-          <img src="/logo.svg" alt="وساطة" className="logo-img" />
-          وساطة
-        </div>
-        <nav className="sidebar-nav">
-          <Link to="/" className="sidebar-link">
-            <span className="sidebar-icon">🏠</span> الرئيسية
-          </Link>
-          <Link to="/mediator-dashboard" className="sidebar-link">
-            <span className="sidebar-icon">▦</span> لوحة التحكم
-          </Link>
-          <Link to="/mediator-orders" className="sidebar-link">
-            <span className="sidebar-icon">📋</span> الطلبات
-          </Link>
-          <Link to="/mediator-services" className="sidebar-link active">
-            <span className="sidebar-icon">🛍</span> الخدمات
-          </Link>
-          <Link to="/mediator-reviews" className="sidebar-link">
-            <span className="sidebar-icon">⭐</span> التقييمات
-          </Link>
-          <Link to="/mediator-profile" className="sidebar-link">
-            <span className="sidebar-icon">👤</span> الملف الشخصي
-          </Link>
-        </nav>
-      </aside>
-
-      <main className="dashboard-main">
-        {/* ===== نفس الـ topbar الموجود بباقي صفحات لوحة التحكم ===== */}
-        <div className="dashboard-topbar">
-          <div className="topbar-actions">
-            <button className="notif-btn">🔔</button>
-          </div>
-          <div className="topbar-user">
-            <div className="user-info">
-              <div className="user-name">{userName}</div>
-              <div className="user-store">وسيطة</div>
-            </div>
-            <div className="user-avatar">{userInitial}</div>
-          </div>
-        </div>
+    <DashboardLayout role="broker">
 
         <div className="services-header-row">
           <div className="dashboard-welcome">
@@ -467,7 +423,6 @@ export default function MediatorServices() {
 
         {/* ===== إشعار نجاح مؤقت ===== */}
         {toast && <div className="toast-notification">{toast}</div>}
-      </main>
-    </div>
+          </DashboardLayout>
   );
 }

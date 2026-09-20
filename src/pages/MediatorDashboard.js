@@ -1,34 +1,22 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
-import { getServices, getOrders, getOrderStats, getMyStore, updateStore } from "../api";
+import { getServices, getOrders, getOrderStats } from "../api";
+import DashboardLayout from "../components/DashboardLayout";
+import { useAuth } from "../context/AuthContext";
 
 export default function MediatorDashboard() {
+  const { user } = useAuth();
+  const userName = user?.full_name || "مستخدمة";
   const [acceptingOrders, setAcceptingOrders] = useState(true);
-  const [imagePreview, setImagePreview] = useState(null);
-
-  const storedUser = JSON.parse(localStorage.getItem("user")) || {};
-  const userName = storedUser.full_name || "مستخدمة";
-  const userInitial = userName.charAt(0);
 
   const [orders, setOrders] = useState([]);
   const [stats, setStats] = useState(null);
   const [loadingOrders, setLoadingOrders] = useState(true);
 
-  // عدد الخدمات النشطة — بيتجاب فعليًا من نفس بيانات صفحة الخدمات، مش رقم ثابت
   const [activeServicesCount, setActiveServicesCount] = useState(0);
   const [loadingServicesCount, setLoadingServicesCount] = useState(true);
 
   useEffect(() => {
-    // نفس مصدر بيانات المتجر يلي بتستخدمه صفحة الملف الشخصي — عشان الصورة وحالة
-    // استقبال الطلبات يضلوا متطابقين بين الشاشتين
-    getMyStore()
-      .then((data) => {
-        const store = data.store || data;
-        setAcceptingOrders(!!store.is_accepting_orders);
-        setImagePreview(store.image_url || store.image || null);
-      })
-      .catch(() => {});
-
     getServices()
       .then((data) => {
         setActiveServicesCount(data.filter((s) => s.available).length);
@@ -49,91 +37,27 @@ export default function MediatorDashboard() {
       });
   }, []);
 
-  // تبديل سريع لحالة استقبال الطلبات — بيحفظ فورًا بالباك اند، نفس سلوك صفحة الملف الشخصي
-  const handleQuickToggleAccepting = async (checked) => {
-    const previous = acceptingOrders;
-    setAcceptingOrders(checked);
-    try {
-      await updateStore({ is_accepting_orders: checked });
-    } catch (err) {
-      setAcceptingOrders(previous);
-    }
-  };
-
-  // أحدث طلب جديد (إذا وجد) — لعرض بانر "لديك طلب جديد" بس لما يكون فعليًا في طلب جديد
   const latestNewOrder = orders.find((o) => o.status === "new");
 
   const inProgressCount = stats ? stats.inProgressCount : 0;
   const newOrdersCount = stats ? stats.newCount : 0;
 
+  const acceptToggle = (
+    <div className="accept-toggle">
+      <label className="switch">
+        <input
+          type="checkbox"
+          checked={acceptingOrders}
+          onChange={(e) => setAcceptingOrders(e.target.checked)}
+        />
+        <span className="slider"></span>
+      </label>
+      <span>استقبال الطلبات</span>
+    </div>
+  );
+
   return (
-    <div className="dashboard-layout">
-      <aside className="dashboard-sidebar">
-        <div className="sidebar-logo">
-          <img src="/logo.svg" alt="وساطة" className="logo-img" />
-          وساطة
-        </div>
-        <nav className="sidebar-nav">
-          <Link to="/" className="sidebar-link">
-            <span className="sidebar-icon">🏠</span> الرئيسية
-          </Link>
-          <Link to="/mediator-dashboard" className="sidebar-link active">
-            <span className="sidebar-icon">▦</span> لوحة التحكم
-          </Link>
-          <Link to="/mediator-orders" className="sidebar-link">
-            <span className="sidebar-icon">📋</span> الطلبات
-            {newOrdersCount > 0 && <span className="sidebar-badge">{newOrdersCount}</span>}
-          </Link>
-          <Link to="/mediator-services" className="sidebar-link">
-            <span className="sidebar-icon">🛍</span> الخدمات
-          </Link>
-          <Link to="/mediator-reviews" className="sidebar-link">
-            <span className="sidebar-icon">⭐</span> التقييمات
-          </Link>
-          <Link to="/mediator-profile" className="sidebar-link">
-            <span className="sidebar-icon">👤</span> الملف الشخصي
-          </Link>
-        </nav>
-      </aside>
-
-      <main className="dashboard-main">
-        <div className="dashboard-topbar">
-          <div className="topbar-actions">
-            <button className="notif-btn">🔔</button>
-            <div className="accept-toggle">
-              <label className="switch">
-                <input
-                  type="checkbox"
-                  checked={acceptingOrders}
-                  onChange={(e) => handleQuickToggleAccepting(e.target.checked)}
-                />
-                <span className="slider"></span>
-              </label>
-              <span>استقبال الطلبات</span>
-            </div>
-          </div>
-          <div className="topbar-user">
-            <div className="user-info">
-              <div className="user-name">{userName}</div>
-              <div className="user-store">وسيطة</div>
-            </div>
-            <div
-              className="user-avatar"
-              style={
-                imagePreview
-                  ? {
-                      backgroundImage: `url(${imagePreview})`,
-                      backgroundSize: "cover",
-                      backgroundPosition: "center",
-                    }
-                  : undefined
-              }
-            >
-              {!imagePreview && userInitial}
-            </div>
-          </div>
-        </div>
-
+    <DashboardLayout role="broker" ordersBadge={newOrdersCount} topbarExtra={acceptToggle}>
         <div className="dashboard-welcome">
           <h1>مرحبًا، {userName.split(" ")[0]} 👋</h1>
           <p>إليك نظرة سريعة على نشاطك اليوم.</p>
@@ -165,7 +89,6 @@ export default function MediatorDashboard() {
           </div>
         </div>
 
-        {/* بانر "لديك طلب جديد" — بيظهر بس لو فعليًا في طلب جديد بانتظار الرد */}
         {latestNewOrder && (
           <div className="new-order-banner">
             <Link to={`/mediator-orders/${latestNewOrder.id}`} className="btn btn-primary">
@@ -189,7 +112,7 @@ export default function MediatorDashboard() {
               + إضافة خدمة
             </Link>
             <Link to="/mediator-reviews" className="btn btn-primary">
-            عرض التقييمات 
+            عرض التقييمات
             </Link>
             <Link to="/mediator-orders" className="btn btn-primary">
               عرض الطلبات
@@ -253,7 +176,6 @@ export default function MediatorDashboard() {
             </div>
           )}
         </div>
-      </main>
-    </div>
+    </DashboardLayout>
   );
 }

@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { Link, useParams } from "react-router-dom";
 import { getOrderDetails, updateOrderStatus } from "../api";
+import DashboardLayout from "../components/DashboardLayout";
 
 // خطوات مسار الطلب — بنفس ترتيب وأسماء الحالات الحقيقية القادمة من الباك اند
 // (pending, ordered_from_shein, shipped, arrived, inspected, received)
@@ -34,9 +35,6 @@ function formatDateTime(value) {
 
 export default function OrderDetails() {
   const { id } = useParams();
-  const storedUser = JSON.parse(localStorage.getItem("user")) || {};
-  const userName = storedUser.full_name || "مستخدمة";
-  const userInitial = userName.charAt(0);
 
   const [order, setOrder] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -98,50 +96,8 @@ export default function OrderDetails() {
     }
   };
 
-  return (
-    <div className="dashboard-layout">
-      {/* ===== نفس القائمة الجانبية الموجودة بباقي صفحات لوحة التحكم ===== */}
-      <aside className="dashboard-sidebar">
-        <div className="sidebar-logo">
-          <img src="/logo.svg" alt="وساطة" className="logo-img" />
-          وساطة
-        </div>
-        <nav className="sidebar-nav">
-          <Link to="/" className="sidebar-link">
-            <span className="sidebar-icon">🏠</span> الرئيسية
-          </Link>
-          <Link to="/mediator-dashboard" className="sidebar-link">
-            <span className="sidebar-icon">▦</span> لوحة التحكم
-          </Link>
-          <Link to="/mediator-orders" className="sidebar-link active">
-            <span className="sidebar-icon">📋</span> الطلبات
-          </Link>
-          <Link to="/mediator-services" className="sidebar-link">
-            <span className="sidebar-icon">🛍</span> الخدمات
-          </Link>
-          <Link to="/mediator-reviews" className="sidebar-link">
-            <span className="sidebar-icon">⭐</span> التقييمات
-          </Link>
-          <Link to="/mediator-profile" className="sidebar-link">
-            <span className="sidebar-icon">👤</span> الملف الشخصي
-          </Link>
-        </nav>
-      </aside>
-
-      <main className="dashboard-main">
-        {/* ===== نفس الـ topbar الموجود بباقي صفحات لوحة التحكم ===== */}
-        <div className="dashboard-topbar">
-          <div className="topbar-actions">
-            <button className="notif-btn">🔔</button>
-          </div>
-          <div className="topbar-user">
-            <div className="user-info">
-              <div className="user-name">{userName}</div>
-              <div className="user-store">وسيطة</div>
-            </div>
-            <div className="user-avatar">{userInitial}</div>
-          </div>
-        </div>
+    return (
+    <DashboardLayout role="broker">
 
         <Link to="/mediator-orders" className="back-link order-details-back">
           ‹ العودة إلى الطلبات
@@ -355,7 +311,6 @@ export default function OrderDetails() {
             )}
           </>
         )}
-      </main>
-    </div>
+         </DashboardLayout>
   );
 }
