@@ -66,6 +66,7 @@ export default function MediatorProfile() {
     city: "",
     bio: "",
     commission: "",
+    yearsOfExperience: "",
   });
 
   const [acceptingOrders, setAcceptingOrders] = useState(true);
@@ -110,6 +111,7 @@ export default function MediatorProfile() {
           city: store.city || "",
           bio: store.bio || "",
           commission: store.commission_rate || "",
+          yearsOfExperience: store.years_of_experience || "",
         }));
         // سويتش "استقبال الطلبات" — is_accepting_orders، منفصل عن استقبال طلبات واتساب
         setAcceptingOrders(!!store.is_accepting_orders);
@@ -244,9 +246,12 @@ export default function MediatorProfile() {
         phone: accountForm.phone,
       });
 
-      // ٢) تحديث بيانات المتجر (المدينة + الصورة الجديدة إذا انتخبت وحدة) — endpoint /api/stores/me
+      // ٢) تحديث بيانات المتجر (المدينة + سنوات الخبرة + الصورة الجديدة إذا انتخبت وحدة) — endpoint /api/stores/me
       const storeData = {};
       if (accountForm.city) storeData.city = accountForm.city;
+      if (accountForm.yearsOfExperience !== "") {
+        storeData.years_of_experience = accountForm.yearsOfExperience;
+      }
       if (imageFile) storeData.image = imageFile;
 
       if (Object.keys(storeData).length > 0) {
@@ -255,6 +260,9 @@ export default function MediatorProfile() {
         if (updatedStore.city) {
           accountForm.city = updatedStore.city;
         }
+        if (updatedStore.years_of_experience !== undefined) {
+          accountForm.yearsOfExperience = updatedStore.years_of_experience;
+        }
       }
 
       setForm((prev) => ({
@@ -262,6 +270,7 @@ export default function MediatorProfile() {
         fullName: accountForm.fullName,
         phone: accountForm.phone,
         city: accountForm.city,
+        yearsOfExperience: accountForm.yearsOfExperience,
       }));
       setImageFile(null);
       setEditingAccount(false);
@@ -598,6 +607,16 @@ export default function MediatorProfile() {
                   {loadingStore ? "جاري التحميل..." : form.city || "غير محدد"}
                 </span>
               </div>
+              <div className="account-data-row">
+                <span className="account-data-label">سنوات الخبرة</span>
+                <span className="account-data-value">
+                  {loadingStore
+                    ? "جاري التحميل..."
+                    : form.yearsOfExperience
+                    ? `${form.yearsOfExperience} سنة`
+                    : "غير محدد"}
+                </span>
+              </div>
             </div>
           ) : (
             <div className="profile-edit-form">
@@ -652,6 +671,17 @@ export default function MediatorProfile() {
                 <option value="الوسطى">الوسطى</option>
                 <option value="رفح">رفح</option>
               </select>
+
+              <label htmlFor="yearsOfExperience">سنوات الخبرة</label>
+              <input
+                id="yearsOfExperience"
+                name="yearsOfExperience"
+                type="number"
+                min="0"
+                placeholder="مثال: 3"
+                value={accountForm.yearsOfExperience}
+                onChange={handleAccountChange}
+              />
 
               {accountError && <p className="form-error">{accountError}</p>}
 

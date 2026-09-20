@@ -1,10 +1,24 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { updateProfile, getOrderStats, logoutUser } from "../api";
+import { updateProfile, getOrderStats, logoutUser, BASE_URL } from "../api";
+
+// رابط صورة الحساب يجي أحيانًا من الباك اند كمسار نسبي (بدون دومين) —
+// هاي الدالة بتتأكد إنه رابط كامل قبل ما نعرضه، وإلا بترجع null
+function resolveImageUrl(path) {
+  if (!path) return null;
+  if (/^https?:\/\//i.test(path) || path.startsWith("blob:") || path.startsWith("data:")) {
+    return path;
+  }
+  const clean = path.startsWith("/") ? path.slice(1) : path;
+  if (!clean.includes("/")) {
+    return `${BASE_URL}/storage/${clean}`;
+  }
+  return `${BASE_URL}/${clean}`;
+}
 
 // صفحة الملف الشخصي للزبونة — نفس تصميم صفحة الملف الشخصي للوسيطة
 // (بدون زر "معاينة الملف كما يظهر للزبائن" لأنه ما إلها داعي هون، وبدون
-// نسبة عمولة/منطقة لأنه هاي بيانات خاصة بمتجر الوسيطة مش بحساب الزبونة)
+// نسبة عمولة لأنها خاصة بمتجر الوسيطة مش بحساب الزبونة)
 export default function CustomerProfile() {
   const navigate = useNavigate();
   const storedUser = JSON.parse(localStorage.getItem("user")) || {};
@@ -13,9 +27,19 @@ export default function CustomerProfile() {
     fullName: storedUser.full_name || storedUser.name || storedUser.fullName || "",
     email: storedUser.email || "",
     phone: storedUser.phone || "",
+    city: storedUser.city || "",
   });
 
   const userInitial = (form.fullName || "ز").charAt(0);
+
+  const [imageFile, setImageFile] = useState(null);
+  const [imagePreview, setImagePreview] = useState(
+    resolveImageUrl(storedUser.image_url || storedUser.image)
+  );
+
+  // بنستخدمه لمنع تعارض: لو المستخدمة رفعت صورة جديدة بنفس اللحظة يلي في فيها
+  // نداء تاني عم يجيب بيانات المستخدمة، ما نخلي نتيجته القديمة تمسح الصورة الجديدة
+  const imageJustUpdatedRef = useRef(false);
 
   // ===== تعديل بيانات الحساب =====
   const [editingAccount, setEditingAccount] = useState(false);
@@ -54,15 +78,18 @@ export default function CustomerProfile() {
     setSavingAccount(true);
 
     try {
-      await updateProfile({
+      const result = await updateProfile({
         full_name: accountForm.fullName,
         phone: accountForm.phone,
+        city: accountForm.city,
       });
 
+      const updatedUser = result.user || {};
       setForm((prev) => ({
         ...prev,
         fullName: accountForm.fullName,
         phone: accountForm.phone,
+        city: updatedUser.city || accountForm.city,
       }));
       setEditingAccount(false);
       showToast("تم تحديث بيانات الحساب بنجاح ✓");
@@ -70,6 +97,33 @@ export default function CustomerProfile() {
       setAccountError(err.message);
     } finally {
       setSavingAccount(false);
+    }
+  };
+
+  // نفس منطق رفع صورة الوسيطة بالضبط: معاينة فورية محليًا + رفع فوري للباك اند
+  const handleImageChange = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const previousPreview = imagePreview;
+    setImageFile(file);
+    setImagePreview(URL.createObjectURL(file));
+
+    try {
+      const result = await updateProfile({ image: file });
+      const updatedUser = result.user || {};
+      imageJustUpdatedRef.current = true;
+
+      const serverImage = resolveImageUrl(updatedUser.image_url || updatedUser.image);
+      if (serverImage) {
+        setImagePreview(serverImage);
+      }
+      setImageFile(null);
+      showToast("تم تحديث الصورة بنجاح ✓");
+    } catch (err) {
+      setImagePreview(previousPreview);
+      setImageFile(null);
+      showToast(err.message || "تعذر رفع الصورة");
     }
   };
 
@@ -136,7 +190,12 @@ export default function CustomerProfile() {
               <div className="user-name">{form.fullName || "زبونة"}</div>
               <div className="user-store">زبونة</div>
             </div>
-            <div className="user-avatar">{userInitial}</div>
+            <div
+              className="user-avatar"
+              style={{ backgroundImage: imagePreview ? `url(${imagePreview})` : "none" }}
+            >
+              {!imagePreview && userInitial}
+            </div>
           </div>
         </div>
 
@@ -150,7 +209,24 @@ export default function CustomerProfile() {
           <div className="profile-hero-banner"></div>
           <div className="profile-hero-body">
             <div className="profile-hero-avatar-wrap">
-              <div className="profile-hero-avatar">{userInitial}</div>
+              <label
+                htmlFor="profileImage"
+                className="profile-hero-avatar"
+                style={{
+                  cursor: "pointer",
+                  backgroundImage: imagePreview ? `url(${imagePreview})` : "none",
+                }}
+              >
+                {!imagePreview && userInitial}
+                <span className="photo-edit-overlay">📷</span>
+              </label>
+              <input
+                id="profileImage"
+                type="file"
+                accept="image/*"
+                onChange={handleImageChange}
+                style={{ display: "none" }}
+              />
             </div>
 
             <div className="profile-hero-info">
@@ -159,6 +235,7 @@ export default function CustomerProfile() {
               </div>
               <div className="profile-hero-facts">
                 <span className="profile-hero-fact-row">🏷️ زبونة</span>
+                <span className="profile-hero-fact-row">📍 {form.city || "غير محدد"}</span>
                 {form.phone && <span className="profile-hero-fact-row">📞 {form.phone}</span>}
               </div>
             </div>
@@ -190,9 +267,34 @@ export default function CustomerProfile() {
                 <span className="account-data-label">رقم الهاتف</span>
                 <span className="account-data-value">{form.phone || "—"}</span>
               </div>
+              <div className="account-data-row">
+                <span className="account-data-label">المنطقة</span>
+                <span className="account-data-value">{form.city || "غير محدد"}</span>
+              </div>
             </div>
           ) : (
             <div className="profile-edit-form">
+              <div className="profile-edit-avatar-row">
+                <div
+                  className="profile-hero-avatar sm"
+                  style={{
+                    backgroundImage: imagePreview ? `url(${imagePreview})` : "none",
+                  }}
+                >
+                  {!imagePreview && userInitial}
+                </div>
+                <label htmlFor="profileImageEdit" className="btn btn-outline btn-sm">
+                  📷 تغيير الصورة
+                </label>
+                <input
+                  id="profileImageEdit"
+                  type="file"
+                  accept="image/*"
+                  onChange={handleImageChange}
+                  style={{ display: "none" }}
+                />
+              </div>
+
               <label htmlFor="fullName">الاسم الكامل</label>
               <input
                 id="fullName"
@@ -213,6 +315,16 @@ export default function CustomerProfile() {
                 value={accountForm.phone}
                 onChange={handleAccountChange}
               />
+
+              <label htmlFor="city">المنطقة</label>
+              <select id="city" name="city" value={accountForm.city} onChange={handleAccountChange}>
+                <option value="">اختر المدينة</option>
+                <option value="غزة">غزة</option>
+                <option value="خانيونس">خانيونس</option>
+                <option value="شمال غزة">شمال غزة</option>
+                <option value="الوسطى">الوسطى</option>
+                <option value="رفح">رفح</option>
+              </select>
 
               {accountError && <p className="form-error">{accountError}</p>}
 
