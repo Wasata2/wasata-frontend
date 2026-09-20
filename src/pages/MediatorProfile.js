@@ -433,7 +433,6 @@ export default function MediatorProfile() {
                       </div>
                       <div className="service-meta-row">
                         <span className="service-fee-tag">{feeLabel(s)}</span>
-                        <span className="service-status-tag available">متاحة</span>
                       </div>
                     </div>
                   ))}
@@ -723,7 +722,6 @@ export default function MediatorProfile() {
                   </div>
                   <div className="service-meta-row">
                     <span className="service-fee-tag">{feeLabel(s)}</span>
-                    <span className="service-status-tag available">متاحة</span>
                   </div>
                 </div>
               ))}
