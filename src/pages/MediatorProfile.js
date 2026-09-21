@@ -1,11 +1,8 @@
 import { useState, useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
-<<<<<<< HEAD
-import { getMyStore, updateProfile, updateStore, getServices, getReviews } from "../api";
+import { getMyStore, updateProfile, updateStore, getServices, getReviews, getOrderStats, BASE_URL } from "../api";
 import DashboardLayout from "../components/DashboardLayout";
 import { useAuth } from "../context/AuthContext";
-=======
-import { getMyStore, updateProfile, updateStore, getServices, getReviews, getOrderStats, BASE_URL } from "../api";
 
 // رابط صورة المتجر يجي أحيانًا من الباك اند كمسار نسبي (بدون دومين) —
 // هاي الدالة بتتأكد إنه رابط كامل قبل ما نعرضه، وإلا بترجع null
@@ -15,8 +12,6 @@ function resolveImageUrl(path) {
     return path;
   }
   const clean = path.startsWith("/") ? path.slice(1) : path;
-  // لو الباك اند رجع بس اسم الملف من غير أي مجلد قبله (حالة الصور غالبًا)،
-  // منضيف مجلد storage/ الافتراضي يلي بلارافيل بيخزّن فيه الملفات المرفوعة والمتاحة عالعام
   if (!clean.includes("/")) {
     return `${BASE_URL}/storage/${clean}`;
   }
@@ -48,7 +43,6 @@ function feeLabel(service) {
   if (service.feeType === "fixed") return `ابتداء من ${service.feeValue} ₪`;
   return "";
 }
->>>>>>> 643435e9fd251ad699a4d2de105f1be6ac3fe048
 
 function StarRating({ rating, size }) {
   return (
@@ -81,13 +75,11 @@ export default function MediatorProfile() {
   const [imageFile, setImageFile] = useState(null);
   const [imagePreview, setImagePreview] = useState(null);
 
-  // ===== تعديل بيانات الحساب (الاسم / الهاتف / المنطقة) =====
   const [editingAccount, setEditingAccount] = useState(false);
   const [accountForm, setAccountForm] = useState(form);
   const [accountError, setAccountError] = useState("");
   const [savingAccount, setSavingAccount] = useState(false);
 
-  // ===== تعديل المعلومات العامة (نبذة / نسبة العمولة / استقبال الطلبات) =====
   const [generalModalOpen, setGeneralModalOpen] = useState(false);
   const [generalForm, setGeneralForm] = useState({ bio: "", commission: "", acceptingOrders: true });
   const [generalError, setGeneralError] = useState("");
@@ -103,11 +95,8 @@ export default function MediatorProfile() {
 
   const userInitial = (form.fullName || "م").charAt(0);
 
-  // بنستخدمه لمنع تعارض: لو المستخدمة رفعت صورة جديدة قبل ما يخلص نداء
-  // جلب بيانات المتجر (getMyStore)، ما نخلي نتيجة النداء القديم يمسح الصورة الجديدة
   const imageJustUpdatedRef = useRef(false);
 
-  // جلب بيانات متجر المستخدمة الحالية فعليًا من الباك اند (بدل الاعتماد على localStorage)
   useEffect(() => {
     getMyStore()
       .then((data) => {
@@ -119,9 +108,7 @@ export default function MediatorProfile() {
           commission: store.commission_rate || "",
           yearsOfExperience: store.years_of_experience || "",
         }));
-        // سويتش "استقبال الطلبات" — is_accepting_orders، منفصل عن استقبال طلبات واتساب
         setAcceptingOrders(!!store.is_accepting_orders);
-        // إذا صار في رفع صورة جديدة أثناء ما هالنداء كان لسا شغال، منتجاهل نتيجته القديمة
         if (!imageJustUpdatedRef.current) {
           setImagePreview(resolveImageUrl(store.image_url || store.image));
         }
@@ -133,7 +120,6 @@ export default function MediatorProfile() {
       });
   }, []);
 
-  // ===== تقييمات الزبائن الحقيقية — متوسط التقييم وعددها جاهزين من الباك اند =====
   const [reviews, setReviews] = useState([]);
   const [ratingSummary, setRatingSummary] = useState({ total: 0, avg: 0 });
   const [loadingReviews, setLoadingReviews] = useState(true);
@@ -150,7 +136,6 @@ export default function MediatorProfile() {
       });
   }, []);
 
-  // ===== الخدمات المتاحة — نفس بيانات صفحة الخدمات الحقيقية =====
   const [services, setServices] = useState([]);
   const [loadingServices, setLoadingServices] = useState(true);
 
@@ -167,7 +152,6 @@ export default function MediatorProfile() {
 
   const availableServices = services.filter((s) => s.available);
 
-  // ===== عدد الطلبات الجديدة — بس عشان الرقم الصغير فوق زر 🔔 =====
   const [stats, setStats] = useState(null);
 
   useEffect(() => {
@@ -182,18 +166,13 @@ export default function MediatorProfile() {
 
     const previousPreview = imagePreview;
     setImageFile(file);
-    setImagePreview(URL.createObjectURL(file)); // معاينة فورية بالواجهة
+    setImagePreview(URL.createObjectURL(file));
 
-    // نرفع الصورة فورًا للباك اند (بدل الانتظار لحد فتح "تعديل بيانات الحساب")
-    // عشان ما تضيع الصورة إذا المستخدمة طلعت من الصفحة قبل ما تحفظ
     try {
       const storeResult = await updateStore({ image: file });
-      console.log("رد الباك اند بعد رفع الصورة:", storeResult); // مؤقت للتشخيص فقط
       const updatedStore = storeResult.store || {};
-      imageJustUpdatedRef.current = true; // نمنع نداء getMyStore القديم من مسح الصورة الجديدة
+      imageJustUpdatedRef.current = true;
 
-      // منستبدل المعاينة المحلية برابط الباك اند بس لو كان رابط سليم فعليًا،
-      // وإلا منخلي المعاينة المحلية (اللي شغالة صح) زي ما هي
       const serverImage = resolveImageUrl(updatedStore.image_url || updatedStore.image);
       if (serverImage) {
         setImagePreview(serverImage);
@@ -201,26 +180,23 @@ export default function MediatorProfile() {
       setImageFile(null);
       showToast("تم تحديث الصورة بنجاح ✓");
     } catch (err) {
-      setImagePreview(previousPreview); // رجّعيها لو فشل الرفع
+      setImagePreview(previousPreview);
       setImageFile(null);
       showToast(err.message || "تعذر رفع الصورة");
     }
   };
 
-  // تبديل سريع لحالة استقبال الطلبات من الـ topbar — بيحفظ فورًا بالباك اند
-  // (بدل ما يبقى تغيير محلي بس لحد ما تفتحي نافذة "تعديل المعلومات العامة")
   const handleQuickToggleAccepting = async (checked) => {
     const previous = acceptingOrders;
-    setAcceptingOrders(checked); // تحديث فوري بالواجهة
+    setAcceptingOrders(checked);
     try {
       await updateStore({ is_accepting_orders: checked });
     } catch (err) {
-      setAcceptingOrders(previous); // رجّعيها لو فشل الحفظ
+      setAcceptingOrders(previous);
       showToast(err.message);
     }
   };
 
-  // ===== إجراءات تعديل بيانات الحساب =====
   const openAccountEdit = () => {
     setAccountForm({ ...form });
     setAccountError("");
@@ -246,13 +222,11 @@ export default function MediatorProfile() {
     setSavingAccount(true);
 
     try {
-      // ١) تحديث بيانات المستخدمة نفسها (الاسم + الهاتف) — endpoint /api/auth/profile
       await updateProfile({
         full_name: accountForm.fullName,
         phone: accountForm.phone,
       });
 
-      // ٢) تحديث بيانات المتجر (المدينة + سنوات الخبرة + الصورة الجديدة إذا انتخبت وحدة) — endpoint /api/stores/me
       const storeData = {};
       if (accountForm.city) storeData.city = accountForm.city;
       if (accountForm.yearsOfExperience !== "") {
@@ -288,7 +262,6 @@ export default function MediatorProfile() {
     }
   };
 
-  // ===== إجراءات تعديل المعلومات العامة (نبذة / عمولة / استقبال طلبات) =====
   const openGeneralModal = () => {
     setGeneralForm({
       bio: form.bio,
@@ -312,8 +285,6 @@ export default function MediatorProfile() {
     setSavingGeneral(true);
 
     try {
-      // نبذة عني + نسبة العمولة + سويتش استقبال الطلبات — الثلاثة صاروا مدعومين
-      // فعليًا بالباك اند (bio, commission_rate, is_accepting_orders)
       await updateStore({
         bio: generalForm.bio,
         commission_rate: generalForm.commission,
@@ -335,7 +306,6 @@ export default function MediatorProfile() {
     }
   };
 
-  // ===== محتوى الهيدر المشترك (يظهر بالوضعين) =====
   const heroCard = (
     <div className="profile-hero-card">
       <div className="profile-hero-banner">
@@ -401,7 +371,6 @@ export default function MediatorProfile() {
     </div>
   );
 
-  // ===== وضع المعاينة كما تظهر للزبائن =====
   if (previewMode) {
     return (
       <div className="dashboard-layout">
@@ -502,14 +471,13 @@ export default function MediatorProfile() {
     );
   }
 
-  // ===== الوضع الافتراضي: لوحة تحكم الوسيطة =====
-    const acceptToggle = (
+  const acceptToggle = (
     <div className="accept-toggle">
       <label className="switch">
         <input
           type="checkbox"
           checked={acceptingOrders}
-          onChange={(e) => setAcceptingOrders(e.target.checked)}
+          onChange={(e) => handleQuickToggleAccepting(e.target.checked)}
         />
         <span className="slider"></span>
       </label>
@@ -519,88 +487,19 @@ export default function MediatorProfile() {
 
   // ===== الوضع الافتراضي: لوحة تحكم الوسيطة =====
   return (
-<<<<<<< HEAD
-    <DashboardLayout role="broker" topbarExtra={acceptToggle}>
-=======
-    <div className="dashboard-layout">
-      <aside className="dashboard-sidebar">
-        <div className="sidebar-logo">
-          <img src="/logo.svg" alt="وساطة" className="logo-img" />
-          وساطة
-        </div>
-        <nav className="sidebar-nav">
-          <Link to="/" className="sidebar-link">
-            <span className="sidebar-icon">🏠</span> الرئيسية
-          </Link>
-          <Link to="/mediator-dashboard" className="sidebar-link">
-            <span className="sidebar-icon">▦</span> لوحة التحكم
-          </Link>
-          <Link to="/mediator-orders" className="sidebar-link">
-            <span className="sidebar-icon">📋</span> الطلبات
-          </Link>
-          <Link to="/mediator-services" className="sidebar-link">
-            <span className="sidebar-icon">🛍</span> الخدمات
-          </Link>
-          <Link to="/mediator-reviews" className="sidebar-link">
-            <span className="sidebar-icon">⭐</span> التقييمات
-          </Link>
-          <Link to="/mediator-profile" className="sidebar-link active">
-            <span className="sidebar-icon">👤</span> الملف الشخصي
-          </Link>
-        </nav>
-      </aside>
-
-      <main className="dashboard-main">
-        <div className="dashboard-topbar">
-          <div className="topbar-actions">
-            <Link to="/mediator-notifications" className="notif-btn-wrap">
-              <button className="notif-btn">🔔</button>
-              {stats && stats.newCount > 0 && (
-                <span className="notif-badge">{stats.newCount}</span>
-              )}
-            </Link>
-            <div className="accept-toggle">
-              <label className="switch">
-                <input
-                  type="checkbox"
-                  checked={acceptingOrders}
-                  onChange={(e) => handleQuickToggleAccepting(e.target.checked)}
-                />
-                <span className="slider"></span>
-              </label>
-              <span>استقبال الطلبات</span>
-            </div>
-          </div>
-          <div className="topbar-user">
-            <div className="user-info">
-              <div className="user-name">{form.fullName}</div>
-              <div className="user-store">وسيطة</div>
-            </div>
-            <div
-              className="user-avatar"
-              style={
-                imagePreview
-                  ? {
-                      backgroundImage: `url(${imagePreview})`,
-                      backgroundSize: "cover",
-                      backgroundPosition: "center",
-                    }
-                  : undefined
-              }
-            >
-              {!imagePreview && userInitial}
-            </div>
-          </div>
-        </div>
-
->>>>>>> 643435e9fd251ad699a4d2de105f1be6ac3fe048
+    <DashboardLayout
+      role="broker"
+      topbarExtra={acceptToggle}
+      avatarImage={imagePreview}
+      notifBadge={stats && stats.newCount}
+      notifLink="/mediator-notifications"
+    >
         <div className="dashboard-welcome profile-title-centered">
           <h1>الملف الشخصي</h1>
           <p>أديري المعلومات التي تظهر للزبائن وتابعي أداء حسابك.</p>
         </div>
         {heroCard}
 
-        {/* ===== بيانات الحساب ===== */}
         <div className="account-data-card">
           <div className="section-header-row">
             <h3>بيانات الحساب</h3>
@@ -721,7 +620,6 @@ export default function MediatorProfile() {
           )}
         </div>
 
-        {/* ===== معلومات تظهر للزبائن ===== */}
         <div className="public-info-card">
           <div className="section-header-row">
             <h3>معلومات تظهر للزبائن</h3>
@@ -752,7 +650,6 @@ export default function MediatorProfile() {
           </div>
         </div>
 
-        {/* ===== الخدمات المتاحة ===== */}
         <div className="public-info-card">
           <div className="section-header-row">
             <h3>الخدمات المتاحة</h3>
@@ -783,7 +680,6 @@ export default function MediatorProfile() {
           )}
         </div>
 
-        {/* ===== نافذة تعديل المعلومات العامة ===== */}
         {generalModalOpen && (
           <div className="modal-overlay" onClick={closeGeneralModal}>
             <div className="modal-card" onClick={(e) => e.stopPropagation()}>
@@ -849,7 +745,7 @@ export default function MediatorProfile() {
           </div>
         )}
 
-               {toast && <div className="toast-notification">{toast}</div>}
+        {toast && <div className="toast-notification">{toast}</div>}
     </DashboardLayout>
   );
 }

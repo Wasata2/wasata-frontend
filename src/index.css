@@ -3127,8 +3127,7 @@ footer .copyright{font-size:12px;color:var(--gray-light);}
 .confirm-actions{ display:flex; gap:12px; }
 .confirm-actions .btn{ flex:1; }
 
-<<<<<<< HEAD
-/* ===== زر تسجيل الخروج===== */
+/* ===== زر تسجيل الخروج (السايدبار) ===== */
 .sidebar-logout-btn {
   display: block;
   width: 100%;
@@ -3147,7 +3146,8 @@ footer .copyright{font-size:12px;color:var(--gray-light);}
 
 .sidebar-logout-btn:hover {
   background: #fee2e2;
-=======
+}
+
 /* ===== ملخص طلباتي (صفحة الملف الشخصي للزبونة) ===== */
 .order-summary-grid{
   display:grid;
@@ -3172,7 +3172,7 @@ footer .copyright{font-size:12px;color:var(--gray-light);}
 .order-summary-box.active .order-summary-number{ color:var(--blue); }
 .order-summary-label{ font-size:12px; color:var(--gray-light); font-weight:700; }
 
-/* ===== زر تسجيل الخروج ===== */
+/* ===== زر تسجيل الخروج (نسخة صفحة الملف الشخصي) ===== */
 .btn-logout{
   width:100%;
   display:flex;
@@ -3196,7 +3196,6 @@ footer .copyright{font-size:12px;color:var(--gray-light);}
   font-weight:500;
   color:#c0392b;
   opacity:.8;
->>>>>>> 643435e9fd251ad699a4d2de105f1be6ac3fe048
 }
 
 /* ============ Responsive ============ */

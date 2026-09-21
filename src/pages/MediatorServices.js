@@ -1,19 +1,8 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
-<<<<<<< HEAD
 import { getServices, createService, updateService, toggleService, deleteService } from "../api";
 import DashboardLayout from "../components/DashboardLayout";
 
-=======
-import {
-  getServices,
-  createService,
-  updateService,
-  toggleService,
-  deleteService,
-  getOrderStats,
-} from "../api";
->>>>>>> 643435e9fd251ad699a4d2de105f1be6ac3fe048
 // أيقونات الخدمة المتاحة للاختيار من بينها — value لازم يطابق القيم المقبولة بالباك اند بالظبط
 const ICONS = [
   { value: "search", label: "🔍" },
@@ -59,17 +48,10 @@ const emptyForm = {
 };
 
 export default function MediatorServices() {
-
   const [services, setServices] = useState([]);
   const [loadingServices, setLoadingServices] = useState(true);
   const [loadError, setLoadError] = useState("");
-  // ===== عدد الطلبات الجديدة — بس عشان الرقم الصغير فوق زر 🔔 =====
-  const [stats, setStats] = useState(null);
-  useEffect(() => {
-    getOrderStats()
-      .then(setStats)
-      .catch(() => {});
-  }, []);
+
   useEffect(() => {
     getServices()
       .then((data) => {
@@ -88,8 +70,8 @@ export default function MediatorServices() {
   const [formError, setFormError] = useState("");
   const [saving, setSaving] = useState(false);
 
-  const [confirmToggle, setConfirmToggle] = useState(null); // الخدمة يلي عم نأكد تفعيلها/تعطيلها
-  const [confirmDelete, setConfirmDelete] = useState(null); // الخدمة يلي عم نأكد حذفها
+  const [confirmToggle, setConfirmToggle] = useState(null);
+  const [confirmDelete, setConfirmDelete] = useState(null);
   const [toast, setToast] = useState("");
 
   const showToast = (message) => {
@@ -124,10 +106,7 @@ export default function MediatorServices() {
       setFormError("يرجى تعبئة اسم الخدمة ووصفها.");
       return;
     }
-    if (
-      (form.feeType === "percentage" || form.feeType === "fixed") &&
-      !form.feeValue
-    ) {
+    if ((form.feeType === "percentage" || form.feeType === "fixed") && !form.feeValue) {
       setFormError("يرجى إدخال قيمة الرسوم.");
       return;
     }
@@ -137,9 +116,7 @@ export default function MediatorServices() {
     try {
       if (editingId) {
         const updated = await updateService(editingId, form);
-        setServices((prev) =>
-          prev.map((s) => (s.id === editingId ? updated : s)),
-        );
+        setServices((prev) => prev.map((s) => (s.id === editingId ? updated : s)));
         showToast("تم حفظ التغييرات بنجاح ✓");
       } else {
         const created = await createService(form);
@@ -159,12 +136,8 @@ export default function MediatorServices() {
     const willEnable = !confirmToggle.available;
     try {
       const updated = await toggleService(confirmToggle.id);
-      setServices((prev) =>
-        prev.map((s) => (s.id === confirmToggle.id ? updated : s)),
-      );
-      showToast(
-        willEnable ? "تم تفعيل الخدمة بنجاح ✓" : "تم تعطيل الخدمة بنجاح ✓",
-      );
+      setServices((prev) => prev.map((s) => (s.id === confirmToggle.id ? updated : s)));
+      showToast(willEnable ? "تم تفعيل الخدمة بنجاح ✓" : "تم تعطيل الخدمة بنجاح ✓");
     } catch (err) {
       showToast(err.message);
     } finally {
@@ -183,365 +156,232 @@ export default function MediatorServices() {
       showToast("تم حذف الخدمة بنجاح ✓");
       setConfirmDelete(null);
     } catch (err) {
-      // نخلي النافذة مفتوحة والرسالة ظاهرة (متل رسالة "الخدمة مستخدمة بطلب سابق")
-      // بدل ما تختفي بسرعة كـ toast عابر
       setDeleteError(err.message);
     }
   };
 
   return (
-<<<<<<< HEAD
     <DashboardLayout role="broker">
-=======
-    <div className="dashboard-layout">
-      {/* ===== نفس القائمة الجانبية الموجودة بباقي صفحات لوحة التحكم ===== */}
-      <aside className="dashboard-sidebar">
-        <div className="sidebar-logo">
-          <img src="/logo.svg" alt="وساطة" className="logo-img" />
-          وساطة
+      <div className="services-header-row">
+        <div className="dashboard-welcome">
+          <h1>الخدمات</h1>
+          <p>خدماتي المتوفرة.</p>
         </div>
-        <nav className="sidebar-nav">
-          <Link to="/" className="sidebar-link">
-            <span className="sidebar-icon">🏠</span> الرئيسية
-          </Link>
-          <Link to="/mediator-dashboard" className="sidebar-link">
-            <span className="sidebar-icon">▦</span> لوحة التحكم
-          </Link>
-          <Link to="/mediator-orders" className="sidebar-link">
-            <span className="sidebar-icon">📋</span> الطلبات
-          </Link>
-          <Link to="/mediator-services" className="sidebar-link active">
-            <span className="sidebar-icon">🛍</span> الخدمات
-          </Link>
-          <Link to="/mediator-reviews" className="sidebar-link">
-            <span className="sidebar-icon">⭐</span> التقييمات
-          </Link>
-          <Link to="/mediator-profile" className="sidebar-link">
-            <span className="sidebar-icon">👤</span> الملف الشخصي
-          </Link>
-        </nav>
-      </aside>
+        <button className="btn btn-primary" onClick={openAddModal}>
+          + إضافة خدمة
+        </button>
+      </div>
 
-      <main className="dashboard-main">
-        {/* ===== نفس الـ topbar الموجود بباقي صفحات لوحة التحكم ===== */}
-        <div className="dashboard-topbar">
-          <div className="topbar-actions">
-            <Link to="/mediator-notifications" className="notif-btn-wrap">
-              <button className="notif-btn">🔔</button>
-              {stats && stats.newCount > 0 && (
-                <span className="notif-badge">{stats.newCount}</span>
-              )}
-            </Link>
-          </div>
-          <div className="topbar-user">
-            <div className="user-info">
-              <div className="user-name">{userName}</div>
-              <div className="user-store">وسيطة</div>
+      {loadingServices ? (
+        <div className="empty-orders">
+          <p>جاري تحميل الخدمات...</p>
+        </div>
+      ) : loadError ? (
+        <div className="empty-orders">
+          <p>تعذر تحميل الخدمات: {loadError}</p>
+          <Link to="/create-store" className="btn btn-primary" style={{ marginTop: "12px", display: "inline-block" }}>
+            الذهاب لإنشاء المتجر
+          </Link>
+        </div>
+      ) : services.length === 0 ? (
+        <div className="empty-orders">
+          <p>ما في خدمات مضافة بعد. اضغطي "إضافة خدمة" لتبدئي.</p>
+        </div>
+      ) : (
+        services.map((service) => (
+          <div className="service-card" key={service.id}>
+            <div className="service-icon-badge">{iconEmoji(service.icon)}</div>
+
+            <div className="service-content">
+              <div className="service-name">{service.name}</div>
+              <div className="service-description">{service.description}</div>
+              {service.notes && <div className="service-notes">📌 {service.notes}</div>}
             </div>
-            <div className="user-avatar">{userInitial}</div>
-          </div>
-        </div>
->>>>>>> 643435e9fd251ad699a4d2de105f1be6ac3fe048
 
-        <div className="services-header-row">
-          <div className="dashboard-welcome">
-            <h1>الخدمات</h1>
-            <p>خدماتي المتوفرة.</p>
-          </div>
-          <button className="btn btn-primary" onClick={openAddModal}>
-            + إضافة خدمة
-          </button>
-        </div>
-
-        {loadingServices ? (
-          <div className="empty-orders">
-            <p>جاري تحميل الخدمات...</p>
-          </div>
-        ) : loadError ? (
-          <div className="empty-orders">
-            <p>تعذر تحميل الخدمات: {loadError}</p>
-            <Link
-              to="/create-store"
-              className="btn btn-primary"
-              style={{ marginTop: "12px", display: "inline-block" }}
-            >
-              الذهاب لإنشاء المتجر
-            </Link>
-          </div>
-        ) : services.length === 0 ? (
-          <div className="empty-orders">
-            <p>ما في خدمات مضافة بعد. اضغطي "إضافة خدمة" لتبدئي.</p>
-          </div>
-        ) : (
-          services.map((service) => (
-            <div className="service-card" key={service.id}>
-              <div className="service-icon-badge">
-                {iconEmoji(service.icon)}
-              </div>
-
-              <div className="service-content">
-                <div className="service-name">{service.name}</div>
-                <div className="service-description">{service.description}</div>
-                {service.notes && (
-                  <div className="service-notes">📌 {service.notes}</div>
-                )}
-              </div>
-
-              <div className="service-meta-row">
-                <span className="service-fee-tag">{feeLabel(service)}</span>
-                <span
-                  className={`service-status-tag ${service.available ? "available" : "unavailable"}`}
-                >
-                  {service.available ? "متاحة" : "غير متاحة"}
-                </span>
-                <button
-                  className="btn-edit-service"
-                  onClick={() => openEditModal(service)}
-                >
-                  ✎ تعديل
-                </button>
-                <button
-                  className={
-                    service.available
-                      ? "btn-disable-service"
-                      : "btn-enable-service"
-                  }
-                  onClick={() => setConfirmToggle(service)}
-                >
-                  {service.available ? "تعطيل" : "تفعيل"}
-                </button>
-                <button
-                  className="btn-delete-service"
-                  onClick={() => {
-                    setConfirmDelete(service);
-                    setDeleteError("");
-                  }}
-                >
-                  🗑 حذف
-                </button>
-              </div>
+            <div className="service-meta-row">
+              <span className="service-fee-tag">{feeLabel(service)}</span>
+              <span className={`service-status-tag ${service.available ? "available" : "unavailable"}`}>
+                {service.available ? "متاحة" : "غير متاحة"}
+              </span>
+              <button className="btn-edit-service" onClick={() => openEditModal(service)}>
+                ✎ تعديل
+              </button>
+              <button
+                className={service.available ? "btn-disable-service" : "btn-enable-service"}
+                onClick={() => setConfirmToggle(service)}
+              >
+                {service.available ? "تعطيل" : "تفعيل"}
+              </button>
+              <button
+                className="btn-delete-service"
+                onClick={() => {
+                  setConfirmDelete(service);
+                  setDeleteError("");
+                }}
+              >
+                🗑 حذف
+              </button>
             </div>
-          ))
-        )}
+          </div>
+        ))
+      )}
 
-        {/* ===== نافذة إضافة/تعديل خدمة ===== */}
-        {modalOpen && (
-          <div className="modal-overlay" onClick={closeModal}>
-            <div className="modal-card" onClick={(e) => e.stopPropagation()}>
-              <div className="modal-header">
-                <span>{editingId ? "تعديل الخدمة" : "إضافة خدمة جديدة"}</span>
-                <button className="modal-close-btn" onClick={closeModal}>
-                  ✕
-                </button>
-              </div>
+      {modalOpen && (
+        <div className="modal-overlay" onClick={closeModal}>
+          <div className="modal-card" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <span>{editingId ? "تعديل الخدمة" : "إضافة خدمة جديدة"}</span>
+              <button className="modal-close-btn" onClick={closeModal}>
+                ✕
+              </button>
+            </div>
 
-              <form className="modal-body" onSubmit={handleSave}>
-                <label>أيقونة الخدمة</label>
-                <div className="icon-picker-row">
-                  {ICONS.map((icon) => (
-                    <button
-                      type="button"
-                      key={icon.value}
-                      className={`icon-picker-btn ${form.icon === icon.value ? "selected" : ""}`}
-                      onClick={() =>
-                        setForm((prev) => ({ ...prev, icon: icon.value }))
-                      }
-                    >
-                      {icon.label}
-                    </button>
-                  ))}
-                </div>
-
-                <label htmlFor="name">اسم الخدمة</label>
-                <input
-                  id="name"
-                  name="name"
-                  type="text"
-                  value={form.name}
-                  onChange={handleFormChange}
-                />
-
-                <label htmlFor="description">وصف الخدمة</label>
-                <textarea
-                  id="description"
-                  name="description"
-                  rows={3}
-                  value={form.description}
-                  onChange={handleFormChange}
-                />
-
-                <label>نوع الرسوم</label>
-                <div className="fee-type-picker">
-                  {FEE_TYPES.map((type) => (
-                    <button
-                      type="button"
-                      key={type.key}
-                      className={`fee-type-option ${form.feeType === type.key ? "selected" : ""}`}
-                      onClick={() =>
-                        setForm((prev) => ({ ...prev, feeType: type.key }))
-                      }
-                    >
-                      {type.label}
-                    </button>
-                  ))}
-                </div>
-
-                {(form.feeType === "percentage" ||
-                  form.feeType === "fixed") && (
-                  <>
-                    <label htmlFor="feeValue">
-                      {form.feeType === "percentage"
-                        ? "نسبة العمولة (%)"
-                        : "المبلغ (₪)"}
-                    </label>
-                    <input
-                      id="feeValue"
-                      name="feeValue"
-                      type="number"
-                      min="0"
-                      value={form.feeValue}
-                      onChange={handleFormChange}
-                    />
-                  </>
-                )}
-
-                <label htmlFor="notes">ملاحظات أو شروط الخدمة (اختياري)</label>
-                <input
-                  id="notes"
-                  name="notes"
-                  type="text"
-                  placeholder="مثال: خلال 1-2 يوم بعد وصول الطلب"
-                  value={form.notes}
-                  onChange={handleFormChange}
-                />
-
-                <div className="service-availability-row">
-                  <label className="switch">
-                    <input
-                      type="checkbox"
-                      checked={form.available}
-                      onChange={(e) =>
-                        setForm((prev) => ({
-                          ...prev,
-                          available: e.target.checked,
-                        }))
-                      }
-                    />
-                    <span className="slider"></span>
-                  </label>
-                  <span>{form.available ? "متاحة" : "غير متاحة"}</span>
-                </div>
-
-                {formError && <p className="form-error">{formError}</p>}
-
-                <div className="modal-actions">
-                  <button
-                    type="submit"
-                    className="btn btn-primary"
-                    disabled={saving}
-                  >
-                    {saving
-                      ? "جاري الحفظ..."
-                      : editingId
-                        ? "حفظ التغييرات"
-                        : "إضافة الخدمة"}
-                  </button>
+            <form className="modal-body" onSubmit={handleSave}>
+              <label>أيقونة الخدمة</label>
+              <div className="icon-picker-row">
+                {ICONS.map((icon) => (
                   <button
                     type="button"
-                    className="btn btn-outline"
-                    onClick={closeModal}
-                    disabled={saving}
+                    key={icon.value}
+                    className={`icon-picker-btn ${form.icon === icon.value ? "selected" : ""}`}
+                    onClick={() => setForm((prev) => ({ ...prev, icon: icon.value }))}
                   >
-                    إلغاء
+                    {icon.label}
                   </button>
-                </div>
-              </form>
-            </div>
-          </div>
-        )}
-
-        {/* ===== نافذة تأكيد التفعيل/التعطيل ===== */}
-        {confirmToggle && (
-          <div className="modal-overlay" onClick={() => setConfirmToggle(null)}>
-            <div
-              className="confirm-modal-card"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <div
-                className={`confirm-icon-badge ${confirmToggle.available ? "danger" : "success"}`}
-              >
-                {confirmToggle.available ? "⏸️" : "▶️"}
+                ))}
               </div>
-              <h3>
+
+              <label htmlFor="name">اسم الخدمة</label>
+              <input id="name" name="name" type="text" value={form.name} onChange={handleFormChange} />
+
+              <label htmlFor="description">وصف الخدمة</label>
+              <textarea id="description" name="description" rows={3} value={form.description} onChange={handleFormChange} />
+
+              <label>نوع الرسوم</label>
+              <div className="fee-type-picker">
+                {FEE_TYPES.map((type) => (
+                  <button
+                    type="button"
+                    key={type.key}
+                    className={`fee-type-option ${form.feeType === type.key ? "selected" : ""}`}
+                    onClick={() => setForm((prev) => ({ ...prev, feeType: type.key }))}
+                  >
+                    {type.label}
+                  </button>
+                ))}
+              </div>
+
+              {(form.feeType === "percentage" || form.feeType === "fixed") && (
+                <>
+                  <label htmlFor="feeValue">
+                    {form.feeType === "percentage" ? "نسبة العمولة (%)" : "المبلغ (₪)"}
+                  </label>
+                  <input
+                    id="feeValue"
+                    name="feeValue"
+                    type="number"
+                    min="0"
+                    value={form.feeValue}
+                    onChange={handleFormChange}
+                  />
+                </>
+              )}
+
+              <label htmlFor="notes">ملاحظات أو شروط الخدمة (اختياري)</label>
+              <input
+                id="notes"
+                name="notes"
+                type="text"
+                placeholder="مثال: خلال 1-2 يوم بعد وصول الطلب"
+                value={form.notes}
+                onChange={handleFormChange}
+              />
+
+              <div className="service-availability-row">
+                <label className="switch">
+                  <input
+                    type="checkbox"
+                    checked={form.available}
+                    onChange={(e) => setForm((prev) => ({ ...prev, available: e.target.checked }))}
+                  />
+                  <span className="slider"></span>
+                </label>
+                <span>{form.available ? "متاحة" : "غير متاحة"}</span>
+              </div>
+
+              {formError && <p className="form-error">{formError}</p>}
+
+              <div className="modal-actions">
+                <button type="submit" className="btn btn-primary" disabled={saving}>
+                  {saving ? "جاري الحفظ..." : editingId ? "حفظ التغييرات" : "إضافة الخدمة"}
+                </button>
+                <button type="button" className="btn btn-outline" onClick={closeModal} disabled={saving}>
+                  إلغاء
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {confirmToggle && (
+        <div className="modal-overlay" onClick={() => setConfirmToggle(null)}>
+          <div className="confirm-modal-card" onClick={(e) => e.stopPropagation()}>
+            <div className={`confirm-icon-badge ${confirmToggle.available ? "danger" : "success"}`}>
+              {confirmToggle.available ? "⏸️" : "▶️"}
+            </div>
+            <h3>{confirmToggle.available ? "تعطيل الخدمة" : "تفعيل الخدمة"}</h3>
+            <p>
+              هل تريدين {confirmToggle.available ? "تعطيل" : "تفعيل"} خدمة «{confirmToggle.name}»؟{" "}
+              {confirmToggle.available ? "لن تظهر للزبائن أثناء تعطيلها." : "ستظهر للزبائن فور تفعيلها."}
+            </p>
+            <div className="confirm-modal-actions">
+              <button className={confirmToggle.available ? "btn-danger" : "btn-success"} onClick={confirmToggleAvailability}>
                 {confirmToggle.available ? "تعطيل الخدمة" : "تفعيل الخدمة"}
-              </h3>
-              <p>
-                هل تريدين {confirmToggle.available ? "تعطيل" : "تفعيل"} خدمة «
-                {confirmToggle.name}»؟{" "}
-                {confirmToggle.available
-                  ? "لن تظهر للزبائن أثناء تعطيلها."
-                  : "ستظهر للزبائن فور تفعيلها."}
-              </p>
-              <div className="confirm-modal-actions">
-                <button
-                  className={
-                    confirmToggle.available ? "btn-danger" : "btn-success"
-                  }
-                  onClick={confirmToggleAvailability}
-                >
-                  {confirmToggle.available ? "تعطيل الخدمة" : "تفعيل الخدمة"}
-                </button>
-                <button
-                  className="btn btn-outline"
-                  onClick={() => setConfirmToggle(null)}
-                >
-                  إلغاء
-                </button>
-              </div>
+              </button>
+              <button className="btn btn-outline" onClick={() => setConfirmToggle(null)}>
+                إلغاء
+              </button>
             </div>
           </div>
-        )}
+        </div>
+      )}
 
-        {/* ===== نافذة تأكيد الحذف ===== */}
-        {confirmDelete && (
-          <div
-            className="modal-overlay"
-            onClick={() => {
-              setConfirmDelete(null);
-              setDeleteError("");
-            }}
-          >
-            <div
-              className="confirm-modal-card"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <div className="confirm-icon-badge danger">🗑</div>
-              <h3>حذف الخدمة</h3>
-              <p>
-                هل متأكدة من حذف خدمة «{confirmDelete.name}»؟ هذا الإجراء نهائي
-                ولا يمكن التراجع عنه.
-              </p>
-              {deleteError && <p className="form-error">{deleteError}</p>}
-              <div className="confirm-modal-actions">
-                <button className="btn-danger" onClick={confirmDeleteService}>
-                  حذف نهائيًا
-                </button>
-                <button
-                  className="btn btn-outline"
-                  onClick={() => {
-                    setConfirmDelete(null);
-                    setDeleteError("");
-                  }}
-                >
-                  إلغاء
-                </button>
-              </div>
+      {confirmDelete && (
+        <div
+          className="modal-overlay"
+          onClick={() => {
+            setConfirmDelete(null);
+            setDeleteError("");
+          }}
+        >
+          <div className="confirm-modal-card" onClick={(e) => e.stopPropagation()}>
+            <div className="confirm-icon-badge danger">🗑</div>
+            <h3>حذف الخدمة</h3>
+            <p>
+              هل متأكدة من حذف خدمة «{confirmDelete.name}»؟ هذا الإجراء نهائي ولا يمكن التراجع عنه.
+            </p>
+            {deleteError && <p className="form-error">{deleteError}</p>}
+            <div className="confirm-modal-actions">
+              <button className="btn-danger" onClick={confirmDeleteService}>
+                حذف نهائيًا
+              </button>
+              <button
+                className="btn btn-outline"
+                onClick={() => {
+                  setConfirmDelete(null);
+                  setDeleteError("");
+                }}
+              >
+                إلغاء
+              </button>
             </div>
-          </div>
-        )}
 
-        {/* ===== إشعار نجاح مؤقت ===== */}
-        {toast && <div className="toast-notification">{toast}</div>}
-          </DashboardLayout>
+          </div>
+        </div>
+      )}
+
+      {toast && <div className="toast-notification">{toast}</div>}
+    </DashboardLayout>
   );
 }

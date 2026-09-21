@@ -1,28 +1,8 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
-<<<<<<< HEAD
-import { getServices, getOrders, getOrderStats } from "../api";
+import { getServices, getOrders, getOrderStats, getMyStore, updateStore } from "../api";
 import DashboardLayout from "../components/DashboardLayout";
 import { useAuth } from "../context/AuthContext";
-=======
-import { getServices, getOrders, getOrderStats, getMyStore, updateStore, BASE_URL } from "../api";
-
-// رابط صورة المتجر يجي أحيانًا من الباك اند كمسار نسبي (بدون دومين) —
-// هاي الدالة بتتأكد إنه رابط كامل قبل ما نعرضه، وإلا بترجع null
-function resolveImageUrl(path) {
-  if (!path) return null;
-  if (/^https?:\/\//i.test(path) || path.startsWith("blob:") || path.startsWith("data:")) {
-    return path;
-  }
-  const clean = path.startsWith("/") ? path.slice(1) : path;
-  // لو الباك اند رجع بس اسم الملف من غير أي مجلد قبله (حالة الصور غالبًا)،
-  // منضيف مجلد storage/ الافتراضي يلي بلارافيل بيخزّن فيه الملفات المرفوعة والمتاحة عالعام
-  if (!clean.includes("/")) {
-    return `${BASE_URL}/storage/${clean}`;
-  }
-  return `${BASE_URL}/${clean}`;
-}
->>>>>>> 643435e9fd251ad699a4d2de105f1be6ac3fe048
 
 export default function MediatorDashboard() {
   const { user } = useAuth();
@@ -37,19 +17,14 @@ export default function MediatorDashboard() {
   const [loadingServicesCount, setLoadingServicesCount] = useState(true);
 
   useEffect(() => {
-<<<<<<< HEAD
-=======
-    // نفس مصدر بيانات المتجر يلي بتستخدمه صفحة الملف الشخصي — عشان الصورة وحالة
-    // استقبال الطلبات يضلوا متطابقين بين الشاشتين
+    // نجيب حالة استقبال الطلبات الحقيقية من المتجر بدل القيمة الافتراضية المحلية
     getMyStore()
       .then((data) => {
         const store = data.store || data;
         setAcceptingOrders(!!store.is_accepting_orders);
-        setImagePreview(resolveImageUrl(store.image_url || store.image));
       })
       .catch(() => {});
 
->>>>>>> 643435e9fd251ad699a4d2de105f1be6ac3fe048
     getServices()
       .then((data) => {
         setActiveServicesCount(data.filter((s) => s.available).length);
@@ -70,6 +45,16 @@ export default function MediatorDashboard() {
       });
   }, []);
 
+  // لما الوسيطة تبدّل السويتش، منبعت التحديث فعليًا للباك اند
+  const handleToggleAccepting = async (checked) => {
+    setAcceptingOrders(checked);
+    try {
+      await updateStore({ is_accepting_orders: checked });
+    } catch (err) {
+      setAcceptingOrders(!checked);
+    }
+  };
+
   const latestNewOrder = orders.find((o) => o.status === "new");
 
   const inProgressCount = stats ? stats.inProgressCount : 0;
@@ -81,7 +66,7 @@ export default function MediatorDashboard() {
         <input
           type="checkbox"
           checked={acceptingOrders}
-          onChange={(e) => setAcceptingOrders(e.target.checked)}
+          onChange={(e) => handleToggleAccepting(e.target.checked)}
         />
         <span className="slider"></span>
       </label>
@@ -90,82 +75,7 @@ export default function MediatorDashboard() {
   );
 
   return (
-<<<<<<< HEAD
     <DashboardLayout role="broker" ordersBadge={newOrdersCount} topbarExtra={acceptToggle}>
-=======
-    <div className="dashboard-layout">
-      <aside className="dashboard-sidebar">
-        <div className="sidebar-logo">
-          <img src="/logo.svg" alt="وساطة" className="logo-img" />
-          وساطة
-        </div>
-        <nav className="sidebar-nav">
-          <Link to="/" className="sidebar-link">
-            <span className="sidebar-icon">🏠</span> الرئيسية
-          </Link>
-          <Link to="/mediator-dashboard" className="sidebar-link active">
-            <span className="sidebar-icon">▦</span> لوحة التحكم
-          </Link>
-          <Link to="/mediator-orders" className="sidebar-link">
-            <span className="sidebar-icon">📋</span> الطلبات
-            {newOrdersCount > 0 && <span className="sidebar-badge">{newOrdersCount}</span>}
-          </Link>
-          <Link to="/mediator-services" className="sidebar-link">
-            <span className="sidebar-icon">🛍</span> الخدمات
-          </Link>
-          <Link to="/mediator-reviews" className="sidebar-link">
-            <span className="sidebar-icon">⭐</span> التقييمات
-          </Link>
-          <Link to="/mediator-profile" className="sidebar-link">
-            <span className="sidebar-icon">👤</span> الملف الشخصي
-          </Link>
-        </nav>
-      </aside>
-
-      <main className="dashboard-main">
-        <div className="dashboard-topbar">
-          <div className="topbar-actions">
-            <Link to="/mediator-notifications" className="notif-btn-wrap">
-              <button className="notif-btn">🔔</button>
-              {stats && stats.newCount > 0 && (
-                <span className="notif-badge">{stats.newCount}</span>
-              )}
-            </Link>
-            <div className="accept-toggle">
-              <label className="switch">
-                <input
-                  type="checkbox"
-                  checked={acceptingOrders}
-                  onChange={(e) => handleQuickToggleAccepting(e.target.checked)}
-                />
-                <span className="slider"></span>
-              </label>
-              <span>استقبال الطلبات</span>
-            </div>
-          </div>
-          <div className="topbar-user">
-            <div className="user-info">
-              <div className="user-name">{userName}</div>
-              <div className="user-store">وسيطة</div>
-            </div>
-            <div
-              className="user-avatar"
-              style={
-                imagePreview
-                  ? {
-                      backgroundImage: `url(${imagePreview})`,
-                      backgroundSize: "cover",
-                      backgroundPosition: "center",
-                    }
-                  : undefined
-              }
-            >
-              {!imagePreview && userInitial}
-            </div>
-          </div>
-        </div>
-
->>>>>>> 643435e9fd251ad699a4d2de105f1be6ac3fe048
         <div className="dashboard-welcome">
           <h1>مرحبًا، {userName.split(" ")[0]} 👋</h1>
           <p>إليك نظرة سريعة على نشاطك اليوم.</p>
