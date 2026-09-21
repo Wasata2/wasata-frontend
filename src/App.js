@@ -16,11 +16,17 @@ import ResetPassword from "./pages/ResetPassword";
 import MediatorServices from "./pages/MediatorServices";
 import NewOrder from "./pages/NewOrder";
 import OrderDetails from "./pages/OrderDetails";
+<<<<<<< HEAD
 import ProtectedRoute from "./components/ProtectedRoute";
+=======
+import MediatorNotifications from "./pages/MediatorNotifications";
+import CustomerProfile from "./pages/CustomerProfile";
+>>>>>>> 643435e9fd251ad699a4d2de105f1be6ac3fe048
 
 function App() {
   return (
     <Routes>
+<<<<<<< HEAD
   <Route path="/" element={<Home />} />
   <Route path="/account-type" element={<AccountType />} />
   <Route path="/signup-customer" element={<SignupCustomer />} />
@@ -113,6 +119,28 @@ function App() {
     }
   />
 </Routes>
+=======
+      <Route path="/" element={<Home />} />
+      <Route path="/account-type" element={<AccountType />} />
+      <Route path="/signup-customer" element={<SignupCustomer />} />
+      <Route path="/signup-mediator" element={<SignupMediator />} />
+      <Route path="/create-store" element={<CreateStore />} />
+      <Route path="/login" element={<Login />} />
+      <Route path="/mediator-dashboard" element={<MediatorDashboard />} />
+      <Route path="/customer-dashboard" element={<CustomerDashboard />} />
+      <Route path="/mediator-profile" element={<MediatorProfile />} />
+      <Route path="/mediator-orders" element={<MediatorOrders />} />
+      <Route path="/mediator-reviews" element={<MediatorReviews />} />
+      <Route path="/my-orders" element={<MyOrders />} />
+      <Route path="/forgot-password" element={<ForgotPassword />} />
+      <Route path="/reset-password" element={<ResetPassword />} />
+      <Route path="/mediator-services" element={<MediatorServices />} />
+      <Route path="/new-order" element={<NewOrder />} />
+      <Route path="/mediator-orders/:id" element={<OrderDetails />} />
+      <Route path="/mediator-notifications" element={<MediatorNotifications />} />
+      <Route path="/profile" element={<CustomerProfile />} />
+    </Routes>
+>>>>>>> 643435e9fd251ad699a4d2de105f1be6ac3fe048
   );
 }
 

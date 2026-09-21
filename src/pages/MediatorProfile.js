@@ -1,8 +1,54 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
+<<<<<<< HEAD
 import { getMyStore, updateProfile, updateStore, getServices, getReviews } from "../api";
 import DashboardLayout from "../components/DashboardLayout";
 import { useAuth } from "../context/AuthContext";
+=======
+import { getMyStore, updateProfile, updateStore, getServices, getReviews, getOrderStats, BASE_URL } from "../api";
+
+// رابط صورة المتجر يجي أحيانًا من الباك اند كمسار نسبي (بدون دومين) —
+// هاي الدالة بتتأكد إنه رابط كامل قبل ما نعرضه، وإلا بترجع null
+function resolveImageUrl(path) {
+  if (!path) return null;
+  if (/^https?:\/\//i.test(path) || path.startsWith("blob:") || path.startsWith("data:")) {
+    return path;
+  }
+  const clean = path.startsWith("/") ? path.slice(1) : path;
+  // لو الباك اند رجع بس اسم الملف من غير أي مجلد قبله (حالة الصور غالبًا)،
+  // منضيف مجلد storage/ الافتراضي يلي بلارافيل بيخزّن فيه الملفات المرفوعة والمتاحة عالعام
+  if (!clean.includes("/")) {
+    return `${BASE_URL}/storage/${clean}`;
+  }
+  return `${BASE_URL}/${clean}`;
+}
+
+// أيقونات الخدمة المتاحة — نفس القيم يلي بصفحة إدارة الخدمات، لعرض نفس الأيقونة للزبونة
+const ICONS = [
+  { value: "search", label: "🔍" },
+  { value: "diamond", label: "💎" },
+  { value: "scissors", label: "✂️" },
+  { value: "gift", label: "🎁" },
+  { value: "tag", label: "🏷️" },
+  { value: "chat", label: "💬" },
+  { value: "refresh", label: "🔄" },
+  { value: "pin", label: "📍" },
+  { value: "truck", label: "🚚" },
+  { value: "photo", label: "🖼️" },
+];
+
+function iconEmoji(value) {
+  return ICONS.find((i) => i.value === value)?.label || "❔";
+}
+
+function feeLabel(service) {
+  if (service.feeType === "free") return "مجاني";
+  if (service.feeType === "variable") return "حسب الحالة";
+  if (service.feeType === "percentage") return `عمولة ${service.feeValue}%`;
+  if (service.feeType === "fixed") return `ابتداء من ${service.feeValue} ₪`;
+  return "";
+}
+>>>>>>> 643435e9fd251ad699a4d2de105f1be6ac3fe048
 
 function StarRating({ rating, size }) {
   return (
@@ -26,6 +72,7 @@ export default function MediatorProfile() {
     city: "",
     bio: "",
     commission: "",
+    yearsOfExperience: "",
   });
 
   const [acceptingOrders, setAcceptingOrders] = useState(true);
@@ -56,6 +103,10 @@ export default function MediatorProfile() {
 
   const userInitial = (form.fullName || "م").charAt(0);
 
+  // بنستخدمه لمنع تعارض: لو المستخدمة رفعت صورة جديدة قبل ما يخلص نداء
+  // جلب بيانات المتجر (getMyStore)، ما نخلي نتيجة النداء القديم يمسح الصورة الجديدة
+  const imageJustUpdatedRef = useRef(false);
+
   // جلب بيانات متجر المستخدمة الحالية فعليًا من الباك اند (بدل الاعتماد على localStorage)
   useEffect(() => {
     getMyStore()
@@ -66,10 +117,14 @@ export default function MediatorProfile() {
           city: store.city || "",
           bio: store.bio || "",
           commission: store.commission_rate || "",
+          yearsOfExperience: store.years_of_experience || "",
         }));
         // سويتش "استقبال الطلبات" — is_accepting_orders، منفصل عن استقبال طلبات واتساب
         setAcceptingOrders(!!store.is_accepting_orders);
-        setImagePreview(store.image_url || store.image || null);
+        // إذا صار في رفع صورة جديدة أثناء ما هالنداء كان لسا شغال، منتجاهل نتيجته القديمة
+        if (!imageJustUpdatedRef.current) {
+          setImagePreview(resolveImageUrl(store.image_url || store.image));
+        }
         setLoadingStore(false);
       })
       .catch((err) => {
@@ -112,11 +167,43 @@ export default function MediatorProfile() {
 
   const availableServices = services.filter((s) => s.available);
 
-  const handleImageChange = (e) => {
+  // ===== عدد الطلبات الجديدة — بس عشان الرقم الصغير فوق زر 🔔 =====
+  const [stats, setStats] = useState(null);
+
+  useEffect(() => {
+    getOrderStats()
+      .then(setStats)
+      .catch(() => {});
+  }, []);
+
+  const handleImageChange = async (e) => {
     const file = e.target.files[0];
-    if (file) {
-      setImageFile(file);
-      setImagePreview(URL.createObjectURL(file));
+    if (!file) return;
+
+    const previousPreview = imagePreview;
+    setImageFile(file);
+    setImagePreview(URL.createObjectURL(file)); // معاينة فورية بالواجهة
+
+    // نرفع الصورة فورًا للباك اند (بدل الانتظار لحد فتح "تعديل بيانات الحساب")
+    // عشان ما تضيع الصورة إذا المستخدمة طلعت من الصفحة قبل ما تحفظ
+    try {
+      const storeResult = await updateStore({ image: file });
+      console.log("رد الباك اند بعد رفع الصورة:", storeResult); // مؤقت للتشخيص فقط
+      const updatedStore = storeResult.store || {};
+      imageJustUpdatedRef.current = true; // نمنع نداء getMyStore القديم من مسح الصورة الجديدة
+
+      // منستبدل المعاينة المحلية برابط الباك اند بس لو كان رابط سليم فعليًا،
+      // وإلا منخلي المعاينة المحلية (اللي شغالة صح) زي ما هي
+      const serverImage = resolveImageUrl(updatedStore.image_url || updatedStore.image);
+      if (serverImage) {
+        setImagePreview(serverImage);
+      }
+      setImageFile(null);
+      showToast("تم تحديث الصورة بنجاح ✓");
+    } catch (err) {
+      setImagePreview(previousPreview); // رجّعيها لو فشل الرفع
+      setImageFile(null);
+      showToast(err.message || "تعذر رفع الصورة");
     }
   };
 
@@ -165,9 +252,12 @@ export default function MediatorProfile() {
         phone: accountForm.phone,
       });
 
-      // ٢) تحديث بيانات المتجر (المدينة + الصورة الجديدة إذا انتخبت وحدة) — endpoint /api/stores/me
+      // ٢) تحديث بيانات المتجر (المدينة + سنوات الخبرة + الصورة الجديدة إذا انتخبت وحدة) — endpoint /api/stores/me
       const storeData = {};
       if (accountForm.city) storeData.city = accountForm.city;
+      if (accountForm.yearsOfExperience !== "") {
+        storeData.years_of_experience = accountForm.yearsOfExperience;
+      }
       if (imageFile) storeData.image = imageFile;
 
       if (Object.keys(storeData).length > 0) {
@@ -176,6 +266,9 @@ export default function MediatorProfile() {
         if (updatedStore.city) {
           accountForm.city = updatedStore.city;
         }
+        if (updatedStore.years_of_experience !== undefined) {
+          accountForm.yearsOfExperience = updatedStore.years_of_experience;
+        }
       }
 
       setForm((prev) => ({
@@ -183,6 +276,7 @@ export default function MediatorProfile() {
         fullName: accountForm.fullName,
         phone: accountForm.phone,
         city: accountForm.city,
+        yearsOfExperience: accountForm.yearsOfExperience,
       }));
       setImageFile(null);
       setEditingAccount(false);
@@ -284,27 +378,24 @@ export default function MediatorProfile() {
             onChange={handleImageChange}
             style={{ display: "none" }}
           />
-          <span className={`hero-availability-dot ${acceptingOrders ? "online" : "offline"}`} />
         </div>
 
         <div className="profile-hero-info">
           <div className="profile-hero-name-row">
             <h2>{form.fullName || "—"}</h2>
-            <span className="profile-role-badge">وسيطة</span>
           </div>
-          <div className="profile-hero-rating">
-            <span className="profile-hero-rating-number">
-              {loadingReviews ? "…" : ratingSummary.avg || "0.0"}
-            </span>
-            <StarRating rating={ratingSummary.avg} />
-            {!loadingReviews && (
-              <span className="reviews-count-pill sm">{ratingSummary.total} تقييم</span>
-            )}
+          <div className="profile-hero-facts">
+            <span className="profile-hero-fact-row">🏷️ وسيطة</span>
+            <span className="profile-hero-fact-row">📍 {form.city || "غير محدد"}</span>
+            {form.phone && <span className="profile-hero-fact-row">📞 {form.phone}</span>}
             {form.commission && (
-              <span className="commission-pill">{form.commission}% عمولة</span>
+              <span className="profile-hero-fact-row">💰 {form.commission}% عمولة</span>
             )}
+            <span className="profile-hero-fact-row">
+              <span className={`status-dot ${acceptingOrders ? "on" : "off"}`}></span>
+              {acceptingOrders ? "متاحة" : "غير متاحة"}
+            </span>
           </div>
-          <div className="profile-hero-location">📍 {form.city || "غير محدد"}</div>
         </div>
       </div>
     </div>
@@ -346,11 +437,19 @@ export default function MediatorProfile() {
               ) : availableServices.length === 0 ? (
                 <p className="service-description">لا توجد خدمات متاحة حاليًا.</p>
               ) : (
-                <div className="services-tags-row">
+                <div className="public-services-list">
                   {availableServices.map((s) => (
-                    <span className="service-tag" key={s.id}>
-                      {s.name}
-                    </span>
+                    <div className="service-card" key={s.id}>
+                      <div className="service-icon-badge">{iconEmoji(s.icon)}</div>
+                      <div className="service-content">
+                        <div className="service-name">{s.name}</div>
+                        <div className="service-description">{s.description}</div>
+                        {s.notes && <div className="service-notes">📌 {s.notes}</div>}
+                      </div>
+                      <div className="service-meta-row">
+                        <span className="service-fee-tag">{feeLabel(s)}</span>
+                      </div>
+                    </div>
                   ))}
                 </div>
               )}
@@ -420,7 +519,81 @@ export default function MediatorProfile() {
 
   // ===== الوضع الافتراضي: لوحة تحكم الوسيطة =====
   return (
+<<<<<<< HEAD
     <DashboardLayout role="broker" topbarExtra={acceptToggle}>
+=======
+    <div className="dashboard-layout">
+      <aside className="dashboard-sidebar">
+        <div className="sidebar-logo">
+          <img src="/logo.svg" alt="وساطة" className="logo-img" />
+          وساطة
+        </div>
+        <nav className="sidebar-nav">
+          <Link to="/" className="sidebar-link">
+            <span className="sidebar-icon">🏠</span> الرئيسية
+          </Link>
+          <Link to="/mediator-dashboard" className="sidebar-link">
+            <span className="sidebar-icon">▦</span> لوحة التحكم
+          </Link>
+          <Link to="/mediator-orders" className="sidebar-link">
+            <span className="sidebar-icon">📋</span> الطلبات
+          </Link>
+          <Link to="/mediator-services" className="sidebar-link">
+            <span className="sidebar-icon">🛍</span> الخدمات
+          </Link>
+          <Link to="/mediator-reviews" className="sidebar-link">
+            <span className="sidebar-icon">⭐</span> التقييمات
+          </Link>
+          <Link to="/mediator-profile" className="sidebar-link active">
+            <span className="sidebar-icon">👤</span> الملف الشخصي
+          </Link>
+        </nav>
+      </aside>
+
+      <main className="dashboard-main">
+        <div className="dashboard-topbar">
+          <div className="topbar-actions">
+            <Link to="/mediator-notifications" className="notif-btn-wrap">
+              <button className="notif-btn">🔔</button>
+              {stats && stats.newCount > 0 && (
+                <span className="notif-badge">{stats.newCount}</span>
+              )}
+            </Link>
+            <div className="accept-toggle">
+              <label className="switch">
+                <input
+                  type="checkbox"
+                  checked={acceptingOrders}
+                  onChange={(e) => handleQuickToggleAccepting(e.target.checked)}
+                />
+                <span className="slider"></span>
+              </label>
+              <span>استقبال الطلبات</span>
+            </div>
+          </div>
+          <div className="topbar-user">
+            <div className="user-info">
+              <div className="user-name">{form.fullName}</div>
+              <div className="user-store">وسيطة</div>
+            </div>
+            <div
+              className="user-avatar"
+              style={
+                imagePreview
+                  ? {
+                      backgroundImage: `url(${imagePreview})`,
+                      backgroundSize: "cover",
+                      backgroundPosition: "center",
+                    }
+                  : undefined
+              }
+            >
+              {!imagePreview && userInitial}
+            </div>
+          </div>
+        </div>
+
+>>>>>>> 643435e9fd251ad699a4d2de105f1be6ac3fe048
         <div className="dashboard-welcome profile-title-centered">
           <h1>الملف الشخصي</h1>
           <p>أديري المعلومات التي تظهر للزبائن وتابعي أداء حسابك.</p>
@@ -458,9 +631,40 @@ export default function MediatorProfile() {
                   {loadingStore ? "جاري التحميل..." : form.city || "غير محدد"}
                 </span>
               </div>
+              <div className="account-data-row">
+                <span className="account-data-label">سنوات الخبرة</span>
+                <span className="account-data-value">
+                  {loadingStore
+                    ? "جاري التحميل..."
+                    : form.yearsOfExperience
+                    ? `${form.yearsOfExperience} سنة`
+                    : "غير محدد"}
+                </span>
+              </div>
             </div>
           ) : (
             <div className="profile-edit-form">
+              <div className="profile-edit-avatar-row">
+                <div
+                  className="profile-hero-avatar sm"
+                  style={{
+                    backgroundImage: imagePreview ? `url(${imagePreview})` : "none",
+                  }}
+                >
+                  {!imagePreview && userInitial}
+                </div>
+                <label htmlFor="profileImageEdit" className="btn btn-outline btn-sm">
+                  📷 تغيير الصورة
+                </label>
+                <input
+                  id="profileImageEdit"
+                  type="file"
+                  accept="image/*"
+                  onChange={handleImageChange}
+                  style={{ display: "none" }}
+                />
+              </div>
+
               <label htmlFor="fullName">الاسم الكامل</label>
               <input
                 id="fullName"
@@ -491,6 +695,17 @@ export default function MediatorProfile() {
                 <option value="الوسطى">الوسطى</option>
                 <option value="رفح">رفح</option>
               </select>
+
+              <label htmlFor="yearsOfExperience">سنوات الخبرة</label>
+              <input
+                id="yearsOfExperience"
+                name="yearsOfExperience"
+                type="number"
+                min="0"
+                placeholder="مثال: 3"
+                value={accountForm.yearsOfExperience}
+                onChange={handleAccountChange}
+              />
 
               {accountError && <p className="form-error">{accountError}</p>}
 
@@ -550,11 +765,19 @@ export default function MediatorProfile() {
           ) : availableServices.length === 0 ? (
             <p className="service-description">لا توجد خدمات متاحة حاليًا.</p>
           ) : (
-            <div className="services-tags-row">
+            <div className="public-services-list">
               {availableServices.map((s) => (
-                <span className="service-tag" key={s.id}>
-                  {s.name}
-                </span>
+                <div className="service-card" key={s.id}>
+                  <div className="service-icon-badge">{iconEmoji(s.icon)}</div>
+                  <div className="service-content">
+                    <div className="service-name">{s.name}</div>
+                    <div className="service-description">{s.description}</div>
+                    {s.notes && <div className="service-notes">📌 {s.notes}</div>}
+                  </div>
+                  <div className="service-meta-row">
+                    <span className="service-fee-tag">{feeLabel(s)}</span>
+                  </div>
+                </div>
               ))}
             </div>
           )}

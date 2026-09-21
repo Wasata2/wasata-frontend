@@ -816,6 +816,60 @@ footer .copyright{font-size:12px;color:var(--gray-light);}
   font-size:16px;
   cursor:pointer;
 }
+.notif-btn.active{ border-color:var(--blue); }
+.notif-btn-wrap{
+  position:relative;
+  display:inline-flex;
+  text-decoration:none;
+}
+.notif-badge{
+  position:absolute;
+  top:-6px;
+  left:-6px;
+  background:#e53935;
+  color:#fff;
+  font-size:10px;
+  font-weight:800;
+  min-width:16px;
+  height:16px;
+  border-radius:9px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding:0 4px;
+  border:2px solid #fff;
+  line-height:1;
+}
+.notifications-list{
+  display:flex;
+  flex-direction:column;
+  gap:12px;
+}
+.notification-card{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:14px;
+  background:#fff;
+  border:1px solid var(--line);
+  border-radius:14px;
+  padding:16px 18px;
+  flex-wrap:wrap;
+}
+.notification-card-title{
+  font-size:14px;
+  font-weight:800;
+  margin-bottom:4px;
+}
+.notification-card-sub{
+  font-size:12px;
+  color:var(--gray-light);
+}
+.notification-card-actions{
+  display:flex;
+  align-items:center;
+  gap:10px;
+}
 .accept-toggle{
   display:flex;
   align-items:center;
@@ -1367,6 +1421,18 @@ footer .copyright{font-size:12px;color:var(--gray-light);}
 .profile-edit-form{
   display:flex;
   flex-direction:column;
+}
+.profile-edit-avatar-row{
+  display:flex;
+  align-items:center;
+  gap:14px;
+  margin-bottom:6px;
+}
+.profile-hero-avatar.sm{
+  width:64px;
+  height:64px;
+  font-size:20px;
+  flex-shrink:0;
 }
 .profile-edit-form label{
   font-size:13px;
@@ -2702,7 +2768,7 @@ footer .copyright{font-size:12px;color:var(--gray-light);}
 .profile-preview-link{
   position:absolute;
   bottom:14px;
-  right:24px;
+  left:24px;
   background:#fff;
   border:none;
   color:var(--blue);
@@ -2757,7 +2823,7 @@ footer .copyright{font-size:12px;color:var(--gray-light);}
   display:flex;
   align-items:center;
   gap:10px;
-  margin-bottom:8px;
+  margin-bottom:10px;
   flex-wrap:wrap;
 }
 .profile-hero-name-row h2{ font-size:22px; font-weight:900; }
@@ -2768,23 +2834,22 @@ footer .copyright{font-size:12px;color:var(--gray-light);}
   font-weight:700;
   padding:4px 14px;
   border-radius:20px;
+  align-self:flex-start;
 }
-.profile-hero-rating{
+.profile-hero-facts{
   display:flex;
-  align-items:center;
+  flex-direction:column;
+  align-items:flex-start;
   gap:8px;
   margin-bottom:8px;
-  flex-wrap:wrap;
 }
-.profile-hero-rating-number{ font-size:15px; font-weight:800; }
-.reviews-count-pill.sm{ padding:3px 10px; font-size:11px; margin-top:0; }
-.commission-pill{
-  background:#fdf2fa;
-  color:#8A157D;
-  font-size:12px;
+.profile-hero-fact-row{
+  font-size:13px;
   font-weight:700;
-  padding:4px 12px;
-  border-radius:20px;
+  color:var(--gray-light);
+  display:flex;
+  align-items:center;
+  gap:6px;
 }
 .profile-hero-location{
   font-size:13px;
@@ -2897,8 +2962,13 @@ footer .copyright{font-size:12px;color:var(--gray-light);}
   font-weight:700;
   padding:7px 16px;
   border-radius:20px;
+  display:inline-block;
 }
-
+.public-services-list{
+  display:flex;
+  flex-direction:column;
+  gap:14px;
+}
 /* ===== وضع معاينة الملف كما يظهر للزبائن ===== */
 .preview-topbar{
   display:flex;
@@ -3057,6 +3127,7 @@ footer .copyright{font-size:12px;color:var(--gray-light);}
 .confirm-actions{ display:flex; gap:12px; }
 .confirm-actions .btn{ flex:1; }
 
+<<<<<<< HEAD
 /* ===== زر تسجيل الخروج===== */
 .sidebar-logout-btn {
   display: block;
@@ -3076,6 +3147,56 @@ footer .copyright{font-size:12px;color:var(--gray-light);}
 
 .sidebar-logout-btn:hover {
   background: #fee2e2;
+=======
+/* ===== ملخص طلباتي (صفحة الملف الشخصي للزبونة) ===== */
+.order-summary-grid{
+  display:grid;
+  grid-template-columns:repeat(3, 1fr);
+  gap:14px;
+}
+.order-summary-box{
+  border-radius:14px;
+  padding:18px 10px;
+  text-align:center;
+}
+.order-summary-box.cancelled{ background:#fdf2f2; }
+.order-summary-box.completed{ background:#eefaf3; }
+.order-summary-box.active{ background:#f5f1fb; }
+.order-summary-number{
+  font-size:26px;
+  font-weight:900;
+  margin-bottom:6px;
+}
+.order-summary-box.cancelled .order-summary-number{ color:#c0392b; }
+.order-summary-box.completed .order-summary-number{ color:#15803d; }
+.order-summary-box.active .order-summary-number{ color:var(--blue); }
+.order-summary-label{ font-size:12px; color:var(--gray-light); font-weight:700; }
+
+/* ===== زر تسجيل الخروج ===== */
+.btn-logout{
+  width:100%;
+  display:flex;
+  flex-direction:column;
+  align-items:flex-start;
+  gap:2px;
+  background:#fdf2f2;
+  border:1px solid #f7d9d9;
+  color:#c0392b;
+  border-radius:14px;
+  padding:14px 20px;
+  font-size:14px;
+  font-weight:800;
+  cursor:pointer;
+  margin-bottom:30px;
+  font-family:'El Messiri', sans-serif;
+}
+.btn-logout:hover{ background:#fbe6e6; }
+.btn-logout-sub{
+  font-size:12px;
+  font-weight:500;
+  color:#c0392b;
+  opacity:.8;
+>>>>>>> 643435e9fd251ad699a4d2de105f1be6ac3fe048
 }
 
 /* ============ Responsive ============ */

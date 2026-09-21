@@ -1,4 +1,4 @@
-const BASE_URL = 'https://wasata-backend-production-nojkxd.laravel.cloud';
+export const BASE_URL = 'https://wasata-backend-production-nojkxd.laravel.cloud';
 
 export async function getCsrfCookie() {
   await fetch(`${BASE_URL}/sanctum/csrf-cookie`, {
@@ -171,6 +171,11 @@ export async function updateStore(data) {
   if (data.commission_rate !== undefined) {
     formData.append('commission_rate', data.commission_rate);
   }
+  // سنوات الخبرة
+if (data.years_of_experience !== undefined) {
+  formData.append('years_of_experience', data.years_of_experience);
+}
+
   if (data.image) {
     formData.append('image', data.image);
   }
@@ -196,9 +201,39 @@ export async function updateStore(data) {
 export async function updateProfile(data) {
   const token = localStorage.getItem('token');
 
+  // لو في صورة، لازم نبعت الطلب كـ multipart (FormData) بدل JSON
+  if (data.image) {
+    const formData = new FormData();
+    formData.append('_method', 'PUT'); // Laravel بيحتاج POST + _method=PUT لما بيكون فيه ملف
+    if (data.full_name !== undefined) formData.append('full_name', data.full_name);
+    if (data.phone !== undefined) formData.append('phone', data.phone);
+    if (data.city !== undefined) formData.append('city', data.city);
+    formData.append('image', data.image);
+
+    const response = await fetch(`${BASE_URL}/api/auth/profile`, {
+      method: 'POST',
+      credentials: 'include',
+      headers: {
+        'Accept': 'application/json',
+        'Authorization': `Bearer ${token}`,
+      },
+      body: formData,
+    });
+
+    const result = await response.json();
+
+    if (!response.ok) {
+      throw new Error(result.message || 'حدث خطأ أثناء تحديث البيانات');
+    }
+
+    localStorage.setItem('user', JSON.stringify(result.user));
+    return result;
+  }
+
   const body = {};
   if (data.full_name !== undefined) body.full_name = data.full_name;
   if (data.phone !== undefined) body.phone = data.phone;
+  if (data.city !== undefined) body.city = data.city;
 
   const response = await fetch(`${BASE_URL}/api/auth/profile`, {
     method: 'PUT',
@@ -217,7 +252,6 @@ export async function updateProfile(data) {
     throw new Error(result.message || 'حدث خطأ أثناء تحديث البيانات');
   }
 
-  // نحدّث localStorage بالبيانات الحقيقية الراجعة من الباك اند (مش بس محليًا متل قبل)
   localStorage.setItem('user', JSON.stringify(result.user));
 
   return result;

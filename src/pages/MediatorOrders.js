@@ -82,7 +82,8 @@ export default function MediatorOrders() {
     return c;
   }, [orders]);
 
-  const hasActiveFilters = dateFilter || statusFilter || search || activeTab !== "all";
+  const hasActiveFilters =
+    dateFilter || statusFilter || search || activeTab !== "all";
 
   const filteredOrders = useMemo(() => {
     return orders.filter((o) => {
@@ -95,7 +96,10 @@ export default function MediatorOrders() {
   }, [orders, activeTab, statusFilter, dateFilter, search]);
 
   const totalPages = Math.max(1, Math.ceil(filteredOrders.length / PAGE_SIZE));
-  const pagedOrders = filteredOrders.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+  const pagedOrders = filteredOrders.slice(
+    (page - 1) * PAGE_SIZE,
+    page * PAGE_SIZE,
+  );
 
   const clearFilters = () => {
     setActiveTab("all");
@@ -116,8 +120,63 @@ export default function MediatorOrders() {
     { key: "cancelled", label: "ملغاة" },
   ];
 
+<<<<<<< HEAD
     return (
     <DashboardLayout role="broker" ordersBadge={stats && stats.newCount}>
+=======
+  return (
+    <div className="dashboard-layout">
+      {/* ===== نفس القائمة الجانبية الموجودة بباقي صفحات لوحة التحكم ===== */}
+      <aside className="dashboard-sidebar">
+        <div className="sidebar-logo">
+          <img src="/logo.svg" alt="وساطة" className="logo-img" />
+          وساطة
+        </div>
+        <nav className="sidebar-nav">
+          <Link to="/" className="sidebar-link">
+            <span className="sidebar-icon">🏠</span> الرئيسية
+          </Link>
+          <Link to="/mediator-dashboard" className="sidebar-link">
+            <span className="sidebar-icon">▦</span> لوحة التحكم
+          </Link>
+          <Link to="/mediator-orders" className="sidebar-link active">
+            <span className="sidebar-icon">📋</span> الطلبات
+            {stats && stats.newCount > 0 && (
+              <span className="sidebar-badge">{stats.newCount}</span>
+            )}
+          </Link>
+          <Link to="/mediator-services" className="sidebar-link">
+            <span className="sidebar-icon">🛍</span> الخدمات
+          </Link>
+          <Link to="/mediator-reviews" className="sidebar-link">
+            <span className="sidebar-icon">⭐</span> التقييمات
+          </Link>
+          <Link to="/mediator-profile" className="sidebar-link">
+            <span className="sidebar-icon">👤</span> الملف الشخصي
+          </Link>
+        </nav>
+      </aside>
+
+      <main className="dashboard-main">
+        {/* ===== نفس الـ topbar الموجود بباقي صفحات لوحة التحكم ===== */}
+        <div className="dashboard-topbar">
+          <div className="topbar-actions">
+            <Link to="/mediator-notifications" className="notif-btn-wrap">
+              <button className="notif-btn">🔔</button>
+              {stats && stats.newCount > 0 && (
+                <span className="notif-badge">{stats.newCount}</span>
+              )}
+            </Link>
+          </div>
+          <div className="topbar-user">
+            <div className="user-info">
+              <div className="user-name">{userName}</div>
+              <div className="user-store">وسيطة</div>
+            </div>
+            <div className="user-avatar">{userInitial}</div>
+          </div>
+        </div>
+>>>>>>> 643435e9fd251ad699a4d2de105f1be6ac3fe048
 
         <div className="dashboard-welcome">
           <h1>الطلبات</h1>
@@ -220,7 +279,8 @@ export default function MediatorOrders() {
                 setPage(1);
               }}
             >
-              <span className="status-tab-count">{counts[tab.key] || 0}</span> {tab.label}
+              <span className="status-tab-count">{counts[tab.key] || 0}</span>{" "}
+              {tab.label}
             </button>
           ))}
         </div>
@@ -266,7 +326,10 @@ export default function MediatorOrders() {
                           </span>
                         </td>
                         <td>
-                          <Link to={`/mediator-orders/${order.id}`} className="details-link">
+                          <Link
+                            to={`/mediator-orders/${order.id}`}
+                            className="details-link"
+                          >
                             عرض التفاصيل
                           </Link>
                           {order.status === "pending" && (

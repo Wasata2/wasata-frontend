@@ -1,8 +1,19 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
+<<<<<<< HEAD
 import { getServices, createService, updateService, toggleService, deleteService } from "../api";
 import DashboardLayout from "../components/DashboardLayout";
 
+=======
+import {
+  getServices,
+  createService,
+  updateService,
+  toggleService,
+  deleteService,
+  getOrderStats,
+} from "../api";
+>>>>>>> 643435e9fd251ad699a4d2de105f1be6ac3fe048
 // أيقونات الخدمة المتاحة للاختيار من بينها — value لازم يطابق القيم المقبولة بالباك اند بالظبط
 const ICONS = [
   { value: "search", label: "🔍" },
@@ -52,7 +63,13 @@ export default function MediatorServices() {
   const [services, setServices] = useState([]);
   const [loadingServices, setLoadingServices] = useState(true);
   const [loadError, setLoadError] = useState("");
-
+  // ===== عدد الطلبات الجديدة — بس عشان الرقم الصغير فوق زر 🔔 =====
+  const [stats, setStats] = useState(null);
+  useEffect(() => {
+    getOrderStats()
+      .then(setStats)
+      .catch(() => {});
+  }, []);
   useEffect(() => {
     getServices()
       .then((data) => {
@@ -107,7 +124,10 @@ export default function MediatorServices() {
       setFormError("يرجى تعبئة اسم الخدمة ووصفها.");
       return;
     }
-    if ((form.feeType === "percentage" || form.feeType === "fixed") && !form.feeValue) {
+    if (
+      (form.feeType === "percentage" || form.feeType === "fixed") &&
+      !form.feeValue
+    ) {
       setFormError("يرجى إدخال قيمة الرسوم.");
       return;
     }
@@ -117,7 +137,9 @@ export default function MediatorServices() {
     try {
       if (editingId) {
         const updated = await updateService(editingId, form);
-        setServices((prev) => prev.map((s) => (s.id === editingId ? updated : s)));
+        setServices((prev) =>
+          prev.map((s) => (s.id === editingId ? updated : s)),
+        );
         showToast("تم حفظ التغييرات بنجاح ✓");
       } else {
         const created = await createService(form);
@@ -137,8 +159,12 @@ export default function MediatorServices() {
     const willEnable = !confirmToggle.available;
     try {
       const updated = await toggleService(confirmToggle.id);
-      setServices((prev) => prev.map((s) => (s.id === confirmToggle.id ? updated : s)));
-      showToast(willEnable ? "تم تفعيل الخدمة بنجاح ✓" : "تم تعطيل الخدمة بنجاح ✓");
+      setServices((prev) =>
+        prev.map((s) => (s.id === confirmToggle.id ? updated : s)),
+      );
+      showToast(
+        willEnable ? "تم تفعيل الخدمة بنجاح ✓" : "تم تعطيل الخدمة بنجاح ✓",
+      );
     } catch (err) {
       showToast(err.message);
     } finally {
@@ -164,7 +190,58 @@ export default function MediatorServices() {
   };
 
   return (
+<<<<<<< HEAD
     <DashboardLayout role="broker">
+=======
+    <div className="dashboard-layout">
+      {/* ===== نفس القائمة الجانبية الموجودة بباقي صفحات لوحة التحكم ===== */}
+      <aside className="dashboard-sidebar">
+        <div className="sidebar-logo">
+          <img src="/logo.svg" alt="وساطة" className="logo-img" />
+          وساطة
+        </div>
+        <nav className="sidebar-nav">
+          <Link to="/" className="sidebar-link">
+            <span className="sidebar-icon">🏠</span> الرئيسية
+          </Link>
+          <Link to="/mediator-dashboard" className="sidebar-link">
+            <span className="sidebar-icon">▦</span> لوحة التحكم
+          </Link>
+          <Link to="/mediator-orders" className="sidebar-link">
+            <span className="sidebar-icon">📋</span> الطلبات
+          </Link>
+          <Link to="/mediator-services" className="sidebar-link active">
+            <span className="sidebar-icon">🛍</span> الخدمات
+          </Link>
+          <Link to="/mediator-reviews" className="sidebar-link">
+            <span className="sidebar-icon">⭐</span> التقييمات
+          </Link>
+          <Link to="/mediator-profile" className="sidebar-link">
+            <span className="sidebar-icon">👤</span> الملف الشخصي
+          </Link>
+        </nav>
+      </aside>
+
+      <main className="dashboard-main">
+        {/* ===== نفس الـ topbar الموجود بباقي صفحات لوحة التحكم ===== */}
+        <div className="dashboard-topbar">
+          <div className="topbar-actions">
+            <Link to="/mediator-notifications" className="notif-btn-wrap">
+              <button className="notif-btn">🔔</button>
+              {stats && stats.newCount > 0 && (
+                <span className="notif-badge">{stats.newCount}</span>
+              )}
+            </Link>
+          </div>
+          <div className="topbar-user">
+            <div className="user-info">
+              <div className="user-name">{userName}</div>
+              <div className="user-store">وسيطة</div>
+            </div>
+            <div className="user-avatar">{userInitial}</div>
+          </div>
+        </div>
+>>>>>>> 643435e9fd251ad699a4d2de105f1be6ac3fe048
 
         <div className="services-header-row">
           <div className="dashboard-welcome">
@@ -183,7 +260,11 @@ export default function MediatorServices() {
         ) : loadError ? (
           <div className="empty-orders">
             <p>تعذر تحميل الخدمات: {loadError}</p>
-            <Link to="/create-store" className="btn btn-primary" style={{ marginTop: "12px", display: "inline-block" }}>
+            <Link
+              to="/create-store"
+              className="btn btn-primary"
+              style={{ marginTop: "12px", display: "inline-block" }}
+            >
               الذهاب لإنشاء المتجر
             </Link>
           </div>
@@ -194,12 +275,16 @@ export default function MediatorServices() {
         ) : (
           services.map((service) => (
             <div className="service-card" key={service.id}>
-              <div className="service-icon-badge">{iconEmoji(service.icon)}</div>
+              <div className="service-icon-badge">
+                {iconEmoji(service.icon)}
+              </div>
 
               <div className="service-content">
                 <div className="service-name">{service.name}</div>
                 <div className="service-description">{service.description}</div>
-                {service.notes && <div className="service-notes">📌 {service.notes}</div>}
+                {service.notes && (
+                  <div className="service-notes">📌 {service.notes}</div>
+                )}
               </div>
 
               <div className="service-meta-row">
@@ -209,11 +294,18 @@ export default function MediatorServices() {
                 >
                   {service.available ? "متاحة" : "غير متاحة"}
                 </span>
-                <button className="btn-edit-service" onClick={() => openEditModal(service)}>
+                <button
+                  className="btn-edit-service"
+                  onClick={() => openEditModal(service)}
+                >
                   ✎ تعديل
                 </button>
                 <button
-                  className={service.available ? "btn-disable-service" : "btn-enable-service"}
+                  className={
+                    service.available
+                      ? "btn-disable-service"
+                      : "btn-enable-service"
+                  }
                   onClick={() => setConfirmToggle(service)}
                 >
                   {service.available ? "تعطيل" : "تفعيل"}
@@ -251,7 +343,9 @@ export default function MediatorServices() {
                       type="button"
                       key={icon.value}
                       className={`icon-picker-btn ${form.icon === icon.value ? "selected" : ""}`}
-                      onClick={() => setForm((prev) => ({ ...prev, icon: icon.value }))}
+                      onClick={() =>
+                        setForm((prev) => ({ ...prev, icon: icon.value }))
+                      }
                     >
                       {icon.label}
                     </button>
@@ -283,17 +377,22 @@ export default function MediatorServices() {
                       type="button"
                       key={type.key}
                       className={`fee-type-option ${form.feeType === type.key ? "selected" : ""}`}
-                      onClick={() => setForm((prev) => ({ ...prev, feeType: type.key }))}
+                      onClick={() =>
+                        setForm((prev) => ({ ...prev, feeType: type.key }))
+                      }
                     >
                       {type.label}
                     </button>
                   ))}
                 </div>
 
-                {(form.feeType === "percentage" || form.feeType === "fixed") && (
+                {(form.feeType === "percentage" ||
+                  form.feeType === "fixed") && (
                   <>
                     <label htmlFor="feeValue">
-                      {form.feeType === "percentage" ? "نسبة العمولة (%)" : "المبلغ (₪)"}
+                      {form.feeType === "percentage"
+                        ? "نسبة العمولة (%)"
+                        : "المبلغ (₪)"}
                     </label>
                     <input
                       id="feeValue"
@@ -322,7 +421,10 @@ export default function MediatorServices() {
                       type="checkbox"
                       checked={form.available}
                       onChange={(e) =>
-                        setForm((prev) => ({ ...prev, available: e.target.checked }))
+                        setForm((prev) => ({
+                          ...prev,
+                          available: e.target.checked,
+                        }))
                       }
                     />
                     <span className="slider"></span>
@@ -333,7 +435,11 @@ export default function MediatorServices() {
                 {formError && <p className="form-error">{formError}</p>}
 
                 <div className="modal-actions">
-                  <button type="submit" className="btn btn-primary" disabled={saving}>
+                  <button
+                    type="submit"
+                    className="btn btn-primary"
+                    disabled={saving}
+                  >
                     {saving
                       ? "جاري الحفظ..."
                       : editingId
@@ -357,13 +463,18 @@ export default function MediatorServices() {
         {/* ===== نافذة تأكيد التفعيل/التعطيل ===== */}
         {confirmToggle && (
           <div className="modal-overlay" onClick={() => setConfirmToggle(null)}>
-            <div className="confirm-modal-card" onClick={(e) => e.stopPropagation()}>
+            <div
+              className="confirm-modal-card"
+              onClick={(e) => e.stopPropagation()}
+            >
               <div
                 className={`confirm-icon-badge ${confirmToggle.available ? "danger" : "success"}`}
               >
                 {confirmToggle.available ? "⏸️" : "▶️"}
               </div>
-              <h3>{confirmToggle.available ? "تعطيل الخدمة" : "تفعيل الخدمة"}</h3>
+              <h3>
+                {confirmToggle.available ? "تعطيل الخدمة" : "تفعيل الخدمة"}
+              </h3>
               <p>
                 هل تريدين {confirmToggle.available ? "تعطيل" : "تفعيل"} خدمة «
                 {confirmToggle.name}»؟{" "}
@@ -373,12 +484,17 @@ export default function MediatorServices() {
               </p>
               <div className="confirm-modal-actions">
                 <button
-                  className={confirmToggle.available ? "btn-danger" : "btn-success"}
+                  className={
+                    confirmToggle.available ? "btn-danger" : "btn-success"
+                  }
                   onClick={confirmToggleAvailability}
                 >
                   {confirmToggle.available ? "تعطيل الخدمة" : "تفعيل الخدمة"}
                 </button>
-                <button className="btn btn-outline" onClick={() => setConfirmToggle(null)}>
+                <button
+                  className="btn btn-outline"
+                  onClick={() => setConfirmToggle(null)}
+                >
                   إلغاء
                 </button>
               </div>
@@ -395,12 +511,15 @@ export default function MediatorServices() {
               setDeleteError("");
             }}
           >
-            <div className="confirm-modal-card" onClick={(e) => e.stopPropagation()}>
+            <div
+              className="confirm-modal-card"
+              onClick={(e) => e.stopPropagation()}
+            >
               <div className="confirm-icon-badge danger">🗑</div>
               <h3>حذف الخدمة</h3>
               <p>
-                هل متأكدة من حذف خدمة «{confirmDelete.name}»؟ هذا الإجراء نهائي ولا يمكن
-                التراجع عنه.
+                هل متأكدة من حذف خدمة «{confirmDelete.name}»؟ هذا الإجراء نهائي
+                ولا يمكن التراجع عنه.
               </p>
               {deleteError && <p className="form-error">{deleteError}</p>}
               <div className="confirm-modal-actions">
