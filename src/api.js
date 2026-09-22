@@ -149,15 +149,36 @@ export async function updateStore(data) {
 }
 
 export async function updateProfile(data) {
-  const body = {};
-  if (data.full_name !== undefined) body.full_name = data.full_name;
-  if (data.phone !== undefined) body.phone = data.phone;
+  const hasImage = !!data.image;
 
-  const result = await request('/api/auth/profile', {
-    method: 'PUT',
-    body,
-    errorMessage: 'حدث خطأ أثناء تحديث البيانات',
-  });
+  let result;
+  if (hasImage) {
+    // فيه ملف => لازم multipart/form-data. الباك اند (Laravel) ما بيقرأ PUT حقيقي
+    // مع FormData، فلازم نبعتها POST مع حقل _method=PUT (method override)
+    const formData = new FormData();
+    formData.append('_method', 'PUT');
+    if (data.full_name !== undefined) formData.append('full_name', data.full_name);
+    if (data.phone !== undefined) formData.append('phone', data.phone);
+    formData.append('image', data.image);
+
+    result = await request('/api/auth/profile', {
+      method: 'POST',
+      body: formData,
+      isFormData: true,
+      errorMessage: 'حدث خطأ أثناء تحديث الصورة',
+    });
+  } else {
+    // تعديل نصي بس (بدون صورة) => JSON عادي بـ PUT حقيقي، زي ما كان
+    const body = {};
+    if (data.full_name !== undefined) body.full_name = data.full_name;
+    if (data.phone !== undefined) body.phone = data.phone;
+
+    result = await request('/api/auth/profile', {
+      method: 'PUT',
+      body,
+      errorMessage: 'حدث خطأ أثناء تحديث البيانات',
+    });
+  }
 
   // نحدّث localStorage بالبيانات الحقيقية الراجعة من الباك اند (مش بس محليًا متل قبل)
   localStorage.setItem('user', JSON.stringify(result.user));
