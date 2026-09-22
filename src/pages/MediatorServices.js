@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
-import { getServices, createService, updateService, toggleService, deleteService } from "../api";
+import { getServices, createService, updateService, toggleService, deleteService, getOrderStats } from "../api";
 import DashboardLayout from "../components/DashboardLayout";
 
 // أيقونات الخدمة المتاحة للاختيار من بينها — value لازم يطابق القيم المقبولة بالباك اند بالظبط
@@ -48,6 +48,11 @@ const emptyForm = {
 };
 
 export default function MediatorServices() {
+  const [stats, setStats] = useState(null);
+  useEffect(() => {
+    getOrderStats().then(setStats).catch(() => { });
+  }, []);
+
   const [services, setServices] = useState([]);
   const [loadingServices, setLoadingServices] = useState(true);
   const [loadError, setLoadError] = useState("");
@@ -161,7 +166,7 @@ export default function MediatorServices() {
   };
 
   return (
-    <DashboardLayout role="broker">
+    <DashboardLayout role="broker" notifBadge={stats && stats.newCount} notifLink="/mediator-notifications">
       <div className="services-header-row">
         <div className="dashboard-welcome">
           <h1>الخدمات</h1>

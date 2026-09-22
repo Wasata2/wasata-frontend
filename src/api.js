@@ -1,4 +1,4 @@
-export const BASE_URL = 'https://wasata-backend-production-nojkxd.laravel.cloud';
+const BASE_URL = 'https://wasata-backend-production-nojkxd.laravel.cloud';
 
 export async function getCsrfCookie() {
   await fetch(`${BASE_URL}/sanctum/csrf-cookie`, {
@@ -6,81 +6,80 @@ export async function getCsrfCookie() {
   });
 }
 
-export async function registerUser(data) {
-  await getCsrfCookie();
+// نقطة مرور وحيدة لكل طلبات الشبكة بالتطبيق. أي دالة تانية بهاد الملف
+// (getOrders, createService...) بتنده على هاي بدل ما تكرر نفس الكود.
+async function request(endpoint, { method = 'GET', body, isFormData = false, errorMessage } = {}) {
+  const token = localStorage.getItem('token');
 
-  const response = await fetch(`${BASE_URL}/api/auth/register`, {
-    method: 'POST',
+  const headers = { Accept: 'application/json' };
+  if (!isFormData) headers['Content-Type'] = 'application/json';
+  if (token) headers['Authorization'] = `Bearer ${token}`;
+
+  const response = await fetch(`${BASE_URL}${endpoint}`, {
+    method,
     credentials: 'include',
-    headers: {
-      'Content-Type': 'application/json',
-      'Accept': 'application/json',
-    },
-    body: JSON.stringify(data),
+    headers,
+    body: isFormData ? body : body !== undefined ? JSON.stringify(body) : undefined,
   });
 
-  const result = await response.json();
+  // ===== معالجة انتهاء الجلسة (401) — بمكان واحد بس، بتغطي كل الطلبات =====
+  const isAuthEndpoint = endpoint.includes('/auth/login') || endpoint.includes('/auth/register');
+  if (response.status === 401 && !isAuthEndpoint) {
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    if (window.location.pathname !== '/login') {
+      window.location.href = '/login';
+    }
+  }
+
+  // بعض الطلبات (متل DELETE) ممكن ترجع بدون body، فمنحاول نقرا الـ JSON
+  // بأمان بدون ما نوقّع لو كان فاضي
+  let result = {};
+  try {
+    result = await response.json();
+  } catch (e) {}
 
   if (!response.ok) {
-    throw new Error(result.message || 'حدث خطأ أثناء إنشاء الحساب');
+    const details = result.errors ? Object.values(result.errors).flat().join(' / ') : '';
+    throw new Error(details || result.message || errorMessage || 'حدث خطأ ما');
   }
 
   return result;
 }
 
+export async function registerUser(data) {
+  await getCsrfCookie();
+  return request('/api/auth/register', {
+    method: 'POST',
+    body: data,
+    errorMessage: 'حدث خطأ أثناء إنشاء الحساب',
+  });
+}
+
 export async function loginUser(data) {
   await getCsrfCookie();
 
-  const response = await fetch(`${BASE_URL}/api/auth/login`, {
+  const result = await request('/api/auth/login', {
     method: 'POST',
-    credentials: 'include',
-    headers: {
-      'Content-Type': 'application/json',
-      'Accept': 'application/json',
-    },
-    body: JSON.stringify(data),
+    body: data,
+    errorMessage: 'خطأ في البريد الإلكتروني أو كلمة المرور',
   });
 
-  const result = await response.json();
-
-  if (!response.ok) {
-    throw new Error(result.message || 'خطأ في البريد الإلكتروني أو كلمة المرور');
-  }
-
   // مسح أي بيانات جلسة سابقة قبل تخزين الجديدة
-  localStorage.clear();
+  localStorage.removeItem('token');
+  localStorage.removeItem('user');
 
   localStorage.setItem('token', result.token);
   localStorage.setItem('user', JSON.stringify(result.user));
 
   return result;
 }
+
 export async function apiPostWithAuth(endpoint, data) {
-  const token = localStorage.getItem('token');
-
-  const response = await fetch(`${BASE_URL}${endpoint}`, {
-    method: 'POST',
-    credentials: 'include',
-    headers: {
-      'Content-Type': 'application/json',
-      'Accept': 'application/json',
-      'Authorization': `Bearer ${token}`,
-    },
-    body: JSON.stringify(data),
-  });
-
-  const result = await response.json();
-
-  if (!response.ok) {
-    throw new Error(result.message || 'حدث خطأ ما');
-  }
-
-  return result;
+  return request(endpoint, { method: 'POST', body: data });
 }
 
 export async function createStore(data) {
-  const token = localStorage.getItem('token');
-
   const formData = new FormData();
   formData.append('name', data.name);
   formData.append('bio', data.bio || '');
@@ -91,68 +90,34 @@ export async function createStore(data) {
     formData.append('image', data.image);
   }
 
-  const response = await fetch(`${BASE_URL}/api/stores`, {
+  return request('/api/stores', {
     method: 'POST',
-    credentials: 'include',
-    headers: {
-      'Accept': 'application/json',
-      'Authorization': `Bearer ${token}`,
-      // ملاحظة: ما نحدد Content-Type يدويًا، المتصفح بيحددها تلقائيًا مع FormData
-    },
     body: formData,
+    isFormData: true,
+    errorMessage: 'حدث خطأ أثناء إنشاء المتجر',
   });
-
-  const result = await response.json();
-
-  if (!response.ok) {
-    throw new Error(result.message || 'حدث خطأ أثناء إنشاء المتجر');
-  }
-
-  return result;
 }
 
 export async function getMyStore() {
-  const token = localStorage.getItem('token');
-
-  const response = await fetch(`${BASE_URL}/api/stores/me`, {
-    method: 'GET',
-    credentials: 'include',
-    headers: {
-      'Accept': 'application/json',
-      'Authorization': `Bearer ${token}`,
-    },
+  return request('/api/stores/me', {
+    errorMessage: 'تعذر جلب بيانات المتجر',
   });
-
-  const result = await response.json();
-
-  if (!response.ok) {
-    throw new Error(result.message || 'تعذر جلب بيانات المتجر');
-  }
-
-  return result;
 }
+
 export async function logoutUser() {
-  const token = localStorage.getItem('token');
   try {
-    await fetch(`${BASE_URL}/api/auth/logout`, {
-      method: 'POST',
-      credentials: 'include',
-      headers: {
-        'Accept': 'application/json',
-        'Authorization': `Bearer ${token}`,
-      },
-    });
+    await request('/api/auth/logout', { method: 'POST' });
   } catch (err) {
     console.log('logout error (ignored):', err);
   } finally {
-    localStorage.clear();
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
   }
 }
+
 // ملاحظة: تعديل المتجر بيصير دايمًا على متجر المستخدمة الحالية —
 // endpoint الصحيح PATCH /api/stores/me (من غير storeId بالمسار، حسب توثيق الباك اند)
 export async function updateStore(data) {
-  const token = localStorage.getItem('token');
-
   const formData = new FormData();
   // Laravel بيحتاج POST + _method=PATCH لما بيكون فيه ملف (multipart/form-data)
   formData.append('_method', 'PATCH');
@@ -171,91 +136,35 @@ export async function updateStore(data) {
   if (data.commission_rate !== undefined) {
     formData.append('commission_rate', data.commission_rate);
   }
-  // سنوات الخبرة
-if (data.years_of_experience !== undefined) {
-  formData.append('years_of_experience', data.years_of_experience);
-}
-
   if (data.image) {
     formData.append('image', data.image);
   }
 
-  const response = await fetch(`${BASE_URL}/api/stores/me`, {
+  return request('/api/stores/me', {
     method: 'POST',
-    credentials: 'include',
-    headers: {
-      'Accept': 'application/json',
-      'Authorization': `Bearer ${token}`,
-    },
     body: formData,
+    isFormData: true,
+    errorMessage: 'حدث خطأ أثناء تحديث بيانات المتجر',
   });
-
-  const result = await response.json();
-
-  if (!response.ok) {
-    throw new Error(result.message || 'حدث خطأ أثناء تحديث بيانات المتجر');
-  }
-
-  return result;
 }
+
 export async function updateProfile(data) {
-  const token = localStorage.getItem('token');
-
-  // لو في صورة، لازم نبعت الطلب كـ multipart (FormData) بدل JSON
-  if (data.image) {
-    const formData = new FormData();
-    formData.append('_method', 'PUT'); // Laravel بيحتاج POST + _method=PUT لما بيكون فيه ملف
-    if (data.full_name !== undefined) formData.append('full_name', data.full_name);
-    if (data.phone !== undefined) formData.append('phone', data.phone);
-    if (data.city !== undefined) formData.append('city', data.city);
-    formData.append('image', data.image);
-
-    const response = await fetch(`${BASE_URL}/api/auth/profile`, {
-      method: 'POST',
-      credentials: 'include',
-      headers: {
-        'Accept': 'application/json',
-        'Authorization': `Bearer ${token}`,
-      },
-      body: formData,
-    });
-
-    const result = await response.json();
-
-    if (!response.ok) {
-      throw new Error(result.message || 'حدث خطأ أثناء تحديث البيانات');
-    }
-
-    localStorage.setItem('user', JSON.stringify(result.user));
-    return result;
-  }
-
   const body = {};
   if (data.full_name !== undefined) body.full_name = data.full_name;
   if (data.phone !== undefined) body.phone = data.phone;
-  if (data.city !== undefined) body.city = data.city;
 
-  const response = await fetch(`${BASE_URL}/api/auth/profile`, {
+  const result = await request('/api/auth/profile', {
     method: 'PUT',
-    credentials: 'include',
-    headers: {
-      'Content-Type': 'application/json',
-      'Accept': 'application/json',
-      'Authorization': `Bearer ${token}`,
-    },
-    body: JSON.stringify(body),
+    body,
+    errorMessage: 'حدث خطأ أثناء تحديث البيانات',
   });
 
-  const result = await response.json();
-
-  if (!response.ok) {
-    throw new Error(result.message || 'حدث خطأ أثناء تحديث البيانات');
-  }
-
+  // نحدّث localStorage بالبيانات الحقيقية الراجعة من الباك اند (مش بس محليًا متل قبل)
   localStorage.setItem('user', JSON.stringify(result.user));
 
   return result;
 }
+
 function mapServiceFromApi(s) {
   return {
     id: s.id,
@@ -282,173 +191,76 @@ function mapServiceToApi(service) {
 }
 
 export async function getServices() {
-  const token = localStorage.getItem('token');
-  const response = await fetch(`${BASE_URL}/api/services`, {
-    method: 'GET',
-    credentials: 'include',
-    headers: {
-      'Accept': 'application/json',
-      'Authorization': `Bearer ${token}`,
-    },
+  const result = await request('/api/services', {
+    errorMessage: 'تعذر جلب الخدمات',
   });
-  const result = await response.json();
-  if (!response.ok) {
-    throw new Error(result.message || 'تعذر جلب الخدمات');
-  }
   const list = result.services || result.data || result;
   return Array.isArray(list) ? list.map(mapServiceFromApi) : [];
 }
 
 export async function createService(service) {
-  const token = localStorage.getItem('token');
-  const response = await fetch(`${BASE_URL}/api/services`, {
+  const result = await request('/api/services', {
     method: 'POST',
-    credentials: 'include',
-    headers: {
-      'Content-Type': 'application/json',
-      'Accept': 'application/json',
-      'Authorization': `Bearer ${token}`,
-    },
-    body: JSON.stringify(mapServiceToApi(service)),
+    body: mapServiceToApi(service),
+    errorMessage: 'حدث خطأ أثناء إضافة الخدمة',
   });
-  const result = await response.json();
- if (!response.ok) {
-  const details = result.errors
-    ? Object.values(result.errors).flat().join(' / ')
-    : '';
-  throw new Error(details || result.message || 'حدث خطأ أثناء إضافة الخدمة');
-}
   return mapServiceFromApi(result.service || result);
 }
 
 export async function updateService(id, service) {
-  const token = localStorage.getItem('token');
-  const response = await fetch(`${BASE_URL}/api/services/${id}`, {
+  const result = await request(`/api/services/${id}`, {
     method: 'PATCH',
-    credentials: 'include',
-    headers: {
-      'Content-Type': 'application/json',
-      'Accept': 'application/json',
-      'Authorization': `Bearer ${token}`,
-    },
-    body: JSON.stringify(mapServiceToApi(service)),
+    body: mapServiceToApi(service),
+    errorMessage: 'حدث خطأ أثناء إضافة الخدمة',
   });
-  const result = await response.json();
- if (!response.ok) {
-  const details = result.errors
-    ? Object.values(result.errors).flat().join(' / ')
-    : '';
-  throw new Error(details || result.message || 'حدث خطأ أثناء إضافة الخدمة');
-}
   return mapServiceFromApi(result.service || result);
 }
 
 export async function toggleService(id) {
-  const token = localStorage.getItem('token');
-  const response = await fetch(`${BASE_URL}/api/services/${id}/toggle`, {
+  const result = await request(`/api/services/${id}/toggle`, {
     method: 'PATCH',
-    credentials: 'include',
-    headers: {
-      'Accept': 'application/json',
-      'Authorization': `Bearer ${token}`,
-    },
+    errorMessage: 'حدث خطأ أثناء تغيير حالة الخدمة',
   });
-  const result = await response.json();
-  if (!response.ok) {
-    throw new Error(result.message || 'حدث خطأ أثناء تغيير حالة الخدمة');
-  }
   return mapServiceFromApi(result.service || result);
 }
+
 export async function deleteService(id) {
-  const token = localStorage.getItem('token');
-
-  const response = await fetch(`${BASE_URL}/api/services/${id}`, {
+  await request(`/api/services/${id}`, {
     method: 'DELETE',
-    credentials: 'include',
-    headers: {
-      'Accept': 'application/json',
-      'Authorization': `Bearer ${token}`,
-    },
+    errorMessage: 'حدث خطأ أثناء حذف الخدمة',
   });
-
-  if (!response.ok) {
-    let result = {};
-    try { result = await response.json(); } catch (e) {}
-    const details = result.errors ? Object.values(result.errors).flat().join(' / ') : '';
-    throw new Error(details || result.message || 'حدث خطأ أثناء حذف الخدمة');
-  }
-
   return true;
 }
+
 export async function forgotPassword(email) {
   await getCsrfCookie();
-
-  const response = await fetch(`${BASE_URL}/api/auth/forgot-password`, {
+  return request('/api/auth/forgot-password', {
     method: 'POST',
-    credentials: 'include',
-    headers: {
-      'Content-Type': 'application/json',
-      'Accept': 'application/json',
-    },
-    body: JSON.stringify({ email }),
+    body: { email },
   });
-
-  const result = await response.json();
-
-  if (!response.ok) {
-    throw new Error(result.message || 'حدث خطأ ما');
-  }
-
-  return result; // { message, reset_token }
+  // النتيجة: { message, reset_token }
 }
 
 export async function resetPassword({ email, token, password, passwordConfirmation }) {
   await getCsrfCookie();
-
-  const response = await fetch(`${BASE_URL}/api/auth/reset-password`, {
+  return request('/api/auth/reset-password', {
     method: 'POST',
-    credentials: 'include',
-    headers: {
-      'Content-Type': 'application/json',
-      'Accept': 'application/json',
-    },
-    body: JSON.stringify({
+    body: {
       email,
       token,
       password,
       password_confirmation: passwordConfirmation,
-    }),
+    },
+    errorMessage: 'حدث خطأ أثناء تعيين كلمة المرور',
   });
-
-  const result = await response.json();
-
-  if (!response.ok) {
-    throw new Error(result.message || 'حدث خطأ أثناء تعيين كلمة المرور');
-  }
-
-  return result;
 }
 
 export async function getOrderStats() {
-  const token = localStorage.getItem('token');
-
-  const response = await fetch(`${BASE_URL}/api/orders/stats`, {
-    method: 'GET',
-    credentials: 'include',
-    headers: {
-      'Accept': 'application/json',
-      'Authorization': `Bearer ${token}`,
-    },
+  const result = await request('/api/orders/stats', {
+    errorMessage: 'تعذر جلب إحصائيات الطلبات',
   });
 
-  const result = await response.json();
-
-  if (!response.ok) {
-    throw new Error(result.message || 'تعذر جلب إحصائيات الطلبات');
-  }
-
   // أسماء الحقول الحقيقية القادمة من الباك اند: total, new, in_progress, completed
-  // (مش new_count/in_progress_count متل ما كنا مفترضين سابقًا)
   return {
     newCount: result.new ?? 0,
     inProgressCount: result.in_progress ?? 0,
@@ -459,45 +271,19 @@ export async function getOrderStats() {
 
 // قبول طلب — بينقل الحالة من pending إلى ordered_from_shein
 export async function acceptOrder(id) {
-  const token = localStorage.getItem('token');
-
-  const response = await fetch(`${BASE_URL}/api/orders/${id}/accept`, {
+  const result = await request(`/api/orders/${id}/accept`, {
     method: 'PATCH',
-    credentials: 'include',
-    headers: {
-      'Accept': 'application/json',
-      'Authorization': `Bearer ${token}`,
-    },
+    errorMessage: 'تعذر قبول الطلب',
   });
-
-  const result = await response.json();
-
-  if (!response.ok) {
-    throw new Error(result.message || 'تعذر قبول الطلب');
-  }
-
   return mapOrderFromApi(result.order || result);
 }
 
 // رفض طلب
 export async function rejectOrder(id) {
-  const token = localStorage.getItem('token');
-
-  const response = await fetch(`${BASE_URL}/api/orders/${id}/reject`, {
+  const result = await request(`/api/orders/${id}/reject`, {
     method: 'PATCH',
-    credentials: 'include',
-    headers: {
-      'Accept': 'application/json',
-      'Authorization': `Bearer ${token}`,
-    },
+    errorMessage: 'تعذر رفض الطلب',
   });
-
-  const result = await response.json();
-
-  if (!response.ok) {
-    throw new Error(result.message || 'تعذر رفض الطلب');
-  }
-
   return mapOrderFromApi(result.order || result);
 }
 
@@ -530,80 +316,38 @@ function mapOrderFromApi(o) {
 }
 
 export async function getOrders(filters = {}) {
-  const token = localStorage.getItem('token');
   const params = new URLSearchParams();
   if (filters.status) params.append('status', filters.status);
   if (filters.date) params.append('date', filters.date);
   if (filters.search) params.append('search', filters.search);
 
-  const response = await fetch(`${BASE_URL}/api/orders?${params.toString()}`, {
-    method: 'GET',
-    credentials: 'include',
-    headers: {
-      'Accept': 'application/json',
-      'Authorization': `Bearer ${token}`,
-    },
+  const result = await request(`/api/orders?${params.toString()}`, {
+    errorMessage: 'تعذر جلب الطلبات',
   });
-
-  const result = await response.json();
-
-  if (!response.ok) {
-    throw new Error(result.message || 'تعذر جلب الطلبات');
-  }
 
   const list = result.orders || result.data || result;
   return Array.isArray(list) ? list.map(mapOrderFromApi) : [];
 }
 
 export async function getOrderDetails(id) {
-  const token = localStorage.getItem('token');
-
-  const response = await fetch(`${BASE_URL}/api/orders/${id}`, {
-    method: 'GET',
-    credentials: 'include',
-    headers: {
-      'Accept': 'application/json',
-      'Authorization': `Bearer ${token}`,
-    },
+  const result = await request(`/api/orders/${id}`, {
+    errorMessage: 'تعذر جلب تفاصيل الطلب',
   });
-
-  const result = await response.json();
-
-  if (!response.ok) {
-    throw new Error(result.message || 'تعذر جلب تفاصيل الطلب');
-  }
-
   return mapOrderFromApi(result.order || result);
 }
 
 // تحديث حالة الطلب (مسار الطلب) — endpoint PATCH /api/orders/{id}/status
 // القيم المسموحة: pending, ordered_from_shein, shipped, arrived, inspected, received, cancelled
 export async function updateOrderStatus(id, status) {
-  const token = localStorage.getItem('token');
-
-  const response = await fetch(`${BASE_URL}/api/orders/${id}/status`, {
+  const result = await request(`/api/orders/${id}/status`, {
     method: 'PATCH',
-    credentials: 'include',
-    headers: {
-      'Content-Type': 'application/json',
-      'Accept': 'application/json',
-      'Authorization': `Bearer ${token}`,
-    },
-    body: JSON.stringify({ status }),
+    body: { status },
+    errorMessage: 'تعذر تحديث حالة الطلب',
   });
-
-  const result = await response.json();
-
-  if (!response.ok) {
-    throw new Error(result.message || 'تعذر تحديث حالة الطلب');
-  }
-
   return mapOrderFromApi(result.order || result);
 }
 
-// تقييمات الزبائن الحقيقية عن الوسيطة الحالية (بدل بيانات وهمية) —
-// نفس منطق mapOrderFromApi فوق: منحاول أكثر من اسم حقل محتمل لأن التسمية
-// الدقيقة القادمة من الباك اند لسه ما تأكدنا منها 100%
+// تقييمات الزبائن الحقيقية عن الوسيطة الحالية
 function mapReviewFromApi(r) {
   return {
     id: r.id,
@@ -616,24 +360,11 @@ function mapReviewFromApi(r) {
 }
 
 // الرد من الباك اند فيه average_rating و total_reviews و distribution جاهزين —
-// ما في داعي نحسبهم يدويًا بالفرونت زي ما كنا عم نعمل سابقًا
+// ما في داعي نحسبهم يدويًا بالفرونت
 export async function getReviews() {
-  const token = localStorage.getItem('token');
-
-  const response = await fetch(`${BASE_URL}/api/reviews`, {
-    method: 'GET',
-    credentials: 'include',
-    headers: {
-      'Accept': 'application/json',
-      'Authorization': `Bearer ${token}`,
-    },
+  const result = await request('/api/reviews', {
+    errorMessage: 'تعذر جلب التقييمات',
   });
-
-  const result = await response.json();
-
-  if (!response.ok) {
-    throw new Error(result.message || 'تعذر جلب التقييمات');
-  }
 
   const list = result.reviews || [];
   return {
@@ -646,3 +377,5 @@ export async function getReviews() {
     reviews: Array.isArray(list) ? list.map(mapReviewFromApi) : [],
   };
 }
+
+export { BASE_URL };

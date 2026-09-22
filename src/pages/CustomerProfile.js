@@ -1,9 +1,9 @@
 import { useState, useEffect, useRef } from "react";
-import { Link, useNavigate } from "react-router-dom";
-import { updateProfile, getOrderStats, logoutUser, BASE_URL } from "../api";
+import { Link } from "react-router-dom";
+import { updateProfile, getOrderStats, BASE_URL } from "../api";
+import DashboardLayout from "../components/DashboardLayout";
+import { useAuth } from "../context/AuthContext";
 
-// رابط صورة الحساب يجي أحيانًا من الباك اند كمسار نسبي (بدون دومين) —
-// هاي الدالة بتتأكد إنه رابط كامل قبل ما نعرضه، وإلا بترجع null
 function resolveImageUrl(path) {
   if (!path) return null;
   if (/^https?:\/\//i.test(path) || path.startsWith("blob:") || path.startsWith("data:")) {
@@ -16,32 +16,25 @@ function resolveImageUrl(path) {
   return `${BASE_URL}/${clean}`;
 }
 
-// صفحة الملف الشخصي للزبونة — نفس تصميم صفحة الملف الشخصي للوسيطة
-// (بدون زر "معاينة الملف كما يظهر للزبائن" لأنه ما إلها داعي هون، وبدون
-// نسبة عمولة لأنها خاصة بمتجر الوسيطة مش بحساب الزبونة)
 export default function CustomerProfile() {
-  const navigate = useNavigate();
-  const storedUser = JSON.parse(localStorage.getItem("user")) || {};
+  const { user } = useAuth();
 
   const [form, setForm] = useState({
-    fullName: storedUser.full_name || storedUser.name || storedUser.fullName || "",
-    email: storedUser.email || "",
-    phone: storedUser.phone || "",
-    city: storedUser.city || "",
+    fullName: user?.full_name || user?.name || user?.fullName || "",
+    email: user?.email || "",
+    phone: user?.phone || "",
+    city: user?.city || "",
   });
 
   const userInitial = (form.fullName || "ز").charAt(0);
 
   const [imageFile, setImageFile] = useState(null);
   const [imagePreview, setImagePreview] = useState(
-    resolveImageUrl(storedUser.image_url || storedUser.image)
+    resolveImageUrl(user?.image_url || user?.image)
   );
 
-  // بنستخدمه لمنع تعارض: لو المستخدمة رفعت صورة جديدة بنفس اللحظة يلي في فيها
-  // نداء تاني عم يجيب بيانات المستخدمة، ما نخلي نتيجته القديمة تمسح الصورة الجديدة
   const imageJustUpdatedRef = useRef(false);
 
-  // ===== تعديل بيانات الحساب =====
   const [editingAccount, setEditingAccount] = useState(false);
   const [accountForm, setAccountForm] = useState(form);
   const [accountError, setAccountError] = useState("");
@@ -100,7 +93,6 @@ export default function CustomerProfile() {
     }
   };
 
-  // نفس منطق رفع صورة الوسيطة بالضبط: معاينة فورية محليًا + رفع فوري للباك اند
   const handleImageChange = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
@@ -127,7 +119,6 @@ export default function CustomerProfile() {
     }
   };
 
-  // ===== ملخص الطلبات — من نفس endpoint إحصائيات الطلبات المستخدم بلوحة الوسيطة =====
   const [stats, setStats] = useState(null);
   const [loadingStats, setLoadingStats] = useState(true);
 
@@ -140,71 +131,19 @@ export default function CustomerProfile() {
       .catch(() => setLoadingStats(false));
   }, []);
 
-  // الباك اند بيرجع new / in_progress / completed / total — ما في حقل مخصص لعدد
-  // الطلبات "الملغى / المرفوض"، فمنحسبه من الباقي (المجموع ناقص باقي الحالات)
   const activeCount = stats ? stats.newCount + stats.inProgressCount : 0;
   const completedCount = stats ? stats.completedCount : 0;
   const cancelledCount = stats
     ? Math.max(0, stats.total - stats.newCount - stats.inProgressCount - stats.completedCount)
     : 0;
 
-  const handleLogout = async () => {
-    await logoutUser();
-    navigate("/login");
-  };
-
   return (
-    <div className="dashboard-layout">
-      {/* ===== الشريط الجانبي ===== */}
-      <aside className="dashboard-sidebar">
-        <div className="sidebar-logo">
-          <img src="/logo.svg" alt="وساطة" className="logo-img" />
-          وساطة
-        </div>
-        <nav className="sidebar-nav">
-          <Link to="/" className="sidebar-link">
-            <span className="sidebar-icon">🏠</span> الرئيسية
-          </Link>
-          <Link to="/customer-dashboard" className="sidebar-link">
-            <span className="sidebar-icon">▦</span> لوحة التحكم
-          </Link>
-          <Link to="/my-orders" className="sidebar-link">
-            <span className="sidebar-icon">📋</span> طلباتي
-          </Link>
-          <Link to="/explore-mediators" className="sidebar-link">
-            <span className="sidebar-icon">🔍</span> استكشاف الوسيطات
-          </Link>
-          <Link to="/profile" className="sidebar-link active">
-            <span className="sidebar-icon">👤</span> الملف الشخصي
-          </Link>
-        </nav>
-      </aside>
-
-      <main className="dashboard-main">
-        <div className="dashboard-topbar">
-          <div className="topbar-actions">
-            <button className="notif-btn">🔔</button>
-          </div>
-          <div className="topbar-user">
-            <div className="user-info">
-              <div className="user-name">{form.fullName || "زبونة"}</div>
-              <div className="user-store">زبونة</div>
-            </div>
-            <div
-              className="user-avatar"
-              style={{ backgroundImage: imagePreview ? `url(${imagePreview})` : "none" }}
-            >
-              {!imagePreview && userInitial}
-            </div>
-          </div>
-        </div>
-
+    <DashboardLayout role="customer" avatarImage={imagePreview}>
         <div className="dashboard-welcome profile-title-centered">
           <h1>الملف الشخصي</h1>
           <p>راجعي بياناتك الشخصية وتابعي ملخص طلباتك.</p>
         </div>
 
-        {/* ===== بطاقة الصورة والبيانات الأساسية — بدون زر معاينة ===== */}
         <div className="profile-hero-card">
           <div className="profile-hero-banner"></div>
           <div className="profile-hero-body">
@@ -242,7 +181,6 @@ export default function CustomerProfile() {
           </div>
         </div>
 
-        {/* ===== بيانات الحساب ===== */}
         <div className="account-data-card">
           <div className="section-header-row">
             <h3>بيانات الحساب</h3>
@@ -340,7 +278,6 @@ export default function CustomerProfile() {
           )}
         </div>
 
-        {/* ===== ملخص طلباتي ===== */}
         <div className="account-data-card">
           <div className="section-header-row">
             <h3>🛍 ملخص طلباتي</h3>
@@ -369,14 +306,7 @@ export default function CustomerProfile() {
           )}
         </div>
 
-        {/* ===== تسجيل الخروج ===== */}
-        <button type="button" className="btn-logout" onClick={handleLogout}>
-          ← تسجيل الخروج
-          <span className="btn-logout-sub">مغادرة الجلسة الحالية بأمان</span>
-        </button>
-
         {toast && <div className="toast-notification">{toast}</div>}
-      </main>
-    </div>
+    </DashboardLayout>
   );
 }
