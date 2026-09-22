@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
 import { getMyStore, updateProfile, updateStore, getServices, getReviews, getOrderStats, BASE_URL } from "../api";
+import LogoutButton from "../components/LogoutButton";
 
 // رابط صورة المتجر يجي أحيانًا من الباك اند كمسار نسبي (بدون دومين) —
 // هاي الدالة بتتأكد إنه رابط كامل قبل ما نعرضه، وإلا بترجع null
@@ -532,6 +533,8 @@ export default function MediatorProfile() {
             <span className="sidebar-icon">👤</span> الملف الشخصي
           </Link>
         </nav>
+
+        <LogoutButton />
       </aside>
 
       <main className="dashboard-main">

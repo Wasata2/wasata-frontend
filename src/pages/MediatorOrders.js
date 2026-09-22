@@ -1,7 +1,21 @@
 import { useState, useEffect, useMemo } from "react";
 import { Link } from "react-router-dom";
-import { getOrders, getOrderStats, acceptOrder, rejectOrder } from "../api";
+import { getOrders, getOrderStats, acceptOrder, rejectOrder, getMyStore, BASE_URL } from "../api";
 import DashboardLayout from "../components/DashboardLayout";
+
+// رابط صورة المتجر يجي أحيانًا من الباك اند كمسار نسبي (بدون دومين) —
+// هاي الدالة بتتأكد إنه رابط كامل قبل ما نعرضه، وإلا بترجع null
+function resolveImageUrl(path) {
+  if (!path) return null;
+  if (/^https?:\/\//i.test(path) || path.startsWith("blob:") || path.startsWith("data:")) {
+    return path;
+  }
+  const clean = path.startsWith("/") ? path.slice(1) : path;
+  if (!clean.includes("/")) {
+    return `${BASE_URL}/storage/${clean}`;
+  }
+  return `${BASE_URL}/${clean}`;
+}
 
 const STATUS_META = {
   pending: { label: "تم الطلب", className: "pending" },
@@ -29,6 +43,16 @@ export default function MediatorOrders() {
   const [statusFilter, setStatusFilter] = useState("");
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
+  const [imagePreview, setImagePreview] = useState(null);
+
+  useEffect(() => {
+    getMyStore()
+      .then((data) => {
+        const store = data.store || data;
+        setImagePreview(resolveImageUrl(store.image_url || store.image));
+      })
+      .catch(() => {});
+  }, []);
 
   useEffect(() => {
     Promise.all([getOrders(), getOrderStats()])
@@ -117,6 +141,7 @@ export default function MediatorOrders() {
       ordersBadge={stats && stats.newCount}
       notifBadge={stats && stats.newCount}
       notifLink="/mediator-notifications"
+      avatarImage={imagePreview}
     >
         <div className="dashboard-welcome">
           <h1>الطلبات</h1>

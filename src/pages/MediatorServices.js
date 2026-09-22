@@ -1,7 +1,21 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
-import { getServices, createService, updateService, toggleService, deleteService, getOrderStats } from "../api";
+import { getServices, createService, updateService, toggleService, deleteService, getOrderStats, getMyStore, BASE_URL } from "../api";
 import DashboardLayout from "../components/DashboardLayout";
+
+// رابط صورة المتجر يجي أحيانًا من الباك اند كمسار نسبي (بدون دومين) —
+// هاي الدالة بتتأكد إنه رابط كامل قبل ما نعرضه، وإلا بترجع null
+function resolveImageUrl(path) {
+  if (!path) return null;
+  if (/^https?:\/\//i.test(path) || path.startsWith("blob:") || path.startsWith("data:")) {
+    return path;
+  }
+  const clean = path.startsWith("/") ? path.slice(1) : path;
+  if (!clean.includes("/")) {
+    return `${BASE_URL}/storage/${clean}`;
+  }
+  return `${BASE_URL}/${clean}`;
+}
 
 // أيقونات الخدمة المتاحة للاختيار من بينها — value لازم يطابق القيم المقبولة بالباك اند بالظبط
 const ICONS = [
@@ -51,6 +65,16 @@ export default function MediatorServices() {
   const [stats, setStats] = useState(null);
   useEffect(() => {
     getOrderStats().then(setStats).catch(() => { });
+  }, []);
+
+  const [imagePreview, setImagePreview] = useState(null);
+  useEffect(() => {
+    getMyStore()
+      .then((data) => {
+        const store = data.store || data;
+        setImagePreview(resolveImageUrl(store.image_url || store.image));
+      })
+      .catch(() => {});
   }, []);
 
   const [services, setServices] = useState([]);
@@ -166,7 +190,7 @@ export default function MediatorServices() {
   };
 
   return (
-    <DashboardLayout role="broker" notifBadge={stats && stats.newCount} notifLink="/mediator-notifications">
+    <DashboardLayout role="broker" notifBadge={stats && stats.newCount} notifLink="/mediator-notifications" avatarImage={imagePreview}>
       <div className="services-header-row">
         <div className="dashboard-welcome">
           <h1>الخدمات</h1>
