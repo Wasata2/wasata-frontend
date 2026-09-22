@@ -1,13 +1,11 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { getOrders, getOrderStats, acceptOrder, rejectOrder } from "../api";
+import DashboardLayout from "../components/DashboardLayout";
 
 // صفحة الإشعارات — بتعرض الطلبات الجديدة (status === "pending") يلي محتاجة
 // قرار الوسيطة (قبول / رفض)، ونفس هالعدد هو يلي بيظهر كرقم صغير فوق زر 🔔
 export default function MediatorNotifications() {
-  const storedUser = JSON.parse(localStorage.getItem("user")) || {};
-  const userName = storedUser.full_name || "مستخدمة";
-  const userInitial = userName.charAt(0);
 
   const [orders, setOrders] = useState([]);
   const [stats, setStats] = useState(null);
@@ -59,53 +57,8 @@ export default function MediatorNotifications() {
     }
   };
 
-  return (
-    <div className="dashboard-layout">
-      <aside className="dashboard-sidebar">
-        <div className="sidebar-logo">
-          <img src="/logo.svg" alt="وساطة" className="logo-img" />
-          وساطة
-        </div>
-        <nav className="sidebar-nav">
-          <Link to="/" className="sidebar-link">
-            <span className="sidebar-icon">🏠</span> الرئيسية
-          </Link>
-          <Link to="/mediator-dashboard" className="sidebar-link">
-            <span className="sidebar-icon">▦</span> لوحة التحكم
-          </Link>
-          <Link to="/mediator-orders" className="sidebar-link">
-            <span className="sidebar-icon">📋</span> الطلبات
-          </Link>
-          <Link to="/mediator-services" className="sidebar-link">
-            <span className="sidebar-icon">🛍</span> الخدمات
-          </Link>
-          <Link to="/mediator-reviews" className="sidebar-link">
-            <span className="sidebar-icon">⭐</span> التقييمات
-          </Link>
-          <Link to="/mediator-profile" className="sidebar-link">
-            <span className="sidebar-icon">👤</span> الملف الشخصي
-          </Link>
-        </nav>
-      </aside>
-
-      <main className="dashboard-main">
-        <div className="dashboard-topbar">
-          <div className="topbar-actions">
-            <span className="notif-btn-wrap">
-              <button className="notif-btn active">🔔</button>
-              {stats && stats.newCount > 0 && (
-                <span className="notif-badge">{stats.newCount}</span>
-              )}
-            </span>
-          </div>
-          <div className="topbar-user">
-            <div className="user-info">
-              <div className="user-name">{userName}</div>
-              <div className="user-store">وسيطة</div>
-            </div>
-            <div className="user-avatar">{userInitial}</div>
-          </div>
-        </div>
+    return (
+    <DashboardLayout role="broker" ordersBadge={stats && stats.newCount} notifBadge={stats && stats.newCount} notifLink="/mediator-notifications">
 
         <div className="dashboard-welcome">
           <h1>الإشعارات</h1>
@@ -167,7 +120,6 @@ export default function MediatorNotifications() {
             </div>
           )}
         </div>
-      </main>
-    </div>
+          </DashboardLayout>
   );
 }
