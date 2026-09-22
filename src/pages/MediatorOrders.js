@@ -1,9 +1,8 @@
 import { useState, useEffect, useMemo } from "react";
 import { Link } from "react-router-dom";
 import { getOrders, getOrderStats, acceptOrder, rejectOrder } from "../api";
+import DashboardLayout from "../components/DashboardLayout";
 
-// وصف كل حالة طلب: النص الظاهر وصنف الـ CSS الخاص فيها (status-badge.<className>) —
-// نفس الحالات الحقيقية السبعة القادمة من الباك اند (وليس new/in_progress/completed القديمة الوهمية)
 const STATUS_META = {
   pending: { label: "تم الطلب", className: "pending" },
   ordered_from_shein: { label: "تم الطلب من SHEIN", className: "ordered" },
@@ -17,16 +16,11 @@ const STATUS_META = {
 const PAGE_SIZE = 6;
 
 export default function MediatorOrders() {
-  const storedUser = JSON.parse(localStorage.getItem("user")) || {};
-  const userName = storedUser.full_name || "مستخدمة";
-  const userInitial = userName.charAt(0);
-
   const [orders, setOrders] = useState([]);
   const [stats, setStats] = useState(null);
   const [loadingOrders, setLoadingOrders] = useState(true);
   const [loadError, setLoadError] = useState("");
 
-  // معرف الطلب يلي عم تنعمل عليه عملية قبول/رفض حاليًا (لتعطيل زرارها وقت الطلب فقط)
   const [actionOrderId, setActionOrderId] = useState(null);
   const [actionError, setActionError] = useState("");
 
@@ -75,7 +69,6 @@ export default function MediatorOrders() {
     }
   };
 
-  // عدد الطلبات لكل حالة، لعرضه جوا تبويبات الفلترة
   const counts = useMemo(() => {
     const c = { all: orders.length };
     Object.keys(STATUS_META).forEach((key) => {
@@ -84,8 +77,7 @@ export default function MediatorOrders() {
     return c;
   }, [orders]);
 
-  const hasActiveFilters =
-    dateFilter || statusFilter || search || activeTab !== "all";
+  const hasActiveFilters = dateFilter || statusFilter || search || activeTab !== "all";
 
   const filteredOrders = useMemo(() => {
     return orders.filter((o) => {
@@ -98,10 +90,7 @@ export default function MediatorOrders() {
   }, [orders, activeTab, statusFilter, dateFilter, search]);
 
   const totalPages = Math.max(1, Math.ceil(filteredOrders.length / PAGE_SIZE));
-  const pagedOrders = filteredOrders.slice(
-    (page - 1) * PAGE_SIZE,
-    page * PAGE_SIZE,
-  );
+  const pagedOrders = filteredOrders.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
   const clearFilters = () => {
     setActiveTab("all");
@@ -123,58 +112,12 @@ export default function MediatorOrders() {
   ];
 
   return (
-    <div className="dashboard-layout">
-      {/* ===== نفس القائمة الجانبية الموجودة بباقي صفحات لوحة التحكم ===== */}
-      <aside className="dashboard-sidebar">
-        <div className="sidebar-logo">
-          <img src="/logo.svg" alt="وساطة" className="logo-img" />
-          وساطة
-        </div>
-        <nav className="sidebar-nav">
-          <Link to="/" className="sidebar-link">
-            <span className="sidebar-icon">🏠</span> الرئيسية
-          </Link>
-          <Link to="/mediator-dashboard" className="sidebar-link">
-            <span className="sidebar-icon">▦</span> لوحة التحكم
-          </Link>
-          <Link to="/mediator-orders" className="sidebar-link active">
-            <span className="sidebar-icon">📋</span> الطلبات
-            {stats && stats.newCount > 0 && (
-              <span className="sidebar-badge">{stats.newCount}</span>
-            )}
-          </Link>
-          <Link to="/mediator-services" className="sidebar-link">
-            <span className="sidebar-icon">🛍</span> الخدمات
-          </Link>
-          <Link to="/mediator-reviews" className="sidebar-link">
-            <span className="sidebar-icon">⭐</span> التقييمات
-          </Link>
-          <Link to="/mediator-profile" className="sidebar-link">
-            <span className="sidebar-icon">👤</span> الملف الشخصي
-          </Link>
-        </nav>
-      </aside>
-
-      <main className="dashboard-main">
-        {/* ===== نفس الـ topbar الموجود بباقي صفحات لوحة التحكم ===== */}
-        <div className="dashboard-topbar">
-          <div className="topbar-actions">
-            <Link to="/mediator-notifications" className="notif-btn-wrap">
-              <button className="notif-btn">🔔</button>
-              {stats && stats.newCount > 0 && (
-                <span className="notif-badge">{stats.newCount}</span>
-              )}
-            </Link>
-          </div>
-          <div className="topbar-user">
-            <div className="user-info">
-              <div className="user-name">{userName}</div>
-              <div className="user-store">وسيطة</div>
-            </div>
-            <div className="user-avatar">{userInitial}</div>
-          </div>
-        </div>
-
+    <DashboardLayout
+      role="broker"
+      ordersBadge={stats && stats.newCount}
+      notifBadge={stats && stats.newCount}
+      notifLink="/mediator-notifications"
+    >
         <div className="dashboard-welcome">
           <h1>الطلبات</h1>
           <p>إدارة ومتابعة جميع طلبات الزبائن.</p>
@@ -188,7 +131,6 @@ export default function MediatorOrders() {
 
         {actionError && <p className="form-error">{actionError}</p>}
 
-        {/* بطاقات الإحصائيات */}
         {stats && (
           <div className="dashboard-stats cols-4">
             <div className="stat-card">
@@ -222,7 +164,6 @@ export default function MediatorOrders() {
           </div>
         )}
 
-        {/* شريط الفلاتر: تاريخ + حالة + بحث */}
         <div className="orders-filters-bar">
           {hasActiveFilters && (
             <button className="clear-filters-btn" onClick={clearFilters}>
@@ -265,7 +206,6 @@ export default function MediatorOrders() {
           />
         </div>
 
-        {/* تبويبات فلترة سريعة حسب الحالة */}
         <div className="status-tabs">
           {tabs.map((tab) => (
             <button
@@ -276,13 +216,11 @@ export default function MediatorOrders() {
                 setPage(1);
               }}
             >
-              <span className="status-tab-count">{counts[tab.key] || 0}</span>{" "}
-              {tab.label}
+              <span className="status-tab-count">{counts[tab.key] || 0}</span> {tab.label}
             </button>
           ))}
         </div>
 
-        {/* جدول الطلبات */}
         <div className="dashboard-orders">
           {loadingOrders ? (
             <div className="empty-orders">
@@ -323,10 +261,7 @@ export default function MediatorOrders() {
                           </span>
                         </td>
                         <td>
-                          <Link
-                            to={`/mediator-orders/${order.id}`}
-                            className="details-link"
-                          >
+                          <Link to={`/mediator-orders/${order.id}`} className="details-link">
                             عرض التفاصيل
                           </Link>
                           {order.status === "pending" && (
@@ -379,7 +314,6 @@ export default function MediatorOrders() {
             </>
           )}
         </div>
-      </main>
-    </div>
+    </DashboardLayout>
   );
 }

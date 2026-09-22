@@ -1,5 +1,7 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import DashboardLayout from "../components/DashboardLayout";
+
 
 // بيانات وسيطات تجريبية (Mock) — لاحقًا لازم تجي من الـ API بدل ما تكون ثابتة هون
 const MOCK_MEDIATORS = [
@@ -51,10 +53,7 @@ const MOCK_MEDIATORS = [
 
 export default function NewOrder() {
   const navigate = useNavigate();
-  const storedUser = JSON.parse(localStorage.getItem("user")) || {};
-  const userName =
-    storedUser.full_name || storedUser.name || storedUser.fullName || "زبونة";
-  const userInitial = userName.charAt(0);
+
 
   // مراحل الطلب: إضافة منتجات ← اختيار وسيطة ← مراجعة وإرسال
   const [step, setStep] = useState("products"); // "products" | "mediator" | "review"
@@ -176,46 +175,8 @@ export default function NewOrder() {
   const pageTitle =
     step === "products" ? "طلب جديد" : step === "mediator" ? "اختيار الوسيطة" : "مراجعة الطلب";
 
-  return (
-    <div className="dashboard-layout">
-      {/* ===== الشريط الجانبي — عدّلي هذا الجزء ليطابق باقي الصفحات بالضبط (اللوجو) ===== */}
-      <aside className="dashboard-sidebar">
-        <div className="sidebar-logo">
-          <img src="/logo.svg" alt="وساطة" className="logo-img" />
-          وساطة
-        </div>
-        <nav className="sidebar-nav">
-          <Link to="/" className="sidebar-link">
-            <span className="sidebar-icon">🏠</span> الرئيسية
-          </Link>
-          <Link to="/customer-dashboard" className="sidebar-link">
-            <span className="sidebar-icon">▦</span> لوحة التحكم
-          </Link>
-          <Link to="/my-orders" className="sidebar-link active">
-            <span className="sidebar-icon">📋</span> طلباتي
-          </Link>
-          <Link to="/explore-mediators" className="sidebar-link">
-            <span className="sidebar-icon">🔍</span> استكشاف الوسيطات
-          </Link>
-          <Link to="/profile" className="sidebar-link">
-            <span className="sidebar-icon">👤</span> الملف الشخصي
-          </Link>
-        </nav>
-      </aside>
-
-      <main className="dashboard-main">
-        <div className="dashboard-topbar">
-          <div className="topbar-actions">
-            <button className="notif-btn">🔔</button>
-          </div>
-          <div className="topbar-user">
-            <div className="user-info">
-              <div className="user-name">{userName}</div>
-              <div className="user-store">زبونة</div>
-            </div>
-            <div className="user-avatar">{userInitial}</div>
-          </div>
-        </div>
+    return (
+    <DashboardLayout role="customer">
 
         <div className="dashboard-welcome">
           <h1>{pageTitle}</h1>
@@ -559,7 +520,6 @@ export default function NewOrder() {
         )}
 
         {toast && <div className="new-order-toast">✓ {toast}</div>}
-      </main>
-    </div>
+          </DashboardLayout>
   );
 }
