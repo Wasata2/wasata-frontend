@@ -394,6 +394,9 @@ export default function MediatorProfile() {
             {form.commission && (
               <span className="profile-hero-fact-row">💰 {form.commission}% عمولة</span>
             )}
+            {form.yearsOfExperience && (
+              <span className="profile-hero-fact-row">📅 {form.yearsOfExperience} سنوات خبرة</span>
+            )}
             <span className="profile-hero-fact-row">
               <span className={`status-dot ${acceptingOrders ? "on" : "off"}`}></span>
               {acceptingOrders ? "متاحة" : "غير متاحة"}
@@ -723,7 +726,7 @@ export default function MediatorProfile() {
           </div>
 
           <div className="public-info-stats">
-            <div className="public-stat-box">
+            <div className="public-stat-box center">
               <div className="public-stat-title">
                 <span className={`status-dot ${acceptingOrders ? "on" : "off"}`}></span>
                 {acceptingOrders ? "تستقبل طلبات" : "لا تستقبل طلبات"}
@@ -735,16 +738,6 @@ export default function MediatorProfile() {
                 {loadingStore ? "…" : form.commission ? `${form.commission}%` : "—"}
               </div>
               <div className="public-stat-sub">نسبة العمولة</div>
-            </div>
-            <div className="public-stat-box center">
-              <div className="public-stat-value">
-                {loadingStore
-                  ? "…"
-                  : form.yearsOfExperience
-                  ? `${form.yearsOfExperience}`
-                  : "—"}
-              </div>
-              <div className="public-stat-sub">سنوات الخبرة</div>
             </div>
           </div>
         </div>

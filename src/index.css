@@ -2931,6 +2931,7 @@ footer .copyright{font-size:12px;color:var(--gray-light);}
   padding:18px 20px;
 }
 .public-stat-box.center{ text-align:center; }
+.public-stat-box.center .public-stat-title{ justify-content:center; }
 .public-stat-title{
   display:flex;
   align-items:center;
