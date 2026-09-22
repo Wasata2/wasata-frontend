@@ -83,7 +83,12 @@ export default function MediatorProfile() {
 
   // ===== تعديل المعلومات العامة (نبذة / نسبة العمولة / استقبال الطلبات) =====
   const [generalModalOpen, setGeneralModalOpen] = useState(false);
-  const [generalForm, setGeneralForm] = useState({ bio: "", commission: "", acceptingOrders: true });
+  const [generalForm, setGeneralForm] = useState({
+    bio: "",
+    commission: "",
+    acceptingOrders: true,
+    yearsOfExperience: "",
+  });
   const [generalError, setGeneralError] = useState("");
   const [savingGeneral, setSavingGeneral] = useState(false);
 
@@ -288,6 +293,7 @@ export default function MediatorProfile() {
       bio: form.bio,
       commission: form.commission,
       acceptingOrders,
+      yearsOfExperience: form.yearsOfExperience,
     });
     setGeneralError("");
     setGeneralModalOpen(true);
@@ -306,18 +312,20 @@ export default function MediatorProfile() {
     setSavingGeneral(true);
 
     try {
-      // نبذة عني + نسبة العمولة + سويتش استقبال الطلبات — الثلاثة صاروا مدعومين
-      // فعليًا بالباك اند (bio, commission_rate, is_accepting_orders)
+      // نبذة عني + نسبة العمولة + سويتش استقبال الطلبات + سنوات الخبرة — مدعومين
+      // فعليًا بالباك اند (bio, commission_rate, is_accepting_orders, years_of_experience)
       await updateStore({
         bio: generalForm.bio,
         commission_rate: generalForm.commission,
         is_accepting_orders: generalForm.acceptingOrders,
+        years_of_experience: generalForm.yearsOfExperience,
       });
 
       setForm((prev) => ({
         ...prev,
         bio: generalForm.bio,
         commission: generalForm.commission,
+        yearsOfExperience: generalForm.yearsOfExperience,
       }));
       setAcceptingOrders(generalForm.acceptingOrders);
       setGeneralModalOpen(false);
@@ -725,6 +733,16 @@ export default function MediatorProfile() {
               </div>
               <div className="public-stat-sub">نسبة العمولة</div>
             </div>
+            <div className="public-stat-box center">
+              <div className="public-stat-value">
+                {loadingStore
+                  ? "…"
+                  : form.yearsOfExperience
+                  ? `${form.yearsOfExperience}`
+                  : "—"}
+              </div>
+              <div className="public-stat-sub">سنوات الخبرة</div>
+            </div>
           </div>
         </div>
 
@@ -788,6 +806,17 @@ export default function MediatorProfile() {
                   min="0"
                   max="100"
                   value={generalForm.commission}
+                  onChange={handleGeneralChange}
+                />
+
+                <label htmlFor="generalYearsOfExperience">سنوات الخبرة</label>
+                <input
+                  id="generalYearsOfExperience"
+                  name="yearsOfExperience"
+                  type="number"
+                  min="0"
+                  placeholder="مثال: 3"
+                  value={generalForm.yearsOfExperience}
                   onChange={handleGeneralChange}
                 />
 
