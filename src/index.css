@@ -3198,7 +3198,165 @@ footer .copyright{font-size:12px;color:var(--gray-light);}
   color:#c0392b;
   opacity:.8;
 }
+/* ============ استكشاف الوسيطات (ExploreMediators) ============ */
+.explore-sort-select{
+  border:1.5px solid var(--line);
+  border-radius:12px;
+  padding:13px 16px;
+  font-size:14px;
+  font-weight:700;
+  color:var(--ink);
+  background:#fff;
+  cursor:pointer;
+  white-space:nowrap;
+}
+.explore-sort-select:focus{outline:none;border-color:var(--blue);}
 
+.explore-loading{
+  text-align:center;
+  color:var(--gray);
+  font-weight:700;
+  padding:40px 0;
+}
+
+.explore-empty-state{
+  text-align:center;
+  background:#fff;
+  border:1px solid var(--line);
+  border-radius:16px;
+  padding:48px 20px;
+  color:var(--gray);
+}
+.explore-empty-state .empty-icon{font-size:36px;margin-bottom:10px;}
+.explore-empty-state h3{font-size:16px;font-weight:800;color:var(--ink);margin-bottom:6px;}
+.explore-empty-state p{font-size:13px;margin-bottom:16px;}
+
+.explore-section{margin-bottom:36px;}
+.explore-section-header{
+  display:flex;
+  align-items:baseline;
+  justify-content:space-between;
+  margin-bottom:16px;
+}
+.explore-section-header h2{font-size:18px;font-weight:800;}
+.explore-section-count{font-size:13px;color:var(--gray);font-weight:700;}
+
+.explore-grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fill, minmax(240px, 1fr));
+  gap:20px;
+}
+
+.explore-card{
+  position:relative;
+  background:#fff;
+  border:1px solid var(--line);
+  border-radius:18px;
+  padding:22px 18px 18px;
+  text-align:center;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+}
+
+.explore-card-heart{
+  position:absolute;
+  top:14px;
+  right:14px;
+  width:32px;
+  height:32px;
+  border-radius:50%;
+  border:1px solid var(--line);
+  background:#fff;
+  font-size:15px;
+  color:var(--gray);
+  cursor:pointer;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+}
+
+.explore-card-avatar{
+  width:64px;
+  height:64px;
+  border-radius:50%;
+  background:var(--blue-tint);
+  color:var(--blue);
+  font-weight:800;
+  font-size:22px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  overflow:hidden;
+  margin-bottom:12px;
+}
+.explore-card-avatar img{width:100%;height:100%;object-fit:cover;}
+
+.explore-card-name-row{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  margin-bottom:8px;
+}
+.explore-card-name-row h3{font-size:15px;font-weight:800;}
+.explore-card-verified{
+  font-size:11px;
+  font-weight:700;
+  color:var(--blue);
+  background:var(--blue-tint);
+  border-radius:999px;
+  padding:3px 8px;
+  white-space:nowrap;
+}
+
+.explore-card-bio{
+  font-size:13px;
+  color:var(--gray);
+  line-height:1.6;
+  margin-bottom:10px;
+  min-height:40px;
+}
+
+.explore-card-status{
+  display:flex;
+  align-items:center;
+  gap:6px;
+  font-size:12px;
+  font-weight:700;
+  color:var(--gray);
+  margin-bottom:16px;
+}
+
+.explore-card-stats{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:10px;
+  width:100%;
+  margin-bottom:16px;
+}
+.explore-stat-box{
+  background:var(--blue-tint);
+  border-radius:12px;
+  padding:10px 6px;
+}
+.explore-stat-value{font-size:15px;font-weight:800;color:var(--blue);}
+.explore-stat-label{font-size:11px;color:var(--gray);margin-top:2px;}
+
+.explore-card-actions{
+  display:flex;
+  gap:8px;
+  width:100%;
+}
+.explore-card-actions .btn{
+  flex:1;
+  padding:10px 8px;
+  font-size:13px;
+  white-space:nowrap;
+}
+
+@media (max-width:520px){
+  .explore-grid{grid-template-columns:1fr;}
+}
 /* ============ Responsive ============ */
 @media (max-width:1024px){
   .suggested-grid{grid-template-columns:repeat(2,1fr);}}

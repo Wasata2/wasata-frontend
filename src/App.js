@@ -18,6 +18,7 @@ import NewOrder from "./pages/NewOrder";
 import OrderDetails from "./pages/OrderDetails";
 import MediatorNotifications from "./pages/MediatorNotifications";
 import CustomerProfile from "./pages/CustomerProfile";
+import ExploreMediators from "./pages/ExploreMediators";
 import ProtectedRoute from "./components/ProtectedRoute";
 
 function App() {
@@ -30,12 +31,11 @@ function App() {
       <Route path="/login" element={<Login />} />
       <Route path="/forgot-password" element={<ForgotPassword />} />
       <Route path="/reset-password" element={<ResetPassword />} />
-
-      {/* ===== صفحات الوسيطة (broker) ===== */}
       <Route
         path="/create-store"
         element={
           <ProtectedRoute allowedRole="broker">
+            {" "}
             <CreateStore />
           </ProtectedRoute>
         }
@@ -127,6 +127,14 @@ function App() {
         element={
           <ProtectedRoute allowedRole="customer">
             <CustomerProfile />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/explore-mediators"
+        element={
+          <ProtectedRoute allowedRole="customer">
+            <ExploreMediators />
           </ProtectedRoute>
         }
       />

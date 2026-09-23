@@ -399,4 +399,53 @@ export async function getReviews() {
   };
 }
 
+// ===== استكشاف الوسيطات (شاشة الزبونة) =====
+// بيانات حقيقية بالكامل من الباك اند — بدون أي بيانات وهمية/ثابتة بالفرونت
+function mapStoreFromApi(s) {
+  const owner = s.user || s.owner || {};
+  return {
+    id: s.id,
+    // اسم الوسيطة نفسها (صاحبة المتجر) — مش اسم المتجر
+    name: owner.full_name || owner.name || s.full_name || s.owner_name || "وسيطة",
+    // نبذة عني يلي كتبتها الوسيطة وقت إنشاء المتجر (أو عدّلتها لاحقًا من ملفها الشخصي)
+    bio: s.bio || "",
+    city: s.city || "",
+    image: resolveStoreImageUrl(s.image_url || s.image),
+    commission: s.commission_rate ?? null,
+    acceptingOrders: !!s.is_accepting_orders,
+    completedOrders:
+      s.completed_orders_count ?? s.completed_orders ?? s.orders_completed ?? 0,
+    // إذا الباك اند ما بيرجّع هالحقل، منسيبه null ومنخفي شارة "موثقة" بالواجهة
+    // (ما منعرض شارة وهمية لكل الوسيطات)
+    verified: s.is_verified ?? s.verified ?? null,
+    createdAt: s.created_at || null,
+  };
+}
+
+// رابط صورة المتجر ممكن يجي كمسار نسبي من الباك اند، فمنتأكد إنه رابط كامل
+function resolveStoreImageUrl(path) {
+  if (!path) return null;
+  if (/^https?:\/\//i.test(path) || path.startsWith("blob:") || path.startsWith("data:")) {
+    return path;
+  }
+  const clean = path.startsWith("/") ? path.slice(1) : path;
+  if (!clean.includes("/")) {
+    return `${BASE_URL}/storage/${clean}`;
+  }
+  return `${BASE_URL}/${clean}`;
+}
+
+// جلب كل الوسيطات المتاحة عشان الزبونة تتصفحهم — endpoint GET /api/stores
+// ملاحظة: لازم نتأكد إنه هاد المسار موجود فعليًا بالباك اند وبيرجع مصفوفة
+// متاجر/وسيطات (بنفس شكل بيانات getMyStore تقريبًا). إذا كان اسم المسار
+// مختلف عند الباك اند، بس غيّري السطر يلي فيه '/api/stores' تحت.
+export async function getStores() {
+  const result = await request('/api/stores', {
+    errorMessage: 'تعذر جلب قائمة الوسيطات',
+  });
+
+  const list = result.stores || result.data || result;
+  return Array.isArray(list) ? list.map(mapStoreFromApi) : [];
+}
+
 export { BASE_URL };
