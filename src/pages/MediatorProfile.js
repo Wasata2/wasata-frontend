@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
 import { getMyStore, updateProfile, updateStore, getServices, getReviews, getOrderStats, BASE_URL } from "../api";
 import LogoutButton from "../components/LogoutButton";
+import { useAuth } from "../context/AuthContext";
 
 // رابط صورة المتجر يجي أحيانًا من الباك اند كمسار نسبي (بدون دومين) —
 // هاي الدالة بتتأكد إنه رابط كامل قبل ما نعرضه، وإلا بترجع null
@@ -58,6 +59,7 @@ function StarRating({ rating, size }) {
 }
 
 export default function MediatorProfile() {
+  const { updateUser } = useAuth();
   const storedUser = JSON.parse(localStorage.getItem("user")) || {};
 
   const [form, setForm] = useState({
@@ -67,7 +69,6 @@ export default function MediatorProfile() {
     city: "",
     bio: "",
     commission: "",
-    yearsOfExperience: "",
   });
 
   const [acceptingOrders, setAcceptingOrders] = useState(true);
@@ -88,7 +89,6 @@ export default function MediatorProfile() {
     bio: "",
     commission: "",
     acceptingOrders: true,
-    yearsOfExperience: "",
   });
   const [generalError, setGeneralError] = useState("");
   const [savingGeneral, setSavingGeneral] = useState(false);
@@ -117,7 +117,6 @@ export default function MediatorProfile() {
           city: store.city || "",
           bio: store.bio || "",
           commission: store.commission_rate || "",
-          yearsOfExperience: store.years_of_experience || "",
         }));
         // سويتش "استقبال الطلبات" — is_accepting_orders، منفصل عن استقبال طلبات واتساب
         setAcceptingOrders(!!store.is_accepting_orders);
@@ -247,17 +246,20 @@ export default function MediatorProfile() {
 
     try {
       // ١) تحديث بيانات المستخدمة نفسها (الاسم + الهاتف) — endpoint /api/auth/profile
-      await updateProfile({
+      const profileResult = await updateProfile({
         full_name: accountForm.fullName,
         phone: accountForm.phone,
       });
 
-      // ٢) تحديث بيانات المتجر (المدينة + سنوات الخبرة + الصورة الجديدة إذا انتخبت وحدة) — endpoint /api/stores/me
+      // منحدّث بيانات المستخدمة بالـ AuthContext كمان، مش بس localStorage،
+      // عشان الاسم الجديد ينعكس فورًا بالنافبار/السايدبار بباقي الصفحات
+      if (profileResult?.user) {
+        updateUser(profileResult.user);
+      }
+
+      // ٢) تحديث بيانات المتجر (المدينة + الصورة الجديدة إذا انتخبت وحدة) — endpoint /api/stores/me
       const storeData = {};
       if (accountForm.city) storeData.city = accountForm.city;
-      if (accountForm.yearsOfExperience !== "") {
-        storeData.years_of_experience = accountForm.yearsOfExperience;
-      }
       if (imageFile) storeData.image = imageFile;
 
       if (Object.keys(storeData).length > 0) {
@@ -266,9 +268,6 @@ export default function MediatorProfile() {
         if (updatedStore.city) {
           accountForm.city = updatedStore.city;
         }
-        if (updatedStore.years_of_experience !== undefined) {
-          accountForm.yearsOfExperience = updatedStore.years_of_experience;
-        }
       }
 
       setForm((prev) => ({
@@ -276,7 +275,6 @@ export default function MediatorProfile() {
         fullName: accountForm.fullName,
         phone: accountForm.phone,
         city: accountForm.city,
-        yearsOfExperience: accountForm.yearsOfExperience,
       }));
       setImageFile(null);
       setEditingAccount(false);
@@ -294,7 +292,6 @@ export default function MediatorProfile() {
       bio: form.bio,
       commission: form.commission,
       acceptingOrders,
-      yearsOfExperience: form.yearsOfExperience,
     });
     setGeneralError("");
     setGeneralModalOpen(true);
@@ -313,20 +310,18 @@ export default function MediatorProfile() {
     setSavingGeneral(true);
 
     try {
-      // نبذة عني + نسبة العمولة + سويتش استقبال الطلبات + سنوات الخبرة — مدعومين
-      // فعليًا بالباك اند (bio, commission_rate, is_accepting_orders, years_of_experience)
+      // نبذة عني + نسبة العمولة + سويتش استقبال الطلبات — مدعومين
+      // فعليًا بالباك اند (bio, commission_rate, is_accepting_orders)
       await updateStore({
         bio: generalForm.bio,
         commission_rate: generalForm.commission,
         is_accepting_orders: generalForm.acceptingOrders,
-        years_of_experience: generalForm.yearsOfExperience,
       });
 
       setForm((prev) => ({
         ...prev,
         bio: generalForm.bio,
         commission: generalForm.commission,
-        yearsOfExperience: generalForm.yearsOfExperience,
       }));
       setAcceptingOrders(generalForm.acceptingOrders);
       setGeneralModalOpen(false);
@@ -393,9 +388,6 @@ export default function MediatorProfile() {
             {form.phone && <span className="profile-hero-fact-row">📞 {form.phone}</span>}
             {form.commission && (
               <span className="profile-hero-fact-row">💰 {form.commission}% عمولة</span>
-            )}
-            {form.yearsOfExperience && (
-              <span className="profile-hero-fact-row">📅 {form.yearsOfExperience} سنوات خبرة</span>
             )}
             <span className="profile-hero-fact-row">
               <span className={`status-dot ${acceptingOrders ? "on" : "off"}`}></span>
@@ -621,16 +613,6 @@ export default function MediatorProfile() {
                   {loadingStore ? "جاري التحميل..." : form.city || "غير محدد"}
                 </span>
               </div>
-              <div className="account-data-row">
-                <span className="account-data-label">سنوات الخبرة</span>
-                <span className="account-data-value">
-                  {loadingStore
-                    ? "جاري التحميل..."
-                    : form.yearsOfExperience
-                    ? `${form.yearsOfExperience} سنة`
-                    : "غير محدد"}
-                </span>
-              </div>
             </div>
           ) : (
             <div className="profile-edit-form">
@@ -685,17 +667,6 @@ export default function MediatorProfile() {
                 <option value="الوسطى">الوسطى</option>
                 <option value="رفح">رفح</option>
               </select>
-
-              <label htmlFor="yearsOfExperience">سنوات الخبرة</label>
-              <input
-                id="yearsOfExperience"
-                name="yearsOfExperience"
-                type="number"
-                min="0"
-                placeholder="مثال: 3"
-                value={accountForm.yearsOfExperience}
-                onChange={handleAccountChange}
-              />
 
               {accountError && <p className="form-error">{accountError}</p>}
 
@@ -802,17 +773,6 @@ export default function MediatorProfile() {
                   min="0"
                   max="100"
                   value={generalForm.commission}
-                  onChange={handleGeneralChange}
-                />
-
-                <label htmlFor="generalYearsOfExperience">سنوات الخبرة</label>
-                <input
-                  id="generalYearsOfExperience"
-                  name="yearsOfExperience"
-                  type="number"
-                  min="0"
-                  placeholder="مثال: 3"
-                  value={generalForm.yearsOfExperience}
                   onChange={handleGeneralChange}
                 />
 

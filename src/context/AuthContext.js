@@ -34,6 +34,18 @@ export function AuthProvider({ children }) {
     setToken(null);
   }
 
+  // بتسمح لأي مكون (متل صفحة الملف الشخصي) إنه يحدّث بيانات المستخدمة
+  // بالـ context مباشرة بعد ما يحدّثها بالباك اند، بدون الحاجة لـ refresh
+  // للصفحة عشان التغيير ينعكس بمكونات تانية زي النافبار/السايدبار
+  function updateUser(updatedUser) {
+    setUser(updatedUser);
+    try {
+      localStorage.setItem("user", JSON.stringify(updatedUser));
+    } catch {
+      // تجاهل أي خطأ بالتخزين المحلي، الـ state بالذاكرة تحدّث برضو
+    }
+  }
+
   const value = {
     user,
     token,
@@ -41,6 +53,7 @@ export function AuthProvider({ children }) {
     role: user?.role?.role_name || null,
     login,
     logout,
+    updateUser,
   };
 
   return (
