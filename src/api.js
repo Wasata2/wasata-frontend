@@ -444,10 +444,6 @@ export async function getStores() {
     errorMessage: 'تعذر جلب قائمة الوسيطات',
   });
 
-  // 🔧 مؤقت للتشخيص فقط — افتحي Console بالمتصفح (F12) وشوفي شو طابع هون
-  // بعدين احذفي هاد السطر لما نتأكد إنه كل شي صح
-  console.log('استجابة /api/stores الحقيقية:', result);
-
   const list = result.stores || result.data || result;
   return Array.isArray(list) ? list.map(mapStoreFromApi) : [];
 }
