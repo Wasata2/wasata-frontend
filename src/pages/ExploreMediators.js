@@ -144,9 +144,8 @@ export default function ExploreMediators() {
   }, [mediators, search, cityFilter, sortBy]);
 
   const handleSelect = (mediator) => {
-    // منوجّه لصفحة إنشاء الطلب — ربط اختيار الوسيطة تلقائيًا جوا NewOrder
-    // لسه بده تعديل منفصل هناك (حاليًا بيعتمد على قائمة وسيطات تجريبية محليًا)
-    navigate("/new-order");
+    // منوجّه لصفحة إنشاء الطلب ومعنا الوسيطة المختارة، فما بتنعرض مرحلة اختيار الوسيطة
+    navigate("/new-order", { state: { mediatorId: mediator.id } });
   };
 
   // عرض الملف: بنفتح الملف العام للوسيطة (نفس شكل "معاينة الملف كما يظهر للزبائن")

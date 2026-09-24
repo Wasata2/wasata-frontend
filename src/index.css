@@ -4444,6 +4444,9 @@ footer .copyright {
   opacity:1;
   filter:none;
 }
+/* اختيار الوسيطة: وسيطة غير متاحة + خيار توصيل غير متوفر */
+.mediator-pick-tag.off{ background:#f2f4f7; color:var(--gray); }
+.delivery-option.disabled{ opacity:.55; cursor:not-allowed; }
 @media (max-width: 640px) {
   .stagnant-item-row {
     flex-wrap: wrap;

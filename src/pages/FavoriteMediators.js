@@ -77,7 +77,7 @@ export default function FavoriteMediators() {
               <MediatorCard
                 key={m.id}
                 mediator={m}
-                onSelect={() => navigate("/new-order")}
+                onSelect={(mediator) => navigate("/new-order", { state: { mediatorId: mediator.id } })}
                 onViewProfile={() => navigate(`/mediators/${m.id}`)}
               />
             ))}

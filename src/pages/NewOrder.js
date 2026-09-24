@@ -1,58 +1,13 @@
-import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import DashboardLayout from "../components/DashboardLayout";
-
-
-// بيانات وسيطات تجريبية (Mock) — لاحقًا لازم تجي من الـ API بدل ما تكون ثابتة هون
-const MOCK_MEDIATORS = [
-  {
-    id: 1,
-    name: "نور أحمد",
-    city: "رام الله",
-    completedOrders: 142,
-    commission: 8,
-    rating: 4.8,
-    reviewsCount: 64,
-    services: ["استلام من نقطة", "توصيل للمنزل"],
-    deliveryFee: 10,
-  },
-  {
-    id: 2,
-    name: "سارة خليل",
-    city: "البيرة",
-    completedOrders: 318,
-    commission: 7,
-    rating: 4.9,
-    reviewsCount: 201,
-    services: ["استلام من نقطة", "تخزين مؤقت", "توصيل للمنزل"],
-    deliveryFee: 12,
-  },
-  {
-    id: 3,
-    name: "دينا عمر",
-    city: "الخليل",
-    completedOrders: 63,
-    commission: 9,
-    rating: 4.6,
-    reviewsCount: 47,
-    services: ["تخزين مؤقت", "استلام من نقطة"],
-    deliveryFee: 10,
-  },
-  {
-    id: 4,
-    name: "رنا مصطفى",
-    city: "نابلس",
-    completedOrders: 97,
-    commission: 10,
-    rating: 4.7,
-    reviewsCount: 88,
-    services: ["توصيل للمنزل"],
-    deliveryFee: 8,
-  },
-];
+import { getStores, getStoreProfile } from "../api";
 
 export default function NewOrder() {
   const navigate = useNavigate();
+  const location = useLocation();
+  // لو الزبونة جاية من "بدء طلب مع هذه الوسيطة" أو "اختيار الوسيطة" بنكون عارفين الوسيطة مسبقًا
+  const preselectedId = location.state?.mediatorId ?? null;
 
 
   // مراحل الطلب: إضافة منتجات ← اختيار وسيطة ← مراجعة وإرسال
@@ -68,8 +23,48 @@ export default function NewOrder() {
   const [openNotesId, setOpenNotesId] = useState(null);
 
   // ===== مرحلة ٢: اختيار الوسيطة =====
-  const [selectedMediatorId, setSelectedMediatorId] = useState(null);
-  const selectedMediator = MOCK_MEDIATORS.find((m) => m.id === selectedMediatorId);
+  // الوسيطات الحقيقية (نفس مصدر صفحة استكشاف الوسيطات)
+  const [mediators, setMediators] = useState([]);
+  const [loadingMediators, setLoadingMediators] = useState(true);
+  const [mediatorsError, setMediatorsError] = useState("");
+
+  const loadMediators = () => {
+    setLoadingMediators(true);
+    setMediatorsError("");
+    getStores()
+      .then((list) => setMediators(list))
+      .catch((err) => setMediatorsError(err.message || "تعذر جلب قائمة الوسيطات"))
+      .finally(() => setLoadingMediators(false));
+  };
+
+  useEffect(() => {
+    loadMediators();
+  }, []);
+
+  const [selectedMediatorId, setSelectedMediatorId] = useState(preselectedId);
+  // بنقبل بس وسيطة مستقبلة للطلبات
+  const selectedMediator = mediators.find((m) => m.id === selectedMediatorId && m.acceptingOrders);
+
+  // الوسيطة كانت مختارة مسبقًا: بنتخطى مرحلة "اختيار الوسيطة" ونروح على المراجعة
+  const hasChosenMediator = preselectedId !== null && selectedMediator?.id === preselectedId;
+
+  // خدمات الوسيطة المختارة (جاية من بروفايل المتجر) — بنستخدمها لعرض الخدمات وخيار التوصيل
+  const [profile, setProfile] = useState({ services: [], loading: false });
+  useEffect(() => {
+    if (selectedMediatorId === null) return undefined;
+    let cancelled = false;
+    setProfile({ services: [], loading: true });
+    getStoreProfile(selectedMediatorId)
+      .then(({ services }) => {
+        if (!cancelled) setProfile({ services: services.filter((sv) => sv.available), loading: false });
+      })
+      .catch(() => {
+        if (!cancelled) setProfile({ services: [], loading: false });
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedMediatorId]);
 
   // ===== مرحلة ٣: مراجعة الطلب =====
   const [deliveryMethod, setDeliveryMethod] = useState("pickup"); // "home" | "pickup"
@@ -141,11 +136,32 @@ export default function NewOrder() {
   const totalPieces = products.reduce((sum, p) => sum + p.qty, 0);
   const totalValue = products.reduce((sum, p) => sum + p.price * p.qty, 0);
 
-  const deliveryFee =
-    deliveryMethod === "home" && selectedMediator ? selectedMediator.deliveryFee : 0;
-  const commissionValue = selectedMediator
-    ? Math.round((totalValue * selectedMediator.commission) / 100)
-    : 0;
+  // التوصيل للمنزل متوفر بس إذا الوسيطة عندها خدمة توصيل (أيقونة الشاحنة) — والرسوم من الخدمة نفسها
+  const deliveryService = profile.services.find((sv) => sv.icon === "truck");
+  const homeDeliveryAvailable = !!deliveryService;
+  const effectiveDeliveryMethod = homeDeliveryAvailable ? deliveryMethod : "pickup";
+  const deliveryFeeAmount =
+    deliveryService && deliveryService.feeType === "fixed" ? Number(deliveryService.feeValue) || 0 : 0;
+  const deliveryFee = effectiveDeliveryMethod === "home" ? deliveryFeeAmount : 0;
+
+  const deliveryTag = deliveryService
+    ? deliveryService.feeType === "free"
+      ? "مجاني"
+      : deliveryService.feeType === "fixed"
+        ? `${deliveryFeeAmount} ₪`
+        : "حسب الوسيطة"
+    : "غير متوفر";
+
+  // العمولة الحقيقية للوسيطة (ممكن تكون فاضية إذا ما حددتها)
+  const commissionRate =
+    selectedMediator && selectedMediator.commission !== null && selectedMediator.commission !== ""
+      ? parseFloat(selectedMediator.commission) || 0
+      : null;
+  const commissionValue = commissionRate !== null ? Math.round((totalValue * commissionRate) / 100) : 0;
+  const commissionText = (m) =>
+    m.commission !== null && m.commission !== "" && Number.isFinite(parseFloat(m.commission))
+      ? `العمولة ${parseFloat(m.commission)}%`
+      : null;
   const estimatedTotal = totalValue + commissionValue + deliveryFee;
 
   // إرسال الطلب النهائي — بيتحول لنفس تصميم كارت الطلب الموجود أصلًا بصفحة "طلباتي"
@@ -155,6 +171,7 @@ export default function NewOrder() {
       type: "active",
       price: String(estimatedTotal),
       store: selectedMediator ? selectedMediator.name : "—",
+      mediatorId: selectedMediator ? selectedMediator.id : null,
       itemsCount: totalPieces,
       date: new Date().toLocaleDateString("ar-EG", {
         day: "numeric",
@@ -331,8 +348,13 @@ export default function NewOrder() {
                 </div>
 
                 <div className="new-order-final-actions">
-                  <button type="button" className="btn btn-primary" onClick={() => setStep("mediator")}>
-                    متابعة الطلب →
+                  <button
+                    type="button"
+                    className="btn btn-primary"
+                    disabled={preselectedId !== null && loadingMediators}
+                    onClick={() => setStep(hasChosenMediator ? "review" : "mediator")}
+                  >
+                    {preselectedId !== null && loadingMediators ? "جاري التحميل..." : "متابعة الطلب →"}
                   </button>
                   <Link to="/my-orders" className="cancel-link">
                     إلغاء
@@ -349,48 +371,72 @@ export default function NewOrder() {
           </>
         )}
 
-        {/* ============ المرحلة ٢: اختيار الوسيطة ============ */}
+        {/* ============ المرحلة ٢: اختيار الوسيطة (بتنعرض بس إذا ما كانت الوسيطة مختارة مسبقًا) ============ */}
         {step === "mediator" && (
           <>
-            <div className="mediator-pick-grid">
-              {MOCK_MEDIATORS.map((m) => (
-                <div className="mediator-pick-card" key={m.id}>
-                  <div className="mediator-pick-top">
-                    <span className="mediator-pick-tag">● تستقبل طلبات</span>
-                    <div className="mediator-pick-avatar">{m.name.charAt(0)}</div>
+            {loadingMediators && <p className="explore-loading">جاري تحميل الوسيطات...</p>}
+
+            {!loadingMediators && mediatorsError && (
+              <div className="explore-empty-state">
+                <div className="empty-icon">⚠️</div>
+                <h3>تعذر تحميل الوسيطات</h3>
+                <p>{mediatorsError}</p>
+                <button type="button" className="btn btn-outline" onClick={loadMediators}>
+                  إعادة المحاولة
+                </button>
+              </div>
+            )}
+
+            {!loadingMediators && !mediatorsError && mediators.length === 0 && (
+              <div className="explore-empty-state">
+                <div className="empty-icon">🔍</div>
+                <h3>ما في وسيطات حاليًا</h3>
+                <p>جربي مرة ثانية بعد شوي.</p>
+              </div>
+            )}
+
+            {!loadingMediators && !mediatorsError && mediators.length > 0 && (
+              <div className="mediator-pick-grid">
+                {mediators.map((m) => (
+                  <div className="mediator-pick-card" key={m.id}>
+                    <div className="mediator-pick-top">
+                      <span className={`mediator-pick-tag ${m.acceptingOrders ? "" : "off"}`}>
+                        {m.acceptingOrders ? "● تستقبل طلبات" : "● غير متاحة"}
+                      </span>
+                      <div className="mediator-pick-avatar">{(m.name || "و").charAt(0)}</div>
+                    </div>
+                    <div className="mediator-pick-name">{m.name}</div>
+                    {m.city && <div className="mediator-pick-loc">📍 {m.city}</div>}
+                    <div className="mediator-pick-stats">
+                      <span>{m.completedOrders} طلب مكتمل</span>
+                      {commissionText(m) && <span>{commissionText(m)}</span>}
+                    </div>
+                    <button
+                      type="button"
+                      className={`btn ${selectedMediatorId === m.id ? "btn-primary" : "btn-outline"} mediator-pick-btn`}
+                      disabled={!m.acceptingOrders}
+                      onClick={() => setSelectedMediatorId(m.id)}
+                    >
+                      {!m.acceptingOrders
+                        ? "غير متاحة الآن"
+                        : selectedMediatorId === m.id
+                          ? "✓ تم الاختيار"
+                          : "اختيار"}
+                    </button>
                   </div>
-                  <div className="mediator-pick-name">{m.name}</div>
-                  <div className="mediator-pick-loc">📍 {m.city}</div>
-                  <div className="mediator-pick-stats">
-                    <span>{m.completedOrders} طلب مكتمل</span>
-                    <span>العمولة {m.commission}%</span>
-                    <span>⭐ {m.rating} ({m.reviewsCount} تقييم)</span>
-                  </div>
-                  <div className="mediator-pick-services">
-                    {m.services.map((s) => (
-                      <span key={s}>{s}</span>
-                    ))}
-                  </div>
-                  <button
-                    type="button"
-                    className={`btn ${selectedMediatorId === m.id ? "btn-primary" : "btn-outline"} mediator-pick-btn`}
-                    onClick={() => setSelectedMediatorId(m.id)}
-                  >
-                    {selectedMediatorId === m.id ? "✓ تم الاختيار" : "اختيار"}
-                  </button>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
 
             <div className="mediator-pick-bar">
               {selectedMediator ? (
                 <div className="mediator-pick-bar-selected">
-                  <div className="mediator-pick-avatar">{selectedMediator.name.charAt(0)}</div>
+                  <div className="mediator-pick-avatar">{(selectedMediator.name || "و").charAt(0)}</div>
                   <div>
                     <div className="mediator-pick-bar-name">{selectedMediator.name}</div>
-                    <div className="mediator-pick-bar-meta">
-                      العمولة {selectedMediator.commission}% · ⭐ {selectedMediator.rating}
-                    </div>
+                    {commissionText(selectedMediator) && (
+                      <div className="mediator-pick-bar-meta">{commissionText(selectedMediator)}</div>
+                    )}
                   </div>
                 </div>
               ) : (
@@ -426,7 +472,7 @@ export default function NewOrder() {
                 <span>{totalValue} ₪</span>
               </div>
               <div className="review-row">
-                <span>عمولة الوسيطة ({selectedMediator.commission}%)</span>
+                <span>عمولة الوسيطة{commissionRate !== null ? ` (${commissionRate}%)` : ""}</span>
                 <span>{commissionValue} ₪</span>
               </div>
               <div className="review-row">
@@ -444,7 +490,11 @@ export default function NewOrder() {
               <button type="button" className="btn btn-primary review-submit-btn" onClick={handleFinalSubmit}>
                 إرسال الطلب إلى {selectedMediator.name} →
               </button>
-              <button type="button" className="btn btn-outline review-back-btn" onClick={() => setStep("mediator")}>
+              <button
+                type="button"
+                className="btn btn-outline review-back-btn"
+                onClick={() => setStep(hasChosenMediator ? "products" : "mediator")}
+              >
                 العودة
               </button>
               <p className="review-payment-note">
@@ -456,22 +506,29 @@ export default function NewOrder() {
               <div className="review-side-card">
                 <div className="review-side-header">
                   <span>الوسيطة</span>
-                  <button type="button" className="change-mediator-link" onClick={() => setStep("mediator")}>
-                    تغيير الوسيطة
-                  </button>
+                  {!hasChosenMediator && (
+                    <button type="button" className="change-mediator-link" onClick={() => setStep("mediator")}>
+                      تغيير الوسيطة
+                    </button>
+                  )}
                 </div>
                 <div className="review-mediator-row">
-                  <div className="mediator-pick-avatar">{selectedMediator.name.charAt(0)}</div>
+                  <div className="mediator-pick-avatar">{(selectedMediator.name || "و").charAt(0)}</div>
                   <div>
                     <div className="mediator-pick-bar-name">{selectedMediator.name}</div>
                     <div className="mediator-pick-bar-meta">
-                      📍 {selectedMediator.city} · العمولة {selectedMediator.commission}% · ⭐{" "}
-                      {selectedMediator.rating}
+                      {[selectedMediator.city && `📍 ${selectedMediator.city}`, commissionText(selectedMediator)]
+                        .filter(Boolean)
+                        .join(" · ")}
                     </div>
                     <div className="mediator-pick-services">
-                      {selectedMediator.services.map((s) => (
-                        <span key={s}>{s}</span>
-                      ))}
+                      {profile.loading ? (
+                        <span>جاري تحميل الخدمات...</span>
+                      ) : profile.services.length === 0 ? (
+                        <span>لا توجد خدمات معروضة</span>
+                      ) : (
+                        profile.services.map((sv) => <span key={sv.id}>{sv.name}</span>)
+                      )}
                     </div>
                   </div>
                 </div>
@@ -481,13 +538,14 @@ export default function NewOrder() {
                 <div className="review-side-header">
                   <span>طريقة استلام الطلب</span>
                 </div>
-                <label className="delivery-option">
-                  <span className="delivery-fee-tag">{selectedMediator.deliveryFee} ₪</span>
+                <label className={`delivery-option ${homeDeliveryAvailable ? "" : "disabled"}`}>
+                  <span className="delivery-fee-tag">{deliveryTag}</span>
                   <span>التوصيل إلى المنزل</span>
                   <input
                     type="radio"
                     name="delivery"
-                    checked={deliveryMethod === "home"}
+                    disabled={!homeDeliveryAvailable}
+                    checked={effectiveDeliveryMethod === "home"}
                     onChange={() => setDeliveryMethod("home")}
                   />
                 </label>
@@ -497,7 +555,7 @@ export default function NewOrder() {
                   <input
                     type="radio"
                     name="delivery"
-                    checked={deliveryMethod === "pickup"}
+                    checked={effectiveDeliveryMethod === "pickup"}
                     onChange={() => setDeliveryMethod("pickup")}
                   />
                 </label>
