@@ -22,9 +22,9 @@ import ExploreMediators from "./pages/ExploreMediators";
 import StagnantItems from "./pages/StagnantItems";
 import FavoriteMediators from "./pages/FavoriteMediators";
 import MediatorPublicProfile from "./pages/MediatorPublicProfile";
+import MediatorItems from "./pages/MediatorItems";
 import ProtectedRoute from "./components/ProtectedRoute";
 import { FavoritesProvider } from "./context/FavoritesContext";
-import NotFound from "./pages/NotFound";
 
 function App() {
   return (
@@ -145,6 +145,14 @@ function App() {
         }
       />
       <Route
+        path="/mediators/:id/items"
+        element={
+          <ProtectedRoute allowedRole="customer">
+            <MediatorItems />
+          </ProtectedRoute>
+        }
+      />
+      <Route
         path="/mediators/:id"
         element={
           <ProtectedRoute allowedRole="customer">
@@ -168,7 +176,6 @@ function App() {
           </ProtectedRoute>
         }
       />
-      <Route path="*" element={<NotFound />} />
     </Routes>
     </FavoritesProvider>
   );

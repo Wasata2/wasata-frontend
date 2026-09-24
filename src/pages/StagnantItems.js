@@ -174,6 +174,12 @@ export default function StagnantItems() {
     setShowModal(false);
   };
 
+  // القطعة المحجوزة: الوسيطة بتأكد البيع (تم البيع) أو بتلغي الحجز فبترجع معروضة للزبونات
+  const setItemStatus = (id, status) => {
+    setItems((prev) => prev.map((item) => (item.id === id ? { ...item, status } : item)));
+    setExpandedId(null);
+  };
+
   const listForSale = (id) => {
     setItems((prev) =>
       prev.map((item) => (item.id === id ? { ...item, status: "listed" } : item))
@@ -338,7 +344,17 @@ export default function StagnantItems() {
                       تعديل العرض
                     </button>
                   )}
-                  {(item.status === "reserved" || item.status === "sold") && (
+                  {item.status === "reserved" && (
+                    <div className="stagnant-item-actions">
+                      <button type="button" className="stagnant-btn primary" onClick={() => setItemStatus(item.id, "sold")}>
+                        تأكيد البيع
+                      </button>
+                      <button type="button" className="stagnant-btn outline" onClick={() => setItemStatus(item.id, "listed")}>
+                        إلغاء الحجز
+                      </button>
+                    </div>
+                  )}
+                  {item.status === "sold" && (
                     <button
                       type="button"
                       className="stagnant-btn outline"

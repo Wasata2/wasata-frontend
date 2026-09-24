@@ -60,3 +60,20 @@ export function saveStagnantItems(storeId, items) {
 export function loadListedItems(storeId) {
   return (readStored(storeId) || []).filter((item) => item.status === "listed");
 }
+
+// لما زبونة تطلب قطعة معروضة: بنحجزها (status = "reserved") عشان تختفي من العرض وتبين للوسيطة محجوزة.
+// بترجع false إذا القطعة ما عادت معروضة (مثلًا زبونة ثانية حجزتها قبل).
+export function reserveItem(storeId, itemId) {
+  const stored = readStored(storeId);
+  if (!stored) return false;
+  let reserved = false;
+  const next = stored.map((item) => {
+    if (item.id === itemId && item.status === "listed") {
+      reserved = true;
+      return { ...item, status: "reserved" };
+    }
+    return item;
+  });
+  if (reserved) saveStagnantItems(storeId, next);
+  return reserved;
+}

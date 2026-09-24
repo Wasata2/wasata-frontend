@@ -1,7 +1,6 @@
 import { useState, useEffect } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { getStores, getStoreProfile, getStoreReviews } from "../api";
-import { loadListedItems } from "../stagnantItemsStore";
 
 // الملف العام للوسيطة — بنفس شكل "معاينة الملف كما يظهر للزبائن" بصفحة ملف الوسيطة،
 // بس هون بيانات أي وسيطة (حسب الـ id بالرابط) مش وسيطة واحدة.
@@ -145,14 +144,6 @@ export default function MediatorPublicProfile() {
     };
   }, [id]);
 
-  // ===== القطع المعروضة للبيع عند هالوسيطة =====
-  const [showItems, setShowItems] = useState(false);
-  const [listedItems, setListedItems] = useState([]);
-  const openItems = () => {
-    setListedItems(loadListedItems(id));
-    setShowItems(true);
-  };
-
   const topbar = (
     <div className="preview-topbar">
       <button type="button" className="back-link" onClick={() => navigate(-1)}>
@@ -206,7 +197,11 @@ export default function MediatorPublicProfile() {
         <div className="profile-preview-wrap">
           <div className="profile-hero-card">
             <div className="profile-hero-banner">
-              <button type="button" className="profile-preview-link" onClick={openItems}>
+              <button
+                type="button"
+                className="profile-preview-link"
+                onClick={() => navigate(`/mediators/${id}/items`)}
+              >
                 🛍 القطع المعروضة
               </button>
             </div>
@@ -329,43 +324,6 @@ export default function MediatorPublicProfile() {
             </button>
           )}
         </div>
-
-        {showItems && (
-          <div className="stagnant-modal-backdrop" onClick={() => setShowItems(false)}>
-            <div className="stagnant-modal wide" onClick={(e) => e.stopPropagation()}>
-              <h3>القطع المعروضة للبيع</h3>
-
-              {listedItems.length === 0 ? (
-                <p className="service-description">لا توجد قطع معروضة حاليًا.</p>
-              ) : (
-                listedItems.map((item) => (
-                  <div className="stagnant-item" key={item.id}>
-                    <div className="stagnant-item-row">
-                      <div
-                        className={`stagnant-item-icon ${
-                          item.category === "أحذية" ? "cat-shoes" : "cat-clothes"
-                        }`}
-                      >
-                        {item.icon}
-                      </div>
-                      <div className="stagnant-item-info">
-                        <div className="stagnant-item-name">{item.name}</div>
-                        <div className="stagnant-item-meta">الفئة: {item.category}</div>
-                      </div>
-                      <div className="stagnant-item-price">{item.price} ₪</div>
-                    </div>
-                  </div>
-                ))
-              )}
-
-              <div className="stagnant-modal-actions">
-                <button type="button" className="stagnant-btn outline" onClick={() => setShowItems(false)}>
-                  إغلاق
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
       </main>
     </div>
   );

@@ -4447,6 +4447,98 @@ footer .copyright {
 /* اختيار الوسيطة: وسيطة غير متاحة + خيار توصيل غير متوفر */
 .mediator-pick-tag.off{ background:#f2f4f7; color:var(--gray); }
 .delivery-option.disabled{ opacity:.55; cursor:not-allowed; }
+
+/* ============ صفحة القطع المعروضة للزبونة (MediatorItems) ============ */
+
+.items-page-wrap{
+
+  max-width:900px;
+
+  margin:0 auto;
+
+}
+
+.shop-grid{
+
+  display:grid;
+
+  grid-template-columns:repeat(auto-fill, minmax(240px, 1fr));
+
+  gap:16px;
+
+}
+
+.shop-card{
+
+  background:#fff;
+
+  border:1px solid var(--line);
+
+  border-radius:18px;
+
+  padding:18px;
+
+  display:flex;
+
+  flex-direction:column;
+
+  gap:8px;
+
+  text-align:center;
+
+  box-shadow:0 1px 3px rgba(16,24,40,.04);
+
+}
+
+.shop-card-icon{
+
+  height:120px;
+
+  border-radius:14px;
+
+  display:flex;
+
+  align-items:center;
+
+  justify-content:center;
+
+  font-size:54px;
+
+  margin-bottom:6px;
+
+}
+
+.shop-card-icon.cat-clothes{ background:#fdf2f8; }
+
+.shop-card-icon.cat-shoes{ background:#eff6ff; }
+
+.shop-card-name{ font-size:16px; font-weight:800; }
+
+.shop-card-meta{ font-size:13px; color:var(--gray); }
+
+.shop-card-price{ font-size:18px; font-weight:800; color:var(--blue); margin:4px 0 8px; }
+
+.shop-card-btn{ width:100%; }
+
+.shop-card-btn:disabled{ background:#9ca3af; cursor:not-allowed; filter:none; }
+
+.stagnant-modal .review-row{ display:flex; justify-content:space-between; gap:12px; }
+
+
+
+/* أزرار القطعة المحجوزة (تأكيد البيع / إلغاء الحجز) */
+
+.stagnant-item-actions{
+
+  display:flex;
+
+  flex-direction:column;
+
+  gap:8px;
+
+}
+
+
 @media (max-width: 640px) {
   .stagnant-item-row {
     flex-wrap: wrap;
