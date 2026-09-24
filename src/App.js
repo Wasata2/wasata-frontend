@@ -24,6 +24,7 @@ import FavoriteMediators from "./pages/FavoriteMediators";
 import MediatorPublicProfile from "./pages/MediatorPublicProfile";
 import ProtectedRoute from "./components/ProtectedRoute";
 import { FavoritesProvider } from "./context/FavoritesContext";
+import NotFound from "./pages/NotFound";
 
 function App() {
   return (
@@ -167,6 +168,7 @@ function App() {
           </ProtectedRoute>
         }
       />
+      <Route path="*" element={<NotFound />} />
     </Routes>
     </FavoritesProvider>
   );

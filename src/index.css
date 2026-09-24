@@ -4035,6 +4035,34 @@ footer .copyright {
   height: 100%;
   object-fit: cover;
 }
+.not-found-page {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 20px;
+}
+.not-found-content {
+  max-width: 420px;
+}
+.not-found-code {
+  font-size: 80px;
+  font-weight: 900;
+  background: var(--brand-gradient);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  line-height: 1;
+  margin-bottom: 16px;
+}
+.not-found-content h1 {
+  font-size: 22px;
+  margin-bottom: 8px;
+}
+.not-found-content p {
+  color: var(--gray-light, #6b7280);
+  margin-bottom: 24px;
+}
 
 .explore-card-name-row {
   display: flex;
