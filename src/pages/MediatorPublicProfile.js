@@ -92,7 +92,9 @@ export default function MediatorPublicProfile() {
       .then((data) => {
         if (!cancelled) setServices(data.filter((s) => s.available));
       })
-      .catch(() => {
+      .catch((err) => {
+        // بنسجّل سبب الفشل بالـ console عشان نعرف مسار الخدمات الصحيح مع الباك اند
+        console.log("تعذر جلب خدمات الوسيطة:", err.message);
         if (!cancelled) setServicesError(true);
       })
       .finally(() => {

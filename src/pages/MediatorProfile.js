@@ -570,6 +570,9 @@ export default function MediatorProfile() {
           <Link to="/mediator-services" className="sidebar-link">
             <span className="sidebar-icon">🛍</span> الخدمات
           </Link>
+          <Link to="/stagnant-items" className="sidebar-link">
+            <span className="sidebar-icon">📦</span> القطع الراكدة
+          </Link>
           <Link to="/mediator-reviews" className="sidebar-link">
             <span className="sidebar-icon">⭐</span> التقييمات
           </Link>

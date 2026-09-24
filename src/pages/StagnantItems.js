@@ -220,6 +220,13 @@ export default function StagnantItems() {
           >
             <span aria-hidden="true">☆</span> القطع المباعة
           </button>
+          <button
+            type="button"
+            className={`stagnant-action-btn ${statusFilter === "" ? "is-active" : ""}`}
+            onClick={() => setStatusFilter("")}
+          >
+            <span aria-hidden="true">☰</span> الكل
+          </button>
         </div>
       </div>
 

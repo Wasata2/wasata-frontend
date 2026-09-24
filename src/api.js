@@ -1,5 +1,10 @@
-const BASE_URL = process.env.REACT_APP_API_URL;
+const BASE_URL = 'https://wasata-backend-production-nojkxd.laravel.cloud';
 
+export async function getCsrfCookie() {
+  await fetch(`${BASE_URL}/sanctum/csrf-cookie`, {
+    credentials: 'include',
+  });
+}
 
 // نقطة مرور وحيدة لكل طلبات الشبكة بالتطبيق. أي دالة تانية بهاد الملف
 // (getOrders, createService...) بتنده على هاي بدل ما تكرر نفس الكود.
@@ -12,6 +17,7 @@ async function request(endpoint, { method = 'GET', body, isFormData = false, err
 
   const response = await fetch(`${BASE_URL}${endpoint}`, {
     method,
+    credentials: 'include',
     headers,
     body: isFormData ? body : body !== undefined ? JSON.stringify(body) : undefined,
   });
@@ -31,7 +37,7 @@ async function request(endpoint, { method = 'GET', body, isFormData = false, err
   let result = {};
   try {
     result = await response.json();
-  } catch (e) { }
+  } catch (e) {}
 
   if (!response.ok) {
     const details = result.errors ? Object.values(result.errors).flat().join(' / ') : '';
@@ -42,6 +48,7 @@ async function request(endpoint, { method = 'GET', body, isFormData = false, err
 }
 
 export async function registerUser(data) {
+  await getCsrfCookie();
   return request('/api/auth/register', {
     method: 'POST',
     body: data,
@@ -50,6 +57,8 @@ export async function registerUser(data) {
 }
 
 export async function loginUser(data) {
+  await getCsrfCookie();
+
   const result = await request('/api/auth/login', {
     method: 'POST',
     body: data,
@@ -245,6 +254,7 @@ export async function deleteService(id) {
 }
 
 export async function forgotPassword(email) {
+  await getCsrfCookie();
   return request('/api/auth/forgot-password', {
     method: 'POST',
     body: { email },
@@ -253,6 +263,7 @@ export async function forgotPassword(email) {
 }
 
 export async function resetPassword({ email, token, password, passwordConfirmation }) {
+  await getCsrfCookie();
   return request('/api/auth/reset-password', {
     method: 'POST',
     body: {
@@ -424,7 +435,8 @@ function mapStoreFromApi(s) {
     // نبذة عني يلي كتبتها الوسيطة وقت إنشاء المتجر (أو عدّلتها لاحقًا من ملفها الشخصي)
     bio: s.bio || "",
     city: s.city || "",
-    phone: s.phone || "",
+    // رقم التلفون ممكن يكون على المتجر نفسه أو على حساب صاحبة المتجر
+    phone: s.phone || owner.phone || s.user_phone || s.owner_phone || "",
     image: resolveStoreImageUrl(s.image_url || s.image),
     commission: s.commission_rate ?? s.commission ?? null,
     acceptingOrders: !!s.is_accepting_orders,
