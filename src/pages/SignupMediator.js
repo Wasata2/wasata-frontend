@@ -76,8 +76,7 @@ export default function SignupMediator() {
             وساطة
           </div>
           <Link to="/account-type" className="back-link">
-            العودة →
-          </Link>
+‹ عودة           </Link>
         </div>
       </header>
 

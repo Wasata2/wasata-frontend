@@ -10,8 +10,7 @@ export default function AccountType() {
             وساطة
           </div>
           <Link to="/" className="back-link">
-            العودة →
-          </Link>
+‹ عودة           </Link>
         </div>
       </header>
 

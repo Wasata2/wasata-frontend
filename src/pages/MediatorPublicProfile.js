@@ -38,6 +38,15 @@ function formatCommission(value) {
   return Number.isFinite(n) ? `${n}%` : null;
 }
 
+// الرقم بينرجع من الباك اند بمقدمة الدولة (+970)، بنعرضه بالشكل المحلي: 0592465010
+function formatPhone(value) {
+  if (!value) return "";
+  const p = String(value).replace(/[\s-]/g, "");
+  const match = p.match(/^(?:\+|00)970(.*)$/);
+  if (!match) return p;
+  return match[1].startsWith("0") ? match[1] : `0${match[1]}`;
+}
+
 function StarRating({ rating, size }) {
   return (
     <span className={`star-rating ${size || ""}`}>
@@ -186,7 +195,7 @@ export default function MediatorPublicProfile() {
   }
 
   const commission = formatCommission(mediator.commission ?? extra.commission);
-  const phone = mediator.phone || extra.phone;
+  const phone = formatPhone(mediator.phone || extra.phone);
   const initial = (mediator.name || "و").charAt(0);
 
   return (
@@ -305,13 +314,20 @@ export default function MediatorPublicProfile() {
         </div>
 
         <div className="preview-bottom-bar">
-          <Link
-            to="/new-order"
-            state={{ mediatorId: mediator.id }}
-            className="btn btn-primary preview-cta"
-          >
-            بدء طلب مع هذه الوسيطة
-          </Link>
+          {mediator.acceptingOrders ? (
+            <Link
+              to="/new-order"
+              state={{ mediatorId: mediator.id }}
+              className="btn btn-primary preview-cta"
+            >
+              بدء طلب مع هذه الوسيطة
+            </Link>
+          ) : (
+            // الوسيطة مش مستقبلة طلبات هلأ: زر معطّل وما بيوديها لصفحة إضافة الطلب
+            <button type="button" className="btn btn-primary preview-cta" disabled>
+              غير متاحة الآن
+            </button>
+          )}
         </div>
 
         {showItems && (

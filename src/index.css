@@ -4436,7 +4436,14 @@ footer .copyright {
   display: flex;
   gap: 10px;
 }
-
+/* زر "بدء طلب" لما تكون الوسيطة غير متاحة */
+.preview-cta:disabled{
+  background:#9ca3af;
+  color:#fff;
+  cursor:not-allowed;
+  opacity:1;
+  filter:none;
+}
 @media (max-width: 640px) {
   .stagnant-item-row {
     flex-wrap: wrap;
