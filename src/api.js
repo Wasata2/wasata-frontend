@@ -402,8 +402,7 @@ export async function getReviews() {
   return mapReviewsResponse(result);
 }
 
-// تقييمات وسيطة معيّنة (للملف العام اللي بتشوفه الزبونة)
-// ملاحظة: المسار /api/stores/{id}/reviews افتراضي — لازم نتأكد منه مع الباك اند
+// تقييمات وسيطة معيّنة (للملف العام اللي بتشوفه الزبونة) — GET /api/stores/{id}/reviews
 export async function getStoreReviews(storeId) {
   const result = await request(`/api/stores/${storeId}/reviews`, {
     errorMessage: 'تعذر جلب التقييمات',
@@ -411,14 +410,22 @@ export async function getStoreReviews(storeId) {
   return mapReviewsResponse(result);
 }
 
-// خدمات وسيطة معيّنة (للملف العام اللي بتشوفه الزبونة)
-// ملاحظة: المسار /api/stores/{id}/services افتراضي — لازم نتأكد منه مع الباك اند
-export async function getStoreServices(storeId) {
-  const result = await request(`/api/stores/${storeId}/services`, {
-    errorMessage: 'تعذر جلب الخدمات',
+// بروفايل وسيطة معيّنة (للملف العام اللي بتشوفه الزبونة) — GET /api/stores/{id}
+// الرد: { store: {...}, services: [...] } — الخدمات جاية جوا نفس الرد، ما في مسار منفصل إلها
+export async function getStoreProfile(storeId) {
+  const result = await request(`/api/stores/${storeId}`, {
+    errorMessage: 'تعذر جلب بيانات الوسيطة',
   });
-  const list = result.services || result.data || result;
-  return Array.isArray(list) ? list.map(mapServiceFromApi) : [];
+  const store = result.store || result;
+  const services = Array.isArray(result.services)
+    ? result.services
+    : Array.isArray(store.services)
+      ? store.services
+      : [];
+  return {
+    store: mapStoreFromApi(store),
+    services: services.map(mapServiceFromApi),
+  };
 }
 
 // ===== استكشاف الوسيطات (شاشة الزبونة) =====

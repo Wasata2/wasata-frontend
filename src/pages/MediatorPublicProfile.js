@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import { getStores, getStoreServices, getStoreReviews } from "../api";
+import { getStores, getStoreProfile, getStoreReviews } from "../api";
 import { loadListedItems } from "../stagnantItemsStore";
 
 // الملف العام للوسيطة — بنفس شكل "معاينة الملف كما يظهر للزبائن" بصفحة ملف الوسيطة،
@@ -79,8 +79,10 @@ export default function MediatorPublicProfile() {
     };
   }, [id]);
 
-  // ===== الخدمات المتاحة =====
+  // ===== الخدمات المتاحة (جاية مع بروفايل المتجر: GET /api/stores/{id}) =====
   const [services, setServices] = useState([]);
+  // حقول إضافية من بروفايل المتجر بنستخدمها لو قائمة الوسيطات ما رجّعتها (التلفون والعمولة)
+  const [extra, setExtra] = useState({ phone: "", commission: null });
   const [loadingServices, setLoadingServices] = useState(true);
   const [servicesError, setServicesError] = useState(false);
 
@@ -88,9 +90,11 @@ export default function MediatorPublicProfile() {
     let cancelled = false;
     setLoadingServices(true);
     setServicesError(false);
-    getStoreServices(id)
-      .then((data) => {
-        if (!cancelled) setServices(data.filter((s) => s.available));
+    getStoreProfile(id)
+      .then(({ store, services: list }) => {
+        if (cancelled) return;
+        setServices(list.filter((s) => s.available));
+        setExtra({ phone: store.phone, commission: store.commission });
       })
       .catch((err) => {
         // بنسجّل سبب الفشل بالـ console عشان نعرف مسار الخدمات الصحيح مع الباك اند
@@ -181,7 +185,8 @@ export default function MediatorPublicProfile() {
     );
   }
 
-  const commission = formatCommission(mediator.commission);
+  const commission = formatCommission(mediator.commission ?? extra.commission);
+  const phone = mediator.phone || extra.phone;
   const initial = (mediator.name || "و").charAt(0);
 
   return (
@@ -213,7 +218,7 @@ export default function MediatorPublicProfile() {
                 <div className="profile-hero-facts">
                   <span className="profile-hero-fact-row">🏷️ وسيطة</span>
                   {mediator.city && <span className="profile-hero-fact-row">📍 {mediator.city}</span>}
-                  {mediator.phone && <span className="profile-hero-fact-row">📞 {mediator.phone}</span>}
+                  {phone && <span className="profile-hero-fact-row">📞 {phone}</span>}
                   {commission && <span className="profile-hero-fact-row">💰 {commission} عمولة</span>}
                   <span className="profile-hero-fact-row">
                     <span className={`status-dot ${mediator.acceptingOrders ? "on" : "off"}`}></span>
