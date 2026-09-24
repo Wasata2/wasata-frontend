@@ -382,11 +382,7 @@ function mapReviewFromApi(r) {
 
 // الرد من الباك اند فيه average_rating و total_reviews و distribution جاهزين —
 // ما في داعي نحسبهم يدويًا بالفرونت
-export async function getReviews() {
-  const result = await request('/api/reviews', {
-    errorMessage: 'تعذر جلب التقييمات',
-  });
-
+function mapReviewsResponse(result) {
   const list = result.reviews || [];
   return {
     averageRating: result.average_rating || 0,
@@ -399,19 +395,49 @@ export async function getReviews() {
   };
 }
 
+export async function getReviews() {
+  const result = await request('/api/reviews', {
+    errorMessage: 'تعذر جلب التقييمات',
+  });
+  return mapReviewsResponse(result);
+}
+
+// تقييمات وسيطة معيّنة (للملف العام اللي بتشوفه الزبونة)
+// ملاحظة: المسار /api/stores/{id}/reviews افتراضي — لازم نتأكد منه مع الباك اند
+export async function getStoreReviews(storeId) {
+  const result = await request(`/api/stores/${storeId}/reviews`, {
+    errorMessage: 'تعذر جلب التقييمات',
+  });
+  return mapReviewsResponse(result);
+}
+
+// خدمات وسيطة معيّنة (للملف العام اللي بتشوفه الزبونة)
+// ملاحظة: المسار /api/stores/{id}/services افتراضي — لازم نتأكد منه مع الباك اند
+export async function getStoreServices(storeId) {
+  const result = await request(`/api/stores/${storeId}/services`, {
+    errorMessage: 'تعذر جلب الخدمات',
+  });
+  const list = result.services || result.data || result;
+  return Array.isArray(list) ? list.map(mapServiceFromApi) : [];
+}
+
 // ===== استكشاف الوسيطات (شاشة الزبونة) =====
 // بيانات حقيقية بالكامل من الباك اند — بدون أي بيانات وهمية/ثابتة بالفرونت
 function mapStoreFromApi(s) {
   const owner = s.user || s.owner || {};
   return {
     id: s.id,
-    // اسم الوسيطة نفسها (صاحبة المتجر) — مش اسم المتجر
-    name: owner.full_name || owner.name || s.full_name || s.owner_name || "وسيطة",
+    // اسم المتجر اللي أنشأته الوسيطة (بيظهر ببطاقة الاستكشاف)، وإذا ما انرجع بنرجع لاسم صاحبة المتجر
+    name:
+      s.name || s.store_name || owner.full_name || owner.name || s.full_name || s.owner_name || "وسيطة",
+    // اسم الوسيطة نفسها (صاحبة المتجر) — بنستخدمه بالبحث بس
+    ownerName: owner.full_name || owner.name || s.full_name || s.owner_name || "",
     // نبذة عني يلي كتبتها الوسيطة وقت إنشاء المتجر (أو عدّلتها لاحقًا من ملفها الشخصي)
     bio: s.bio || "",
     city: s.city || "",
+    phone: s.phone || "",
     image: resolveStoreImageUrl(s.image_url || s.image),
-    commission: s.commission_rate ?? null,
+    commission: s.commission_rate ?? s.commission ?? null,
     acceptingOrders: !!s.is_accepting_orders,
     completedOrders:
       s.completed_orders_count ?? s.completed_orders ?? s.orders_completed ?? 0,

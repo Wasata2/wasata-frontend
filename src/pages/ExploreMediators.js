@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import DashboardLayout from "../components/DashboardLayout";
 import { getStores } from "../api";
+import { useFavorites } from "../context/FavoritesContext";
 
 const CITIES = ["غزة", "خانيونس", "شمال غزة", "الوسطى", "رفح"];
 
@@ -13,13 +14,28 @@ const SORT_OPTIONS = [
 // بطاقة وسيطة واحدة — نفس تصميم البطاقة المتفق عليه:
 // من غير شارة "الأكثر طلبًا" ومن غير تقييم النجوم وسنوات الخبرة،
 // وبدل سطر التخصص بنعرض نبذة عني الحقيقية يلي كتبتها الوسيطة
-function MediatorCard({ mediator, onSelect, onViewProfile }) {
+// نسبة العمولة كنص جاهز للعرض: "4%" — أو "—" إذا الباك اند ما رجّعها
+function formatCommission(value) {
+  if (value === null || value === undefined || value === "") return "—";
+  const n = parseFloat(value);
+  return Number.isFinite(n) ? `${n}%` : "—";
+}
+
+export function MediatorCard({ mediator, onSelect, onViewProfile }) {
   const initial = (mediator.name || "و").charAt(0);
+  const { isFavorite, toggleFavorite } = useFavorites();
+  const favorite = isFavorite(mediator.id);
 
   return (
     <div className="explore-card">
-      <button className="explore-card-heart" type="button" aria-label="أضيفي للمفضلة">
-        ♡
+      <button
+        className={`explore-card-heart ${favorite ? "is-active" : ""}`}
+        type="button"
+        aria-label={favorite ? "إزالة من المفضلة" : "أضيفي للمفضلة"}
+        aria-pressed={favorite}
+        onClick={() => toggleFavorite(mediator.id)}
+      >
+        {favorite ? "♥" : "♡"}
       </button>
 
       <div className="explore-card-avatar">
@@ -45,15 +61,13 @@ function MediatorCard({ mediator, onSelect, onViewProfile }) {
       </div>
 
       <div className="explore-card-stats">
-        {mediator.commission !== null && (
-          <div className="explore-stat-box">
-            <div className="explore-stat-value">{mediator.commission}%</div>
-            <div className="explore-stat-label">عمولة</div>
-          </div>
-        )}
         <div className="explore-stat-box">
           <div className="explore-stat-value">+{mediator.completedOrders}</div>
           <div className="explore-stat-label">طلب مكتمل</div>
+        </div>
+        <div className="explore-stat-box">
+          <div className="explore-stat-value">{formatCommission(mediator.commission)}</div>
+          <div className="explore-stat-label">عمولة</div>
         </div>
       </div>
 
@@ -81,12 +95,6 @@ export default function ExploreMediators() {
   const [cityFilter, setCityFilter] = useState("");
   const [sortBy, setSortBy] = useState("popular");
 
-  const [toast, setToast] = useState("");
-  const showToast = (message) => {
-    setToast(message);
-    setTimeout(() => setToast(""), 2500);
-  };
-
   const loadMediators = () => {
     setLoading(true);
     setError("");
@@ -113,7 +121,10 @@ export default function ExploreMediators() {
 
     if (search.trim()) {
       const q = search.trim().toLowerCase();
-      list = list.filter((m) => m.name.toLowerCase().includes(q));
+      // بنبحث باسم المتجر وباسم الوسيطة نفسها
+      list = list.filter((m) =>
+        [m.name, m.ownerName].some((v) => v && v.toLowerCase().includes(q))
+      );
     }
 
     if (cityFilter) {
@@ -138,9 +149,41 @@ export default function ExploreMediators() {
     navigate("/new-order");
   };
 
-  const handleViewProfile = () => {
-    showToast("صفحة الملف الشخصي العامة للوسيطة قيد التطوير قريبًا");
+  // عرض الملف: بنفتح الملف العام للوسيطة (نفس شكل "معاينة الملف كما يظهر للزبائن")
+  const handleViewProfile = (mediator) => {
+    navigate(`/mediators/${mediator.id}`);
   };
+
+  // إذا في بحث أو تصفية بالمدينة، بنعرض النتائج فوق مباشرة
+  const isSearching = search.trim() !== "" || cityFilter !== "";
+
+  const renderResults = (title) => (
+    <section className="explore-section">
+      <div className="explore-section-header">
+        <h2>{title}</h2>
+        <span className="explore-section-count">{filteredMediators.length} وسيطة</span>
+      </div>
+
+      {filteredMediators.length === 0 ? (
+        <div className="explore-empty-state">
+          <div className="empty-icon">🔍</div>
+          <h3>ما في وسيطات مطابقة</h3>
+          <p>جربي كلمة بحث تانية أو غيّري التصفية.</p>
+        </div>
+      ) : (
+        <div className="explore-grid">
+          {filteredMediators.map((m) => (
+            <MediatorCard
+              key={m.id}
+              mediator={m}
+              onSelect={handleSelect}
+              onViewProfile={handleViewProfile}
+            />
+          ))}
+        </div>
+      )}
+    </section>
+  );
 
   return (
     <DashboardLayout role="customer">
@@ -201,8 +244,6 @@ export default function ExploreMediators() {
         </div>
       )}
 
-      {toast && <div className="toast-notification">{toast}</div>}
-
       {loading && <p className="explore-loading">جاري تحميل الوسيطات...</p>}
 
       {!loading && error && (
@@ -226,6 +267,9 @@ export default function ExploreMediators() {
 
       {!loading && !error && mediators.length > 0 && (
         <>
+          {/* نتائج البحث بتظهر فوق مباشرة، والوسيطات الأكثر انتشارًا بتضل ثابتة تحتها */}
+          {isSearching && renderResults("نتائج البحث")}
+
           {topMediators.length > 0 && (
             <section className="explore-section">
               <div className="explore-section-header">
@@ -245,31 +289,7 @@ export default function ExploreMediators() {
             </section>
           )}
 
-          <section className="explore-section">
-            <div className="explore-section-header">
-              <h2>جميع الوسيطات</h2>
-              <span className="explore-section-count">{filteredMediators.length} وسيطة</span>
-            </div>
-
-            {filteredMediators.length === 0 ? (
-              <div className="explore-empty-state">
-                <div className="empty-icon">🔍</div>
-                <h3>ما في وسيطات مطابقة</h3>
-                <p>جربي كلمة بحث تانية أو غيّري التصفية.</p>
-              </div>
-            ) : (
-              <div className="explore-grid">
-                {filteredMediators.map((m) => (
-                  <MediatorCard
-                    key={m.id}
-                    mediator={m}
-                    onSelect={handleSelect}
-                    onViewProfile={handleViewProfile}
-                  />
-                ))}
-              </div>
-            )}
-          </section>
+          {!isSearching && renderResults("جميع الوسيطات")}
         </>
       )}
     </DashboardLayout>

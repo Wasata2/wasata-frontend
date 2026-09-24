@@ -1,5 +1,6 @@
 import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
+import { useFavorites } from "../context/FavoritesContext";
 import LogoutButton from "./LogoutButton";
 
 const BROKER_LINKS = [
@@ -7,6 +8,7 @@ const BROKER_LINKS = [
   { to: "/mediator-dashboard", icon: "▦", label: "لوحة التحكم" },
   { to: "/mediator-orders", icon: "📋", label: "الطلبات", showBadge: true },
   { to: "/mediator-services", icon: "🛍", label: "الخدمات" },
+  { to: "/stagnant-items", icon: "📦", label: "القطع الراكدة" },
   { to: "/mediator-reviews", icon: "⭐", label: "التقييمات" },
   { to: "/mediator-profile", icon: "👤", label: "الملف الشخصي" },
 ];
@@ -29,6 +31,7 @@ export default function DashboardLayout({
   children,
 }) {
   const { user } = useAuth();
+  const { favoritesCount } = useFavorites();
   const location = useLocation();
 
   const links = role === "broker" ? BROKER_LINKS : CUSTOMER_LINKS;
@@ -79,6 +82,20 @@ export default function DashboardLayout({
               <button className="notif-btn" aria-label="الإشعارات">
                 🔔
               </button>
+            )}
+            {role === "customer" && (
+              <Link to="/favorites" className="notif-btn-wrap">
+                <button
+                  type="button"
+                  className={`notif-btn fav-btn ${
+                    location.pathname === "/favorites" ? "active" : ""
+                  }`}
+                  aria-label="المفضلة"
+                >
+                  ♡
+                </button>
+                {favoritesCount > 0 && <span className="notif-badge">{favoritesCount}</span>}
+              </Link>
             )}
             {topbarExtra}
           </div>

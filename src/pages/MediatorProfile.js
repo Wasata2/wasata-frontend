@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { getMyStore, updateProfile, updateStore, getServices, getReviews, getOrderStats, BASE_URL } from "../api";
 import LogoutButton from "../components/LogoutButton";
 import { useAuth } from "../context/AuthContext";
+import { loadListedItems } from "../stagnantItemsStore";
 
 // رابط صورة المتجر يجي أحيانًا من الباك اند كمسار نسبي (بدون دومين) —
 // هاي الدالة بتتأكد إنه رابط كامل قبل ما نعرضه، وإلا بترجع null
@@ -95,6 +96,15 @@ export default function MediatorProfile() {
 
   const [previewMode, setPreviewMode] = useState(false);
 
+  // القطع المعروضة للبيع (بتظهر للزبونة بوضع المعاينة كنافذة بتنفتح من زر بالبانر)
+  const [showItems, setShowItems] = useState(false);
+  const [listedItems, setListedItems] = useState([]);
+  const [myStoreId, setMyStoreId] = useState(null);
+  const openItems = () => {
+    setListedItems(myStoreId === null ? [] : loadListedItems(myStoreId));
+    setShowItems(true);
+  };
+
   const [toast, setToast] = useState("");
   const showToast = (message) => {
     setToast(message);
@@ -120,6 +130,7 @@ export default function MediatorProfile() {
         }));
         // سويتش "استقبال الطلبات" — is_accepting_orders، منفصل عن استقبال طلبات واتساب
         setAcceptingOrders(!!store.is_accepting_orders);
+        setMyStoreId(store.id ?? null);
         // إذا صار في رفع صورة جديدة أثناء ما هالنداء كان لسا شغال، منتجاهل نتيجته القديمة
         if (!imageJustUpdatedRef.current) {
           setImagePreview(resolveImageUrl(store.image_url || store.image));
@@ -346,6 +357,11 @@ export default function MediatorProfile() {
             👁 معاينة الملف كما يظهر للزبائن
           </button>
         )}
+        {previewMode && (
+          <button type="button" className="profile-preview-link" onClick={openItems}>
+            🛍 القطع المعروضة
+          </button>
+        )}
       </div>
       <div className="profile-hero-body">
         <div className="profile-hero-avatar-wrap">
@@ -495,6 +511,39 @@ export default function MediatorProfile() {
               بدء طلب مع هذه الوسيطة
             </Link>
           </div>
+
+          {showItems && (
+            <div className="stagnant-modal-backdrop" onClick={() => setShowItems(false)}>
+              <div className="stagnant-modal wide" onClick={(e) => e.stopPropagation()}>
+                <h3>القطع المعروضة للبيع</h3>
+
+                {listedItems.length === 0 ? (
+                  <p className="service-description">لا توجد قطع معروضة حاليًا.</p>
+                ) : (
+                  listedItems.map((item) => (
+                    <div className="stagnant-item" key={item.id}>
+                      <div className="stagnant-item-row">
+                        <div className={`stagnant-item-icon ${item.category === "أحذية" ? "cat-shoes" : "cat-clothes"}`}>
+                          {item.icon}
+                        </div>
+                        <div className="stagnant-item-info">
+                          <div className="stagnant-item-name">{item.name}</div>
+                          <div className="stagnant-item-meta">الفئة: {item.category}</div>
+                        </div>
+                        <div className="stagnant-item-price">{item.price} ₪</div>
+                      </div>
+                    </div>
+                  ))
+                )}
+
+                <div className="stagnant-modal-actions">
+                  <button type="button" className="stagnant-btn outline" onClick={() => setShowItems(false)}>
+                    إغلاق
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
         </main>
       </div>
     );
