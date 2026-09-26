@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import LogoutButton from "./LogoutButton";
@@ -31,6 +32,9 @@ export default function DashboardLayout({
   const { user } = useAuth();
   const location = useLocation();
 
+  // حالة فتح/إغلاق قائمة الموبايل — false يعني مقفولة بشكل افتراضي
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
   const links = role === "broker" ? BROKER_LINKS : CUSTOMER_LINKS;
   const roleLabel = role === "broker" ? "وسيطة" : "زبونة";
 
@@ -39,10 +43,17 @@ export default function DashboardLayout({
 
   return (
     <div className="dashboard-layout">
-      <aside className="dashboard-sidebar">
+      <aside className={`dashboard-sidebar ${mobileMenuOpen ? "open" : ""}`}>
         <div className="sidebar-logo">
           <img src="/logo.svg" alt="وساطة" className="logo-img" />
           وساطة
+          <button
+            className="sidebar-close-btn"
+            aria-label="إغلاق القائمة"
+            onClick={() => setMobileMenuOpen(false)}
+          >
+            ✕
+          </button>
         </div>
 
         <nav className="sidebar-nav">
@@ -50,6 +61,9 @@ export default function DashboardLayout({
             <Link
               key={link.to}
               to={link.to}
+              // إغلاق القائمة تلقائيًا بعد الضغط على أي رابط — مهم بالموبايل
+              // عشان ما تضل القائمة مفتوحة فوق الصفحة الجديدة
+              onClick={() => setMobileMenuOpen(false)}
               className={`sidebar-link ${
                 location.pathname === link.to ? "active" : ""
               }`}
@@ -65,9 +79,27 @@ export default function DashboardLayout({
         <LogoutButton />
       </aside>
 
+      {/* خلفية معتمة تظهر بالموبايل بس، وقت ما تكون القائمة مفتوحة —
+          الضغط عليها بيسكّر القائمة */}
+      {mobileMenuOpen && (
+        <div
+          className="sidebar-overlay"
+          onClick={() => setMobileMenuOpen(false)}
+        />
+      )}
+
       <main className="dashboard-main">
         <div className="dashboard-topbar">
           <div className="topbar-actions">
+            {/* زر الهمبرغر — ظاهر بالموبايل بس (مخفي بالكمبيوتر عبر CSS) */}
+            <button
+              className="hamburger-btn"
+              aria-label="فتح القائمة"
+              onClick={() => setMobileMenuOpen(true)}
+            >
+              ☰
+            </button>
+
             {notifLink ? (
               <Link to={notifLink} className="notif-btn-wrap">
                 <button className="notif-btn" aria-label="الإشعارات">
