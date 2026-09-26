@@ -43,8 +43,7 @@ export default function ForgotPassword() {
             وساطة
           </div>
           <Link to="/login" className="back-link">
-            العودة →
-          </Link>
+‹ عودة           </Link>
         </div>
       </header>
 

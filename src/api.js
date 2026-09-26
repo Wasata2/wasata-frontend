@@ -1,5 +1,10 @@
-const BASE_URL = process.env.REACT_APP_API_URL;
+const BASE_URL = 'https://wasata-backend-production-nojkxd.laravel.cloud';
 
+export async function getCsrfCookie() {
+  await fetch(`${BASE_URL}/sanctum/csrf-cookie`, {
+    credentials: 'include',
+  });
+}
 
 // نقطة مرور وحيدة لكل طلبات الشبكة بالتطبيق. أي دالة تانية بهاد الملف
 // (getOrders, createService...) بتنده على هاي بدل ما تكرر نفس الكود.
@@ -12,6 +17,7 @@ async function request(endpoint, { method = 'GET', body, isFormData = false, err
 
   const response = await fetch(`${BASE_URL}${endpoint}`, {
     method,
+    credentials: 'include',
     headers,
     body: isFormData ? body : body !== undefined ? JSON.stringify(body) : undefined,
   });
@@ -31,7 +37,7 @@ async function request(endpoint, { method = 'GET', body, isFormData = false, err
   let result = {};
   try {
     result = await response.json();
-  } catch (e) { }
+  } catch (e) {}
 
   if (!response.ok) {
     const details = result.errors ? Object.values(result.errors).flat().join(' / ') : '';
@@ -42,6 +48,7 @@ async function request(endpoint, { method = 'GET', body, isFormData = false, err
 }
 
 export async function registerUser(data) {
+  await getCsrfCookie();
   return request('/api/auth/register', {
     method: 'POST',
     body: data,
@@ -50,6 +57,8 @@ export async function registerUser(data) {
 }
 
 export async function loginUser(data) {
+  await getCsrfCookie();
+
   const result = await request('/api/auth/login', {
     method: 'POST',
     body: data,
@@ -245,6 +254,7 @@ export async function deleteService(id) {
 }
 
 export async function forgotPassword(email) {
+  await getCsrfCookie();
   return request('/api/auth/forgot-password', {
     method: 'POST',
     body: { email },
@@ -253,6 +263,7 @@ export async function forgotPassword(email) {
 }
 
 export async function resetPassword({ email, token, password, passwordConfirmation }) {
+  await getCsrfCookie();
   return request('/api/auth/reset-password', {
     method: 'POST',
     body: {
@@ -371,11 +382,7 @@ function mapReviewFromApi(r) {
 
 // الرد من الباك اند فيه average_rating و total_reviews و distribution جاهزين —
 // ما في داعي نحسبهم يدويًا بالفرونت
-export async function getReviews() {
-  const result = await request('/api/reviews', {
-    errorMessage: 'تعذر جلب التقييمات',
-  });
-
+function mapReviewsResponse(result) {
   const list = result.reviews || [];
   return {
     averageRating: result.average_rating || 0,
@@ -388,19 +395,57 @@ export async function getReviews() {
   };
 }
 
+export async function getReviews() {
+  const result = await request('/api/reviews', {
+    errorMessage: 'تعذر جلب التقييمات',
+  });
+  return mapReviewsResponse(result);
+}
+
+// تقييمات وسيطة معيّنة (للملف العام اللي بتشوفه الزبونة) — GET /api/stores/{id}/reviews
+export async function getStoreReviews(storeId) {
+  const result = await request(`/api/stores/${storeId}/reviews`, {
+    errorMessage: 'تعذر جلب التقييمات',
+  });
+  return mapReviewsResponse(result);
+}
+
+// بروفايل وسيطة معيّنة (للملف العام اللي بتشوفه الزبونة) — GET /api/stores/{id}
+// الرد: { store: {...}, services: [...] } — الخدمات جاية جوا نفس الرد، ما في مسار منفصل إلها
+export async function getStoreProfile(storeId) {
+  const result = await request(`/api/stores/${storeId}`, {
+    errorMessage: 'تعذر جلب بيانات الوسيطة',
+  });
+  const store = result.store || result;
+  const services = Array.isArray(result.services)
+    ? result.services
+    : Array.isArray(store.services)
+      ? store.services
+      : [];
+  return {
+    store: mapStoreFromApi(store),
+    services: services.map(mapServiceFromApi),
+  };
+}
+
 // ===== استكشاف الوسيطات (شاشة الزبونة) =====
 // بيانات حقيقية بالكامل من الباك اند — بدون أي بيانات وهمية/ثابتة بالفرونت
 function mapStoreFromApi(s) {
   const owner = s.user || s.owner || {};
   return {
     id: s.id,
-    // اسم الوسيطة نفسها (صاحبة المتجر) — مش اسم المتجر
-    name: owner.full_name || owner.name || s.full_name || s.owner_name || "وسيطة",
+    // اسم المتجر اللي أنشأته الوسيطة (بيظهر ببطاقة الاستكشاف)، وإذا ما انرجع بنرجع لاسم صاحبة المتجر
+    name:
+      s.name || s.store_name || owner.full_name || owner.name || s.full_name || s.owner_name || "وسيطة",
+    // اسم الوسيطة نفسها (صاحبة المتجر) — بنستخدمه بالبحث بس
+    ownerName: owner.full_name || owner.name || s.full_name || s.owner_name || "",
     // نبذة عني يلي كتبتها الوسيطة وقت إنشاء المتجر (أو عدّلتها لاحقًا من ملفها الشخصي)
     bio: s.bio || "",
     city: s.city || "",
+    // رقم التلفون ممكن يكون على المتجر نفسه أو على حساب صاحبة المتجر
+    phone: s.phone || owner.phone || s.user_phone || s.owner_phone || "",
     image: resolveStoreImageUrl(s.image_url || s.image),
-    commission: s.commission_rate ?? null,
+    commission: s.commission_rate ?? s.commission ?? null,
     acceptingOrders: !!s.is_accepting_orders,
     completedOrders:
       s.completed_orders_count ?? s.completed_orders ?? s.orders_completed ?? 0,

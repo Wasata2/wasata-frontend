@@ -19,11 +19,16 @@ import OrderDetails from "./pages/OrderDetails";
 import MediatorNotifications from "./pages/MediatorNotifications";
 import CustomerProfile from "./pages/CustomerProfile";
 import ExploreMediators from "./pages/ExploreMediators";
+import StagnantItems from "./pages/StagnantItems";
+import FavoriteMediators from "./pages/FavoriteMediators";
+import MediatorPublicProfile from "./pages/MediatorPublicProfile";
+import MediatorItems from "./pages/MediatorItems";
 import ProtectedRoute from "./components/ProtectedRoute";
-import NotFound from "./pages/NotFound";
+import { FavoritesProvider } from "./context/FavoritesContext";
 
 function App() {
   return (
+    <FavoritesProvider>
     <Routes>
       <Route path="/" element={<Home />} />
       <Route path="/account-type" element={<AccountType />} />
@@ -132,6 +137,38 @@ function App() {
         }
       />
       <Route
+        path="/stagnant-items"
+        element={
+          <ProtectedRoute allowedRole="broker">
+            <StagnantItems />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/mediators/:id/items"
+        element={
+          <ProtectedRoute allowedRole="customer">
+            <MediatorItems />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/mediators/:id"
+        element={
+          <ProtectedRoute allowedRole="customer">
+            <MediatorPublicProfile />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/favorites"
+        element={
+          <ProtectedRoute allowedRole="customer">
+            <FavoriteMediators />
+          </ProtectedRoute>
+        }
+      />
+      <Route
         path="/explore-mediators"
         element={
           <ProtectedRoute allowedRole="customer">
@@ -139,8 +176,8 @@ function App() {
           </ProtectedRoute>
         }
       />
-      <Route path="*" element={<NotFound />} />
     </Routes>
+    </FavoritesProvider>
   );
 }
 

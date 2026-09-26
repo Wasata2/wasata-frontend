@@ -70,8 +70,7 @@ export default function CreateStore() {
             وساطة
           </div>
           <Link to="/signup-mediator" className="back-link">
-            العودة →
-          </Link>
+‹ عودة           </Link>
         </div>
       </header>
 
