@@ -325,10 +325,10 @@ function mapOrderFromApi(o) {
   return {
     id: o.id,
     customer: o.customer_name,
-    date: o.created_at || o.date || o.order_date || o.placed_at,
+    date: o.date || o.created_at || o.order_date || o.placed_at,
     statusUpdatedAt: o.status_updated_at || o.updated_at || o.created_at,
     itemsCount: o.items_count ?? (o.items ? o.items.length : 0),
-    amount: o.total_amount ?? o.estimated_amount ?? o.amount ?? 0,
+    amount: o.estimated_amount ?? o.total_amount ?? o.amount ?? 0,
     status: o.status,
     items: (o.items || []).map(mapOrderItemFromApi),
   };
