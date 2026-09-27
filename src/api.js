@@ -336,6 +336,98 @@ function mapOrderFromApi(o) {
   };
 }
 
+// خطوات مسار الطلب عند الزبونة — بنفس ترتيب الحالات الحقيقية من الباك اند
+export const CUSTOMER_ORDER_STATUSES = [
+  "pending",
+  "ordered_from_shein",
+  "shipped",
+  "arrived",
+  "inspected",
+  "received",
+];
+export const CUSTOMER_ORDER_STEP_LABELS = [
+  "تم الطلب",
+  "تم الطلب من SHEIN",
+  "تم الشحن",
+  "وصلت",
+  "تم الفحص",
+  "تم الاستلام",
+];
+
+// طلبات الزبونة نفسها (تختلف عن getOrders اللي بترجع طلبات الوسيطة الواردة)
+function mapMyOrderFromApi(o) {
+  const stepIndex = CUSTOMER_ORDER_STATUSES.indexOf(o.status);
+  const isCancelled = o.status === "cancelled" || o.status === "rejected";
+  const isCompleted = o.status === "received" || o.status === "completed";
+
+  return {
+    id: o.id,
+    store: o.store_name || "—",
+    itemsCount: o.items_count ?? 0,
+    price: o.estimated_amount ?? 0,
+    date: o.date || "",
+    reviewed: !!o.reviewed,
+    rawStatus: o.status,
+    type: isCancelled ? "cancelled" : isCompleted ? "completed" : "active",
+    statusLabel: isCancelled
+      ? o.status === "rejected"
+        ? "مرفوض"
+        : "ملغي"
+      : isCompleted
+        ? "مكتمل"
+        : CUSTOMER_ORDER_STEP_LABELS[stepIndex] || "تم الطلب",
+    currentStepIndex: stepIndex >= 0 ? stepIndex : 0,
+  };
+}
+
+export async function getMyOrders() {
+  const result = await request('/api/my-orders', {
+    errorMessage: 'تعذر جلب طلباتك',
+  });
+  const list = result.orders || [];
+  return {
+    stats: result.stats || { active: 0, completed: 0, cancelled_or_rejected: 0 },
+    orders: list.map(mapMyOrderFromApi),
+  };
+}
+
+// إنشاء طلب جديد (الزبونة) — POST /api/orders، multipart/form-data عشان صور المنتجات
+// items: [{ serviceListingId, quantity, productName, productUrl, productImage, color, size, itemNote }]
+export async function createOrder({
+  storeId,
+  deliveryMethod, // "home_delivery" | "pickup"
+  customerNote,
+  estimatedAmount,
+  items,
+}) {
+  const form = new FormData();
+  form.append('store_id', storeId);
+  form.append('delivery_method', deliveryMethod);
+  if (customerNote) form.append('customer_note', customerNote);
+  if (estimatedAmount !== null && estimatedAmount !== undefined) {
+    form.append('estimated_amount', estimatedAmount);
+  }
+
+  items.forEach((item, i) => {
+    form.append(`items[${i}][service_listing_id]`, item.serviceListingId);
+    form.append(`items[${i}][quantity]`, item.quantity);
+    form.append(`items[${i}][product_name]`, item.productName);
+    if (item.productUrl) form.append(`items[${i}][product_url]`, item.productUrl);
+    if (item.productImage) form.append(`items[${i}][product_image]`, item.productImage);
+    if (item.color) form.append(`items[${i}][color]`, item.color);
+    if (item.size) form.append(`items[${i}][size]`, item.size);
+    if (item.itemNote) form.append(`items[${i}][item_note]`, item.itemNote);
+  });
+
+  const result = await request('/api/orders', {
+    method: 'POST',
+    body: form,
+    isFormData: true,
+    errorMessage: 'تعذر إرسال الطلب',
+  });
+  return result.order || result;
+}
+
 export async function getOrders(filters = {}) {
   const params = new URLSearchParams();
   if (filters.status) params.append('status', filters.status);

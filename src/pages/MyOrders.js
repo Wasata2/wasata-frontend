@@ -1,6 +1,7 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { Link } from "react-router-dom";
 import DashboardLayout from "../components/DashboardLayout";
+import { getMyOrders } from "../api";
 
 
 // تحويل وقت مخزّن (timestamp) لنص "منذ كذا" — بيتحسب وقت العرض، مش وقت الإنشاء
@@ -18,12 +19,22 @@ function getRelativeTime(timestamp) {
 
 export default function MyOrders() {
 
-  // بيانات وهمية مؤقتة — بما إننا لسه بمرحلة التأسيس ومفيش طلبات حقيقية بعد،
-  // حطينا طلب وهمي واحد بس بحالة "نشطة" حتى تبين الصفحة شكلها وهي شغالة.
-  // لاحقًا هاد المصفوفة بتتجاب من الـ API بدل ما تكون ثابتة هون.
-  const [orders] = useState([
-    ...(JSON.parse(localStorage.getItem("wasata_new_orders")) || []),
-  ]);
+  const [orders, setOrders] = useState([]);
+  const [loadingOrders, setLoadingOrders] = useState(true);
+  const [ordersError, setOrdersError] = useState("");
+
+  const loadOrders = () => {
+    setLoadingOrders(true);
+    setOrdersError("");
+    getMyOrders()
+      .then(({ orders: list }) => setOrders(list))
+      .catch((err) => setOrdersError(err.message || "تعذر جلب طلباتك"))
+      .finally(() => setLoadingOrders(false));
+  };
+
+  useEffect(() => {
+    loadOrders();
+  }, []);
 
   // خطوات مسار الطلب — بنفس الترتيب المتفق عليه بلوحة التحكم
   const timelineSteps = [
@@ -189,7 +200,17 @@ export default function MyOrders() {
         {/* قائمة الطلبات */}
         {filteredOrders.length === 0 ? (
           <div className="orders-empty-state">
-            {hasActiveFilters ? (
+            {loadingOrders ? (
+              <p>جاري تحميل طلباتك...</p>
+            ) : ordersError ? (
+              <>
+                <p>تعذر تحميل الطلبات</p>
+                <span>{ordersError}</span>
+                <button type="button" className="btn btn-outline" onClick={loadOrders}>
+                  إعادة المحاولة
+                </button>
+              </>
+            ) : hasActiveFilters ? (
               <>
                 <p>لا توجد طلبات مطابقة</p>
                 <span>حاولي تعديل معايير البحث</span>
@@ -243,11 +264,8 @@ export default function MyOrders() {
                       );
                     })}
                   </div>
-                  <div className="order-updated">
-                    آخر تحديث: {order.updatedAt ? getRelativeTime(order.updatedAt) : order.updatedAgo}
-                  </div>
                   <div className="order-actions">
-                    <Link to="#" className="btn btn-outline">
+                    <Link to={`/orders/${order.id}`} className="btn btn-outline">
                       عرض التفاصيل
                     </Link>
                   </div>
@@ -258,11 +276,11 @@ export default function MyOrders() {
                 <>
                   <div className="order-success-banner">✓ تم تسليم هذا الطلب بنجاح</div>
                   <div className="order-actions">
-                    <Link to="#" className="btn btn-outline">
+                    <Link to={`/orders/${order.id}`} className="btn btn-outline">
                       عرض التفاصيل
                     </Link>
-                    {!order.rated && (
-                      <Link to="#" className="btn btn-primary">
+                    {!order.reviewed && (
+                      <Link to={`/orders/${order.id}`} className="btn btn-primary">
                         ★ تقييم الوسيطة
                       </Link>
                     )}
@@ -294,7 +312,7 @@ export default function MyOrders() {
                     </>
                   )}
                   <div className="order-actions">
-                    <Link to="#" className="btn btn-outline">
+                    <Link to={`/orders/${order.id}`} className="btn btn-outline">
                       عرض التفاصيل
                     </Link>
                   </div>

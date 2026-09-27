@@ -1,9 +1,21 @@
-import { useState, useRef } from "react";
-import { Link } from "react-router-dom";
+import { useState, useRef, useEffect } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import DashboardLayout from "../components/DashboardLayout";
 import { useAuth } from "../context/AuthContext";
+import { getStores, getMyOrders } from "../api";
+
+// خطوات مسار الطلب — نفس ترتيب صفحة "طلباتي"
+const TIMELINE_STEPS = [
+  "تم الطلب",
+  "تم الطلب من SHEIN",
+  "تم الشحن",
+  "وصلت",
+  "تم الفحص",
+  "تم الاستلام",
+];
 
 export default function CustomerDashboard() {
+  const navigate = useNavigate();
   const { user } = useAuth();
   const userName = user?.full_name || user?.name || "زبونة";
   const userFirstName = userName.split(" ")[0];
@@ -19,59 +31,26 @@ export default function CustomerDashboard() {
     }
   };
 
-  // خطوات تتبع الطلب الحالي — كل خطوة عندها حالة: done (اكتملت) أو current (الحالية) أو upcoming (لسه)
-  const orderSteps = [
-    { label: "تم الطلب", status: "done" },
-    { label: "تم الطلب من SHEIN", status: "done" },
-    { label: "تم الشحن", status: "current" },
-    { label: "وصلت", status: "upcoming" },
-    { label: "تم الفحص", status: "upcoming" },
-    { label: "تم الاستلام", status: "upcoming" },
-  ];
+  // الطلب النشط الحالي: آخر طلب لسا ما انقبل ولا انرفض من الوسيطة (أول خطوة بمسار الطلب: "تم الطلب")
+  const [pendingOrder, setPendingOrder] = useState(null);
+  useEffect(() => {
+    getMyOrders()
+      .then(({ orders }) => {
+        const pending = orders.find((o) => o.type === "active" && o.currentStepIndex === 0);
+        setPendingOrder(pending || null);
+      })
+      .catch(() => {});
+  }, []);
 
-  // بيانات تجريبية لوسيطات مقترحة — لاحقًا هذه بتيجي من الـ API بدل ما تكون ثابتة هون
-  const suggestedMediators = [
-    {
-      id: 1,
-      name: "متجر ريم الدولي",
-      city: "الخليل",
-      tag: "متاحة",
-      rating: 4.5,
-      reviews: 971,
-      duration: "15-22 يوم",
-      commission: "12%",
-    },
-    {
-      id: 2,
-      name: "وسيطة نور للطلبات",
-      city: "نابلس",
-      tag: "مشغولة",
-      rating: 4.9,
-      reviews: 302,
-      duration: "14-20 يوم",
-      commission: "9%",
-    },
-    {
-      id: 3,
-      name: "متجر لين SHEIN",
-      city: "رام الله",
-      tag: "متاحة",
-      rating: 4.6,
-      reviews: 189,
-      duration: "12-18 يوم",
-      commission: "10%",
-    },
-    {
-      id: 4,
-      name: "متجر سارة لطلبات SHEIN",
-      city: "غزة",
-      tag: "متاحة",
-      rating: 4.8,
-      reviews: 214,
-      duration: "10-14 يوم",
-      commission: "8%",
-    },
-  ];
+  // وسيطات مقترحة — نفس بيانات صفحة استكشاف الوسيطات الحقيقية، أول 4 بس
+  const [suggestedMediators, setSuggestedMediators] = useState([]);
+  const [loadingSuggested, setLoadingSuggested] = useState(true);
+  useEffect(() => {
+    getStores()
+      .then((list) => setSuggestedMediators(list.slice(0, 4)))
+      .catch(() => {})
+      .finally(() => setLoadingSuggested(false));
+  }, []);
 
   const handleSearch = (e) => {
     e.preventDefault();
@@ -174,40 +153,46 @@ export default function CustomerDashboard() {
         </div>
       </section>
 
-      {/* الطلب الحالي وتتبعه */}
-      <section className="order-card">
-        <div className="order-card-top">
-          <div>
-            <span className="order-status-badge">تم الشحن</span>
-            <div className="order-id">طلب #1042</div>
-            <div className="order-store">متجر سارة لطلبات SHEIN</div>
-          </div>
-          <div>
-            <div className="order-date-label">تاريخ الطلب</div>
-            <div className="order-date-value">20 أغسطس 2026</div>
-          </div>
-        </div>
-
-        <div className="order-actions">
-          <Link to="#" className="btn btn-outline">
-            📄 عرض التفاصيل
-          </Link>
-        </div>
-
-        <div className="order-timeline">
-          {orderSteps.map((step, index) => (
-            <div key={index} className={`timeline-step ${step.status}`}>
-              <div className="timeline-line"></div>
-              <div className="timeline-dot">
-                {step.status === "done" ? "✓" : index + 1}
-              </div>
-              <div className="timeline-label">{step.label}</div>
+      {/* الطلب الحالي وتتبعه — بيظهر بس إذا في طلب لسا ما انقبل ولا انرفض */}
+      {pendingOrder && (
+        <section className="order-card">
+          <div className="order-card-top">
+            <div>
+              <span className="order-status-badge">بانتظار رد الوسيطة</span>
+              <div className="order-id">طلب #{pendingOrder.id}</div>
+              <div className="order-store">{pendingOrder.store}</div>
             </div>
-          ))}
-        </div>
+            <div>
+              <div className="order-date-label">تاريخ الطلب</div>
+              <div className="order-date-value">{pendingOrder.date}</div>
+            </div>
+          </div>
 
-        <div className="order-updated">آخر تحديث منذ 3 ساعات</div>
-      </section>
+          <div className="order-actions">
+            <Link to="/my-orders" className="btn btn-outline">
+              📄 عرض التفاصيل
+            </Link>
+          </div>
+
+          <div className="order-timeline">
+            {TIMELINE_STEPS.map((label, index) => {
+              const status =
+                index < pendingOrder.currentStepIndex
+                  ? "done"
+                  : index === pendingOrder.currentStepIndex
+                    ? "current"
+                    : "upcoming";
+              return (
+                <div key={label} className={`timeline-step ${status}`}>
+                  <div className="timeline-line"></div>
+                  <div className="timeline-dot">{status === "done" ? "✓" : index + 1}</div>
+                  <div className="timeline-label">{label}</div>
+                </div>
+              );
+            })}
+          </div>
+        </section>
+      )}
 
       {/* وسيطات مقترحة */}
       <section className="suggested-section">
@@ -223,30 +208,35 @@ export default function CustomerDashboard() {
           </button>
         </div>
 
-        <div className="suggested-grid" ref={suggestedScrollRef}>
-          {suggestedMediators.map((m) => (
-            <div className="mediator-card" key={m.id}>
-              <div className="mediator-card-top">
-                <span className="mediator-tag">{m.tag}</span>
-                <div className="mediator-avatar">
-                  {m.name.charAt(0)}
+        {loadingSuggested ? (
+          <p className="explore-loading">جاري تحميل الوسيطات...</p>
+        ) : suggestedMediators.length === 0 ? (
+          <p className="explore-loading">لا توجد وسيطات حاليًا.</p>
+        ) : (
+          <div className="suggested-grid" ref={suggestedScrollRef}>
+            {suggestedMediators.map((m) => (
+              <div className="mediator-card" key={m.id}>
+                <div className="mediator-card-top">
+                  <span className={`mediator-tag ${m.acceptingOrders ? "" : "off"}`}>
+                    {m.acceptingOrders ? "متاحة" : "غير متاحة"}
+                  </span>
+                  <div className="mediator-avatar">{(m.name || "و").charAt(0)}</div>
                 </div>
+                <div className="mediator-name">{m.name}</div>
+                {m.city && <div className="mediator-loc">📍 {m.city}</div>}
+                <div className="mediator-meta">
+                  <span>{m.completedOrders} طلب مكتمل</span>
+                  {m.commission !== null && m.commission !== "" && (
+                    <span>عمولة {parseFloat(m.commission)}%</span>
+                  )}
+                </div>
+                <button type="button" className="btn btn-primary" onClick={() => navigate(`/mediators/${m.id}`)}>
+                  عرض الملف
+                </button>
               </div>
-              <div className="mediator-name">{m.name}</div>
-              <div className="mediator-loc">📍 {m.city}</div>
-              <div className="mediator-rating">
-                ⭐ {m.rating} ({m.reviews} تقييم)
-              </div>
-              <div className="mediator-meta">
-                <span>⏱ {m.duration}</span>
-                <span>عمولة {m.commission}</span>
-              </div>
-              <Link to="#" className="btn btn-primary">
-                عرض الملف
-              </Link>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
       </section>
     </DashboardLayout>
   );

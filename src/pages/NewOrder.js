@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import DashboardLayout from "../components/DashboardLayout";
-import { getStores, getStoreProfile } from "../api";
+import { getStores, getStoreProfile, createOrder } from "../api";
 
 export default function NewOrder() {
   const navigate = useNavigate();
@@ -56,7 +56,10 @@ export default function NewOrder() {
     setProfile({ services: [], loading: true });
     getStoreProfile(selectedMediatorId)
       .then(({ services }) => {
-        if (!cancelled) setProfile({ services: services.filter((sv) => sv.available), loading: false });
+        if (cancelled) return;
+        const available = services.filter((sv) => sv.available);
+        setProfile({ services: available, loading: false });
+        setSelectedServiceId(available.length === 1 ? String(available[0].id) : "");
       })
       .catch(() => {
         if (!cancelled) setProfile({ services: [], loading: false });
@@ -69,6 +72,10 @@ export default function NewOrder() {
   // ===== مرحلة ٣: مراجعة الطلب =====
   const [deliveryMethod, setDeliveryMethod] = useState("pickup"); // "home" | "pickup"
   const [notesToMediator, setNotesToMediator] = useState("");
+  // الخدمة المطلوبة من الوسيطة (شحن من شي إن، شراء بالنيابة...) — إلزامية من الباك اند لكل منتج
+  const [selectedServiceId, setSelectedServiceId] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState("");
 
   const isValidSheinLink = (url) => /^https?:\/\/.*shein\.com/i.test(url.trim());
 
@@ -82,10 +89,11 @@ export default function NewOrder() {
     setTimeout(() => setToast(""), 2500);
   };
 
-  const addMockProduct = (sourceLabel) => {
+  const addMockProduct = (url, sourceLabel) => {
     const newProduct = {
       id: Date.now() + Math.random(),
       title: `منتج من ${sourceLabel}`,
+      url,
       size: "M",
       color: "غير محدد",
       price: Math.floor(Math.random() * (180 - 30 + 1)) + 30, // سعر تقديري وهمي — لسه بدون جلب حقيقي من SHEIN
@@ -101,7 +109,7 @@ export default function NewOrder() {
       return;
     }
     setError("");
-    addMockProduct("السلة");
+    addMockProduct(cartLink.trim(), "السلة");
     showToast("تمت إضافة المنتجات إلى الطلب");
     setCartLink("");
   };
@@ -117,7 +125,7 @@ export default function NewOrder() {
       return;
     }
     setError("");
-    links.forEach(() => addMockProduct("SHEIN"));
+    links.forEach((url) => addMockProduct(url, "SHEIN"));
     showToast(`تمت إضافة ${links.length} منتجات إلى الطلب`);
     setLinksText("");
   };
@@ -164,29 +172,39 @@ export default function NewOrder() {
       : null;
   const estimatedTotal = totalValue + commissionValue + deliveryFee;
 
-  // إرسال الطلب النهائي — بيتحول لنفس تصميم كارت الطلب الموجود أصلًا بصفحة "طلباتي"
-  const handleFinalSubmit = () => {
-    const newOrder = {
-      id: String(Math.floor(1000 + Math.random() * 9000)),
-      type: "active",
-      price: String(estimatedTotal),
-      store: selectedMediator ? selectedMediator.name : "—",
-      mediatorId: selectedMediator ? selectedMediator.id : null,
-      itemsCount: totalPieces,
-      date: new Date().toLocaleDateString("ar-EG", {
-        day: "numeric",
-        month: "long",
-        year: "numeric",
-      }),
-      statusLabel: "تم الطلب",
-      updatedAt: Date.now(), // وقت حقيقي — صفحة طلباتي بتحسب منه "منذ كذا" ديناميكيًا وقت العرض
-      currentStepIndex: 0,
-    };
+  // إرسال الطلب النهائي إلى الباك اند — POST /api/orders
+  const handleFinalSubmit = async () => {
+    if (!selectedMediator || submitting) return;
 
-    const existing = JSON.parse(localStorage.getItem("wasata_new_orders")) || [];
-    localStorage.setItem("wasata_new_orders", JSON.stringify([newOrder, ...existing]));
+    if (!selectedServiceId) {
+      setSubmitError("اختاري نوع الخدمة قبل إرسال الطلب.");
+      return;
+    }
 
-    navigate("/my-orders");
+    setSubmitting(true);
+    setSubmitError("");
+    try {
+      await createOrder({
+        storeId: selectedMediator.id,
+        deliveryMethod: effectiveDeliveryMethod === "home" ? "home_delivery" : "pickup",
+        customerNote: notesToMediator.trim() || undefined,
+        estimatedAmount: estimatedTotal,
+        items: products.map((p) => ({
+          serviceListingId: selectedServiceId,
+          quantity: p.qty,
+          productName: p.title,
+          productUrl: p.url,
+          color: p.color,
+          size: p.size,
+          itemNote: p.notes || undefined,
+        })),
+      });
+      navigate("/my-orders");
+    } catch (err) {
+      setSubmitError(err.message || "تعذر إرسال الطلب، حاولي مرة ثانية.");
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const pageTitle =
@@ -487,8 +505,15 @@ export default function NewOrder() {
                 ⚠ المبلغ تقديري وقد يتغير حسب السعر النهائي للمنتجات.
               </p>
 
-              <button type="button" className="btn btn-primary review-submit-btn" onClick={handleFinalSubmit}>
-                إرسال الطلب إلى {selectedMediator.name} →
+              {submitError && <div className="stagnant-form-error">{submitError}</div>}
+
+              <button
+                type="button"
+                className="btn btn-primary review-submit-btn"
+                onClick={handleFinalSubmit}
+                disabled={submitting}
+              >
+                {submitting ? "جاري الإرسال..." : `إرسال الطلب إلى ${selectedMediator.name} →`}
               </button>
               <button
                 type="button"
@@ -521,17 +546,30 @@ export default function NewOrder() {
                         .filter(Boolean)
                         .join(" · ")}
                     </div>
-                    <div className="mediator-pick-services">
-                      {profile.loading ? (
-                        <span>جاري تحميل الخدمات...</span>
-                      ) : profile.services.length === 0 ? (
-                        <span>لا توجد خدمات معروضة</span>
-                      ) : (
-                        profile.services.map((sv) => <span key={sv.id}>{sv.name}</span>)
-                      )}
-                    </div>
                   </div>
                 </div>
+
+                {/* اختيار الخدمة إلزامي: الباك اند بربط كل منتج بخدمة محددة من خدمات الوسيطة */}
+                <label className="service-select-label">
+                  <span>نوع الخدمة *</span>
+                  {profile.loading ? (
+                    <span>جاري تحميل الخدمات...</span>
+                  ) : profile.services.length === 0 ? (
+                    <span className="stagnant-form-error">هاي الوسيطة ما ضافت أي خدمة، ما بتقدري تكملي الطلب.</span>
+                  ) : (
+                    <select
+                      value={selectedServiceId}
+                      onChange={(e) => setSelectedServiceId(e.target.value)}
+                    >
+                      <option value="">اختاري خدمة</option>
+                      {profile.services.map((sv) => (
+                        <option key={sv.id} value={sv.id}>
+                          {sv.name}
+                        </option>
+                      ))}
+                    </select>
+                  )}
+                </label>
               </div>
 
               <div className="review-side-card">
