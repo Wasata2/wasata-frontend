@@ -325,12 +325,10 @@ function mapOrderFromApi(o) {
   return {
     id: o.id,
     customer: o.customer_name,
-    date: o.created_at,
-    // آخر وقت تحديث لحالة الطلب — هاد الحقل الوحيد المتوفر من الباك اند لتوثيق
-    // وقت أي خطوة (ما في status history منفصل لكل خطوة لهلق)
+    date: o.created_at || o.date || o.order_date || o.placed_at,
     statusUpdatedAt: o.status_updated_at || o.updated_at || o.created_at,
     itemsCount: o.items_count ?? (o.items ? o.items.length : 0),
-    amount: o.total_amount,
+    amount: o.total_amount ?? o.estimated_amount ?? o.amount ?? 0,
     status: o.status,
     items: (o.items || []).map(mapOrderItemFromApi),
   };
@@ -364,8 +362,8 @@ function mapMyOrderFromApi(o) {
     id: o.id,
     store: o.store_name || "—",
     itemsCount: o.items_count ?? 0,
-    price: o.estimated_amount ?? 0,
-    date: o.date || "",
+    price: o.estimated_amount ?? o.total_amount ?? 0,
+    date: o.date || o.created_at || o.order_date || "",
     reviewed: !!o.reviewed,
     rawStatus: o.status,
     type: isCancelled ? "cancelled" : isCompleted ? "completed" : "active",

@@ -5168,6 +5168,119 @@ footer .copyright {
   flex-direction:column;
   gap:8px;
 }
+/* بطاقة الوسيطة داخل "وسيطات مقترحة" بلوحة التحكم — نفس بطاقة استكشاف الوسيطات بعرض ثابت للتمرير الأفقي */
+.suggested-grid .explore-card{ flex:0 0 260px; }
+* خدمات الوسيطة كمعلومة فقط (بدون اختيار) + طريقة استلام الطلب (توصيل/نقطة استلام) */
+
+.mediator-services-info{
+
+  display:flex;
+
+  flex-direction:column;
+
+  gap:8px;
+
+  margin-top:14px;
+
+  padding-top:14px;
+
+  border-top:1px solid var(--line);
+
+  font-size:13px;
+
+  font-weight:700;
+
+  color:var(--gray);
+
+}
+
+.mediator-services-chips{ display:flex; flex-wrap:wrap; gap:8px; }
+
+.mediator-service-chip{
+
+  background:var(--blue-tint);
+
+  color:var(--blue);
+
+  border-radius:999px;
+
+  padding:5px 14px;
+
+  font-size:12px;
+
+  font-weight:700;
+
+}
+
+.delivery-home-fields{
+
+  display:flex;
+
+  flex-direction:column;
+
+  gap:10px;
+
+  margin:4px 0 10px;
+
+  padding:12px 14px;
+
+  background:#f9fafb;
+
+  border-radius:12px;
+
+}
+
+.delivery-home-fields label{
+
+  display:flex;
+
+  flex-direction:column;
+
+  gap:6px;
+
+  font-size:13px;
+
+  font-weight:700;
+
+  color:var(--gray);
+
+}
+
+.delivery-home-fields input{
+
+  border:1.5px solid var(--line);
+
+  border-radius:10px;
+
+  padding:10px 14px;
+
+  font-family:inherit;
+
+  font-size:14px;
+
+  background:#fff;
+
+}
+
+.delivery-home-fields input:focus{ outline:none; border-color:var(--blue); }
+
+.delivery-pickup-note{
+
+  font-size:13px;
+
+  color:var(--gray);
+
+  background:#f9fafb;
+
+  border-radius:12px;
+
+  padding:10px 14px;
+
+  margin:4px 0 10px;
+
+}
+
+ 
 
 @media (max-width: 640px) {
   .stagnant-item-row {

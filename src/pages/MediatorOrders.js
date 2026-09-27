@@ -17,6 +17,14 @@ function resolveImageUrl(path) {
   return `${BASE_URL}/${clean}`;
 }
 
+// تنسيق التاريخ القادم من الباك اند (ISO) لشكل عربي مقروء بدل ما يطلع فاضي أو خام
+function formatDate(value) {
+  if (!value) return "—";
+  const d = new Date(value);
+  if (isNaN(d.getTime())) return value;
+  return d.toLocaleDateString("ar-EG", { year: "numeric", month: "long", day: "numeric" });
+}
+
 const STATUS_META = {
   pending: { label: "تم الطلب", className: "pending" },
   ordered_from_shein: { label: "تم الطلب من SHEIN", className: "ordered" },
@@ -275,9 +283,9 @@ export default function MediatorOrders() {
                       <tr key={order.id}>
                         <td>#{order.id}</td>
                         <td>{order.customer}</td>
-                        <td>{order.date}</td>
+                        <td>{formatDate(order.date)}</td>
                         <td>{order.itemsCount}</td>
-                        <td>{order.amount} ر.س</td>
+                        <td>{order.amount} ₪</td>
                         <td>
                           <span
                             className={`status-badge ${STATUS_META[order.status]?.className || ""}`}
@@ -286,9 +294,13 @@ export default function MediatorOrders() {
                           </span>
                         </td>
                         <td>
-                          <Link to={`/mediator-orders/${order.id}`} className="details-link">
-                            عرض التفاصيل
-                          </Link>
+                          {order.status === "cancelled" ? (
+                            <span className="no-action">—</span>
+                          ) : (
+                            <Link to={`/mediator-orders/${order.id}`} className="details-link">
+                              عرض التفاصيل
+                            </Link>
+                          )}
                           {order.status === "pending" && (
                             <span className="row-actions">
                               <button

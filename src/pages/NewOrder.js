@@ -59,7 +59,8 @@ export default function NewOrder() {
         if (cancelled) return;
         const available = services.filter((sv) => sv.available);
         setProfile({ services: available, loading: false });
-        setSelectedServiceId(available.length === 1 ? String(available[0].id) : "");
+        // ما منخيّر الزبونة بنوع الخدمة — منستخدم أول خدمة متاحة عند الوسيطة تلقائيًا
+        setSelectedServiceId(available.length > 0 ? String(available[0].id) : "");
       })
       .catch(() => {
         if (!cancelled) setProfile({ services: [], loading: false });
@@ -71,6 +72,8 @@ export default function NewOrder() {
 
   // ===== مرحلة ٣: مراجعة الطلب =====
   const [deliveryMethod, setDeliveryMethod] = useState("pickup"); // "home" | "pickup"
+  const [homeAddress, setHomeAddress] = useState("");
+  const [homePhone, setHomePhone] = useState("");
   const [notesToMediator, setNotesToMediator] = useState("");
   // الخدمة المطلوبة من الوسيطة (شحن من شي إن، شراء بالنيابة...) — إلزامية من الباك اند لكل منتج
   const [selectedServiceId, setSelectedServiceId] = useState("");
@@ -78,6 +81,15 @@ export default function NewOrder() {
   const [submitError, setSubmitError] = useState("");
 
   const isValidSheinLink = (url) => /^https?:\/\/.*shein\.com/i.test(url.trim());
+
+  // ترجمة رسائل أخطاء معروفة من الباك اند (بتيجي بالإنجليزي أحيانًا) لعربي مفهوم للزبونة
+  const translateOrderError = (message) => {
+    if (!message) return "";
+    if (/pickup location/i.test(message)) {
+      return "هاي الوسيطة ما حدّدت نقطة استلام بعد، فما بتقدري تختاري \"الاستلام من نقطة استلام\" معها حاليًا. جربي التوصيل إلى المنزل إذا كان متوفر، أو تواصلي مع الوسيطة مباشرة.";
+    }
+    return message;
+  };
 
   const switchTab = (tab) => {
     setActiveTab(tab);
@@ -144,21 +156,8 @@ export default function NewOrder() {
   const totalPieces = products.reduce((sum, p) => sum + p.qty, 0);
   const totalValue = products.reduce((sum, p) => sum + p.price * p.qty, 0);
 
-  // التوصيل للمنزل متوفر بس إذا الوسيطة عندها خدمة توصيل (أيقونة الشاحنة) — والرسوم من الخدمة نفسها
-  const deliveryService = profile.services.find((sv) => sv.icon === "truck");
-  const homeDeliveryAvailable = !!deliveryService;
-  const effectiveDeliveryMethod = homeDeliveryAvailable ? deliveryMethod : "pickup";
-  const deliveryFeeAmount =
-    deliveryService && deliveryService.feeType === "fixed" ? Number(deliveryService.feeValue) || 0 : 0;
-  const deliveryFee = effectiveDeliveryMethod === "home" ? deliveryFeeAmount : 0;
-
-  const deliveryTag = deliveryService
-    ? deliveryService.feeType === "free"
-      ? "مجاني"
-      : deliveryService.feeType === "fixed"
-        ? `${deliveryFeeAmount} ₪`
-        : "حسب الوسيطة"
-    : "غير متوفر";
+  // الزبونة مخيّرة دايمًا بين توصيل للمنزل أو استلام من نقطة معيّنة — رسوم التوصيل تحددها الوسيطة لاحقًا
+  const deliveryFee = 0;
 
   // العمولة الحقيقية للوسيطة (ممكن تكون فاضية إذا ما حددتها)
   const commissionRate =
@@ -177,17 +176,29 @@ export default function NewOrder() {
     if (!selectedMediator || submitting) return;
 
     if (!selectedServiceId) {
-      setSubmitError("اختاري نوع الخدمة قبل إرسال الطلب.");
+      setSubmitError("هاي الوسيطة ما ضافت أي خدمة، ما بتقدري تطلبي منها حاليًا.");
+      return;
+    }
+
+    if (deliveryMethod === "home" && (!homeAddress.trim() || !homePhone.trim())) {
+      setSubmitError("عبّي العنوان ورقم التواصل قبل إرسال الطلب.");
       return;
     }
 
     setSubmitting(true);
     setSubmitError("");
     try {
+      // ما في حقل مخصص بالباك اند لعنوان التوصيل أو نقطة الاستلام حاليًا، فبنضيفهم كجزء من ملاحظة الزبونة
+      const deliveryNote =
+        deliveryMethod === "home"
+          ? `طريقة الاستلام: توصيل إلى المنزل\nالعنوان: ${homeAddress.trim()}\nرقم التواصل: ${homePhone.trim()}`
+          : `طريقة الاستلام: استلام من نقطة استلام (${selectedMediator.city || "حسب مدينة الوسيطة"})`;
+      const customerNote = [deliveryNote, notesToMediator.trim()].filter(Boolean).join("\n\n");
+
       await createOrder({
         storeId: selectedMediator.id,
-        deliveryMethod: effectiveDeliveryMethod === "home" ? "home_delivery" : "pickup",
-        customerNote: notesToMediator.trim() || undefined,
+        deliveryMethod: deliveryMethod === "home" ? "home_delivery" : "pickup",
+        customerNote,
         estimatedAmount: estimatedTotal,
         items: products.map((p) => ({
           serviceListingId: selectedServiceId,
@@ -201,7 +212,7 @@ export default function NewOrder() {
       });
       navigate("/my-orders");
     } catch (err) {
-      setSubmitError(err.message || "تعذر إرسال الطلب، حاولي مرة ثانية.");
+      setSubmitError(translateOrderError(err.message) || "تعذر إرسال الطلب، حاولي مرة ثانية.");
     } finally {
       setSubmitting(false);
     }
@@ -495,7 +506,7 @@ export default function NewOrder() {
               </div>
               <div className="review-row">
                 <span>رسوم التوصيل</span>
-                <span>{deliveryFee > 0 ? `${deliveryFee} ₪` : "مجاني"}</span>
+                <span>{deliveryMethod === "home" ? "تحددها الوسيطة" : "مجاني"}</span>
               </div>
               <div className="review-row review-total">
                 <span>الإجمالي التقديري</span>
@@ -549,54 +560,79 @@ export default function NewOrder() {
                   </div>
                 </div>
 
-                {/* اختيار الخدمة إلزامي: الباك اند بربط كل منتج بخدمة محددة من خدمات الوسيطة */}
-                <label className="service-select-label">
-                  <span>نوع الخدمة *</span>
+                {/* الخدمات هون للمعرفة بس — ما في اختيار من الزبونة، وبيتحدد أول خدمة متاحة تلقائيًا بالخلفية */}
+                <div className="mediator-services-info">
+                  <span>خدمات الوسيطة</span>
                   {profile.loading ? (
                     <span>جاري تحميل الخدمات...</span>
                   ) : profile.services.length === 0 ? (
-                    <span className="stagnant-form-error">هاي الوسيطة ما ضافت أي خدمة، ما بتقدري تكملي الطلب.</span>
+                    <span className="stagnant-form-error">هاي الوسيطة ما ضافت أي خدمة، ما بتقدري تطلبي منها حاليًا.</span>
                   ) : (
-                    <select
-                      value={selectedServiceId}
-                      onChange={(e) => setSelectedServiceId(e.target.value)}
-                    >
-                      <option value="">اختاري خدمة</option>
+                    <div className="mediator-services-chips">
                       {profile.services.map((sv) => (
-                        <option key={sv.id} value={sv.id}>
+                        <span key={sv.id} className="mediator-service-chip">
                           {sv.name}
-                        </option>
+                        </span>
                       ))}
-                    </select>
+                    </div>
                   )}
-                </label>
+                </div>
               </div>
 
               <div className="review-side-card">
                 <div className="review-side-header">
                   <span>طريقة استلام الطلب</span>
                 </div>
-                <label className={`delivery-option ${homeDeliveryAvailable ? "" : "disabled"}`}>
-                  <span className="delivery-fee-tag">{deliveryTag}</span>
+                <label className="delivery-option">
                   <span>التوصيل إلى المنزل</span>
                   <input
                     type="radio"
                     name="delivery"
-                    disabled={!homeDeliveryAvailable}
-                    checked={effectiveDeliveryMethod === "home"}
+                    checked={deliveryMethod === "home"}
                     onChange={() => setDeliveryMethod("home")}
                   />
                 </label>
+
+                {deliveryMethod === "home" && (
+                  <div className="delivery-home-fields">
+                    <label>
+                      <span>العنوان</span>
+                      <input
+                        type="text"
+                        placeholder="المدينة، الحي، أقرب معلم..."
+                        value={homeAddress}
+                        onChange={(e) => setHomeAddress(e.target.value)}
+                      />
+                    </label>
+                    <label>
+                      <span>رقم للتواصل</span>
+                      <input
+                        type="tel"
+                        placeholder="05xxxxxxxx"
+                        value={homePhone}
+                        onChange={(e) => setHomePhone(e.target.value)}
+                      />
+                    </label>
+                  </div>
+                )}
+
                 <label className="delivery-option">
                   <span className="delivery-fee-tag free">مجاني</span>
                   <span>الاستلام من نقطة استلام</span>
                   <input
                     type="radio"
                     name="delivery"
-                    checked={effectiveDeliveryMethod === "pickup"}
+                    checked={deliveryMethod === "pickup"}
                     onChange={() => setDeliveryMethod("pickup")}
                   />
                 </label>
+
+                {deliveryMethod === "pickup" && (
+                  <p className="delivery-pickup-note">
+                    📍 نقطة الاستلام حسب مدينة الوسيطة:{" "}
+                    {selectedMediator.city || "غير محددة، تواصلي مع الوسيطة"}
+                  </p>
+                )}
               </div>
 
               <div className="review-side-card">

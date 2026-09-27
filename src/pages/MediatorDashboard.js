@@ -201,7 +201,7 @@ export default function MediatorDashboard() {
                     <td>{order.customer}</td>
                     <td>{order.date}</td>
                     <td>{order.itemsCount}</td>
-                    <td>{order.amount} ر.س</td>
+                    <td>{order.amount}₪</td>
                     <td>
                       <span className={`status-badge ${order.status}`}>{order.status}</span>
                     </td>

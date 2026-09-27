@@ -91,7 +91,7 @@ export default function MediatorNotifications() {
                       طلب جديد #{order.id} من {order.customer}
                     </div>
                     <div className="notification-card-sub">
-                      {order.itemsCount} منتج · {order.amount} ر.س · {order.date}
+                      {order.itemsCount} منتج · {order.amount} ₪ · {order.date}
                     </div>
                   </div>
                   <div className="notification-card-actions">
