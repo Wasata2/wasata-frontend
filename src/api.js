@@ -299,11 +299,20 @@ export async function acceptOrder(id) {
   return mapOrderFromApi(result.order || result);
 }
 
-// رفض طلب
+//  رفض طلب من الوسيطة
 export async function rejectOrder(id) {
   const result = await request(`/api/orders/${id}/reject`, {
     method: 'PATCH',
     errorMessage: 'تعذر رفض الطلب',
+  });
+  return mapOrderFromApi(result.order || result);
+}
+
+// إلغاء الطلب من طرف الزبونة — بيشتغل بس لو الطلب لسا بحالة pending
+export async function cancelOrder(id) {
+  const result = await request(`/api/orders/${id}/cancel`, {
+    method: 'PATCH',
+    errorMessage: 'تعذر إلغاء الطلب',
   });
   return mapOrderFromApi(result.order || result);
 }
@@ -318,6 +327,9 @@ function mapOrderItemFromApi(item) {
     size: item.size,
     quantity: item.quantity,
     notes: item.notes,
+    // سعر الوحدة — بيتحدد بس وقت ما الوسيطة تقبل الطلب (PATCH /orders/{id}/accept)،
+    // فقبلها بيكون null
+    price: item.unit_price ?? null,
   };
 }
 
@@ -354,42 +366,7 @@ export const CUSTOMER_ORDER_STEP_LABELS = [
   "تم الاستلام",
 ];
 
-// طلبات الزبونة نفسها (تختلف عن getOrders اللي بترجع طلبات الوسيطة الواردة)
-function mapMyOrderFromApi(o) {
-  const stepIndex = CUSTOMER_ORDER_STATUSES.indexOf(o.status);
-  const isCancelled = o.status === "cancelled" || o.status === "rejected";
-  const isCompleted = o.status === "received" || o.status === "completed";
 
-  return {
-    id: o.id,
-    store: o.store_name || "—",
-    itemsCount: o.items_count ?? 0,
-    price: o.estimated_amount ?? 0,
-    date: o.date || "",
-    reviewed: !!o.reviewed,
-    rawStatus: o.status,
-    type: isCancelled ? "cancelled" : isCompleted ? "completed" : "active",
-    statusLabel: isCancelled
-      ? o.status === "rejected"
-        ? "مرفوض"
-        : "ملغي"
-      : isCompleted
-        ? "مكتمل"
-        : CUSTOMER_ORDER_STEP_LABELS[stepIndex] || "تم الطلب",
-    currentStepIndex: stepIndex >= 0 ? stepIndex : 0,
-  };
-}
-
-export async function getMyOrders() {
-  const result = await request('/api/my-orders', {
-    errorMessage: 'تعذر جلب طلباتك',
-  });
-  const list = result.orders || [];
-  return {
-    stats: result.stats || { active: 0, completed: 0, cancelled_or_rejected: 0 },
-    orders: list.map(mapMyOrderFromApi),
-  };
-}
 
 // إنشاء طلب جديد (الزبونة) — POST /api/orders، multipart/form-data عشان صور المنتجات
 // items: [{ serviceListingId, quantity, productName, productUrl, productImage, color, size, itemNote }]
@@ -440,6 +417,46 @@ export async function getOrders(filters = {}) {
 
   const list = result.orders || result.data || result;
   return Array.isArray(list) ? list.map(mapOrderFromApi) : [];
+}
+// ===== طلبات الزبونة (صفحة "طلباتي") =====
+// نفس endpoint GET /api/orders، بس الرد بيختلف حسب صاحبة التوكن (زبونة/وسيطة) —
+// هون منحوّل شكل الرد لما تحتاجه صفحة MyOrders تحديدًا
+function mapMyOrderFromApi(o) {
+  const items = (o.items || []).map(mapOrderItemFromApi);
+
+  // نوع الطلب (نشط/مكتمل/ملغى) محسوب من الحالة الحقيقية القادمة من الباك اند
+  let type = "active";
+  if (o.status === "received") type = "completed";
+  else if (o.status === "cancelled") type = "cancelled";
+
+  // السعر الإجمالي بيظهر بس لو كل المنتجات صار إلها سعر (يعني الوسيطة قبلت الطلب فعليًا)
+  const allPriced = items.length > 0 && items.every((it) => it.price != null);
+  const totalPrice = allPriced
+    ? items.reduce((sum, it) => sum + it.price * it.quantity, 0)
+    : null;
+
+  return {
+    id: o.id,
+    // TODO: تأكيد من الباك اند اسم الحقل الحقيقي لاسم متجر/وسيطة الطلب
+    store: o.store?.name || o.store_name || o.mediator_name || "الوسيطة",
+    date: o.created_at,
+    statusUpdatedAt: o.status_updated_at || o.updated_at || o.created_at,
+    itemsCount: o.items_count ?? items.length,
+    price: totalPrice,
+    status: o.status,
+    type,
+    // TODO: تأكيد من الباك اند اسم الحقل لسبب الرفض/الإلغاء إذا موجود
+    rejectionReason: o.rejection_reason || o.cancellation_reason || null,
+    items,
+  };
+}
+
+export async function getMyOrders() {
+  const result = await request('/api/orders', {
+    errorMessage: 'تعذر جلب طلباتك',
+  });
+  const list = result.orders || result.data || result;
+  return Array.isArray(list) ? list.map(mapMyOrderFromApi) : [];
 }
 
 export async function getOrderDetails(id) {
