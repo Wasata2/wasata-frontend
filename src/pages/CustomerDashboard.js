@@ -3,6 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import DashboardLayout from "../components/DashboardLayout";
 import { useAuth } from "../context/AuthContext";
 import { getStores, getMyOrders } from "../api";
+import { MediatorCard } from "./ExploreMediators";
 
 // خطوات مسار الطلب — نفس ترتيب صفحة "طلباتي"
 const TIMELINE_STEPS = [
@@ -215,28 +216,16 @@ export default function CustomerDashboard() {
         ) : (
           <div className="suggested-grid" ref={suggestedScrollRef}>
             {suggestedMediators.map((m) => (
-              <div className="mediator-card" key={m.id}>
-                <div className="mediator-card-top">
-                  <span className={`mediator-tag ${m.acceptingOrders ? "" : "off"}`}>
-                    {m.acceptingOrders ? "متاحة" : "غير متاحة"}
-                  </span>
-                  <div className="mediator-avatar">{(m.name || "و").charAt(0)}</div>
-                </div>
-                <div className="mediator-name">{m.name}</div>
-                {m.city && <div className="mediator-loc">📍 {m.city}</div>}
-                <div className="mediator-meta">
-                  <span>{m.completedOrders} طلب مكتمل</span>
-                  {m.commission !== null && m.commission !== "" && (
-                    <span>عمولة {parseFloat(m.commission)}%</span>
-                  )}
-                </div>
-                <button type="button" className="btn btn-primary" onClick={() => navigate(`/mediators/${m.id}`)}>
-                  عرض الملف
-                </button>
-              </div>
+              <MediatorCard
+                key={m.id}
+                mediator={m}
+                onSelect={() => navigate("/new-order", { state: { mediatorId: m.id } })}
+                onViewProfile={() => navigate(`/mediators/${m.id}`)}
+              />
             ))}
           </div>
         )}
+
       </section>
     </DashboardLayout>
   );

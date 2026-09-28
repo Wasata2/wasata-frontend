@@ -1,10 +1,4 @@
-const BASE_URL = 'https://wasata-backend-production-nojkxd.laravel.cloud';
-
-export async function getCsrfCookie() {
-  await fetch(`${BASE_URL}/sanctum/csrf-cookie`, {
-    credentials: 'include',
-  });
-}
+const BASE_URL = process.env.REACT_APP_API_URL;
 
 // نقطة مرور وحيدة لكل طلبات الشبكة بالتطبيق. أي دالة تانية بهاد الملف
 // (getOrders, createService...) بتنده على هاي بدل ما تكرر نفس الكود.
@@ -17,7 +11,6 @@ async function request(endpoint, { method = 'GET', body, isFormData = false, err
 
   const response = await fetch(`${BASE_URL}${endpoint}`, {
     method,
-    credentials: 'include',
     headers,
     body: isFormData ? body : body !== undefined ? JSON.stringify(body) : undefined,
   });
@@ -48,7 +41,6 @@ async function request(endpoint, { method = 'GET', body, isFormData = false, err
 }
 
 export async function registerUser(data) {
-  await getCsrfCookie();
   return request('/api/auth/register', {
     method: 'POST',
     body: data,
@@ -57,8 +49,6 @@ export async function registerUser(data) {
 }
 
 export async function loginUser(data) {
-  await getCsrfCookie();
-
   const result = await request('/api/auth/login', {
     method: 'POST',
     body: data,
@@ -254,7 +244,6 @@ export async function deleteService(id) {
 }
 
 export async function forgotPassword(email) {
-  await getCsrfCookie();
   return request('/api/auth/forgot-password', {
     method: 'POST',
     body: { email },
@@ -263,7 +252,6 @@ export async function forgotPassword(email) {
 }
 
 export async function resetPassword({ email, token, password, passwordConfirmation }) {
-  await getCsrfCookie();
   return request('/api/auth/reset-password', {
     method: 'POST',
     body: {
@@ -299,7 +287,7 @@ export async function acceptOrder(id) {
   return mapOrderFromApi(result.order || result);
 }
 
-//  رفض طلب من الوسيطة
+// رفض طلب من الوسيطة
 export async function rejectOrder(id) {
   const result = await request(`/api/orders/${id}/reject`, {
     method: 'PATCH',
@@ -337,12 +325,10 @@ function mapOrderFromApi(o) {
   return {
     id: o.id,
     customer: o.customer_name,
-    date: o.created_at,
-    // آخر وقت تحديث لحالة الطلب — هاد الحقل الوحيد المتوفر من الباك اند لتوثيق
-    // وقت أي خطوة (ما في status history منفصل لكل خطوة لهلق)
+    date: o.date || o.created_at || o.order_date || o.placed_at,
     statusUpdatedAt: o.status_updated_at || o.updated_at || o.created_at,
     itemsCount: o.items_count ?? (o.items ? o.items.length : 0),
-    amount: o.total_amount,
+    amount: o.estimated_amount ?? o.total_amount ?? o.amount ?? 0,
     status: o.status,
     items: (o.items || []).map(mapOrderItemFromApi),
   };
@@ -366,7 +352,42 @@ export const CUSTOMER_ORDER_STEP_LABELS = [
   "تم الاستلام",
 ];
 
+// طلبات الزبونة نفسها (تختلف عن getOrders اللي بترجع طلبات الوسيطة الواردة)
+function mapMyOrderFromApi(o) {
+  const stepIndex = CUSTOMER_ORDER_STATUSES.indexOf(o.status);
+  const isCancelled = o.status === "cancelled" || o.status === "rejected";
+  const isCompleted = o.status === "received" || o.status === "completed";
 
+  return {
+    id: o.id,
+    store: o.store_name || "—",
+    itemsCount: o.items_count ?? 0,
+    price: o.estimated_amount ?? o.total_amount ?? 0,
+    date: o.date || o.created_at || o.order_date || "",
+    reviewed: !!o.reviewed,
+    rawStatus: o.status,
+    type: isCancelled ? "cancelled" : isCompleted ? "completed" : "active",
+    statusLabel: isCancelled
+      ? o.status === "rejected"
+        ? "مرفوض"
+        : "ملغي"
+      : isCompleted
+        ? "مكتمل"
+        : CUSTOMER_ORDER_STEP_LABELS[stepIndex] || "تم الطلب",
+    currentStepIndex: stepIndex >= 0 ? stepIndex : 0,
+  };
+}
+
+export async function getMyOrders() {
+  const result = await request('/api/my-orders', {
+    errorMessage: 'تعذر جلب طلباتك',
+  });
+  const list = result.orders || [];
+  return {
+    stats: result.stats || { active: 0, completed: 0, cancelled_or_rejected: 0 },
+    orders: list.map(mapMyOrderFromApi),
+  };
+}
 
 // إنشاء طلب جديد (الزبونة) — POST /api/orders، multipart/form-data عشان صور المنتجات
 // items: [{ serviceListingId, quantity, productName, productUrl, productImage, color, size, itemNote }]
@@ -417,46 +438,6 @@ export async function getOrders(filters = {}) {
 
   const list = result.orders || result.data || result;
   return Array.isArray(list) ? list.map(mapOrderFromApi) : [];
-}
-// ===== طلبات الزبونة (صفحة "طلباتي") =====
-// نفس endpoint GET /api/orders، بس الرد بيختلف حسب صاحبة التوكن (زبونة/وسيطة) —
-// هون منحوّل شكل الرد لما تحتاجه صفحة MyOrders تحديدًا
-function mapMyOrderFromApi(o) {
-  const items = (o.items || []).map(mapOrderItemFromApi);
-
-  // نوع الطلب (نشط/مكتمل/ملغى) محسوب من الحالة الحقيقية القادمة من الباك اند
-  let type = "active";
-  if (o.status === "received") type = "completed";
-  else if (o.status === "cancelled") type = "cancelled";
-
-  // السعر الإجمالي بيظهر بس لو كل المنتجات صار إلها سعر (يعني الوسيطة قبلت الطلب فعليًا)
-  const allPriced = items.length > 0 && items.every((it) => it.price != null);
-  const totalPrice = allPriced
-    ? items.reduce((sum, it) => sum + it.price * it.quantity, 0)
-    : null;
-
-  return {
-    id: o.id,
-    // TODO: تأكيد من الباك اند اسم الحقل الحقيقي لاسم متجر/وسيطة الطلب
-    store: o.store?.name || o.store_name || o.mediator_name || "الوسيطة",
-    date: o.created_at,
-    statusUpdatedAt: o.status_updated_at || o.updated_at || o.created_at,
-    itemsCount: o.items_count ?? items.length,
-    price: totalPrice,
-    status: o.status,
-    type,
-    // TODO: تأكيد من الباك اند اسم الحقل لسبب الرفض/الإلغاء إذا موجود
-    rejectionReason: o.rejection_reason || o.cancellation_reason || null,
-    items,
-  };
-}
-
-export async function getMyOrders() {
-  const result = await request('/api/orders', {
-    errorMessage: 'تعذر جلب طلباتك',
-  });
-  const list = result.orders || result.data || result;
-  return Array.isArray(list) ? list.map(mapMyOrderFromApi) : [];
 }
 
 export async function getOrderDetails(id) {
@@ -579,9 +560,6 @@ function resolveStoreImageUrl(path) {
 }
 
 // جلب كل الوسيطات المتاحة عشان الزبونة تتصفحهم — endpoint GET /api/stores
-// ملاحظة: لازم نتأكد إنه هاد المسار موجود فعليًا بالباك اند وبيرجع مصفوفة
-// متاجر/وسيطات (بنفس شكل بيانات getMyStore تقريبًا). إذا كان اسم المسار
-// مختلف عند الباك اند، بس غيّري السطر يلي فيه '/api/stores' تحت.
 export async function getStores() {
   const result = await request('/api/stores', {
     errorMessage: 'تعذر جلب قائمة الوسيطات',
