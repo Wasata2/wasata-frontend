@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect } from "react";
 import { Link } from "react-router-dom";
 import DashboardLayout from "../components/DashboardLayout";
-import { getMyOrders } from "../api";
+import { getMyOrders, cancelOrder } from "../api";
 
 
 // الباك اند بيرجع التاريخ بدون معلومة عن المنطقة الزمنية (بدون Z أو offset)
@@ -53,6 +53,23 @@ export default function MyOrders() {
   useEffect(() => {
     loadOrders();
   }, []);
+
+    const [cancellingId, setCancellingId] = useState(null);
+  const [cancelError, setCancelError] = useState({ id: null, message: "" });
+
+  const handleCancel = async (orderId) => {
+    if (!window.confirm("هل أنتِ متأكدة من إلغاء هذا الطلب؟")) return;
+    setCancelError({ id: null, message: "" });
+    setCancellingId(orderId);
+    try {
+      await cancelOrder(orderId);
+      loadOrders(); // نعيد التحميل عشان الطلب ينتقل لتبويب الملغاة
+    } catch (err) {
+      setCancelError({ id: orderId, message: err.message });
+    } finally {
+      setCancellingId(null);
+    }
+  };
 
   // خطوات مسار الطلب — بنفس الترتيب المتفق عليه بلوحة التحكم
   const timelineSteps = [
@@ -286,7 +303,23 @@ export default function MyOrders() {
                     <Link to={`/orders/${order.id}`} className="btn btn-outline">
                       عرض التفاصيل
                     </Link>
+                    {/* الإلغاء مسموح بس لما الطلب لسا "تم الطلب" (pending) —
+                        الباك اند بيرفض أي حالة تانية بخطأ 422 */}
+                    {order.rawStatus === "pending" && (
+                      <button
+                        type="button"
+                        className="btn btn-outline"
+                        style={{ color: "#dc2626", borderColor: "#dc2626" }}
+                        onClick={() => handleCancel(order.id)}
+                        disabled={cancellingId === order.id}
+                      >
+                        {cancellingId === order.id ? "جاري الإلغاء..." : "إلغاء الطلب"}
+                      </button>
+                    )}
                   </div>
+                  {cancelError.id === order.id && (
+                    <p className="form-error">{cancelError.message}</p>
+                  )}
                 </>
               )}
 

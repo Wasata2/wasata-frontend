@@ -1,10 +1,4 @@
-const BASE_URL = 'https://wasata-backend-production-nojkxd.laravel.cloud';
-
-export async function getCsrfCookie() {
-  await fetch(`${BASE_URL}/sanctum/csrf-cookie`, {
-    credentials: 'include',
-  });
-}
+const BASE_URL = process.env.REACT_APP_API_URL;
 
 // نقطة مرور وحيدة لكل طلبات الشبكة بالتطبيق. أي دالة تانية بهاد الملف
 // (getOrders, createService...) بتنده على هاي بدل ما تكرر نفس الكود.
@@ -17,7 +11,6 @@ async function request(endpoint, { method = 'GET', body, isFormData = false, err
 
   const response = await fetch(`${BASE_URL}${endpoint}`, {
     method,
-    credentials: 'include',
     headers,
     body: isFormData ? body : body !== undefined ? JSON.stringify(body) : undefined,
   });
@@ -48,7 +41,6 @@ async function request(endpoint, { method = 'GET', body, isFormData = false, err
 }
 
 export async function registerUser(data) {
-  await getCsrfCookie();
   return request('/api/auth/register', {
     method: 'POST',
     body: data,
@@ -57,8 +49,6 @@ export async function registerUser(data) {
 }
 
 export async function loginUser(data) {
-  await getCsrfCookie();
-
   const result = await request('/api/auth/login', {
     method: 'POST',
     body: data,
@@ -254,7 +244,6 @@ export async function deleteService(id) {
 }
 
 export async function forgotPassword(email) {
-  await getCsrfCookie();
   return request('/api/auth/forgot-password', {
     method: 'POST',
     body: { email },
@@ -263,7 +252,6 @@ export async function forgotPassword(email) {
 }
 
 export async function resetPassword({ email, token, password, passwordConfirmation }) {
-  await getCsrfCookie();
   return request('/api/auth/reset-password', {
     method: 'POST',
     body: {
@@ -300,11 +288,20 @@ export async function acceptOrder(id, items) {
   return mapOrderFromApi(result.order || result);
 }
 
-// رفض طلب
+// رفض طلب من الوسيطة
 export async function rejectOrder(id) {
   const result = await request(`/api/orders/${id}/reject`, {
     method: 'PATCH',
     errorMessage: 'تعذر رفض الطلب',
+  });
+  return mapOrderFromApi(result.order || result);
+}
+
+// إلغاء الطلب من طرف الزبونة — بيشتغل بس لو الطلب لسا بحالة pending
+export async function cancelOrder(id) {
+  const result = await request(`/api/orders/${id}/cancel`, {
+    method: 'PATCH',
+    errorMessage: 'تعذر إلغاء الطلب',
   });
   return mapOrderFromApi(result.order || result);
 }
@@ -319,6 +316,9 @@ function mapOrderItemFromApi(item) {
     size: item.size,
     quantity: item.quantity,
     notes: item.notes || item.item_note,
+    // سعر الوحدة — بيتحدد بس وقت ما الوسيطة تقبل الطلب (PATCH /orders/{id}/accept)،
+    // فقبلها بيكون null
+    price: item.unit_price ?? null,
   };
 }
 
@@ -589,9 +589,6 @@ function resolveStoreImageUrl(path) {
 }
 
 // جلب كل الوسيطات المتاحة عشان الزبونة تتصفحهم — endpoint GET /api/stores
-// ملاحظة: لازم نتأكد إنه هاد المسار موجود فعليًا بالباك اند وبيرجع مصفوفة
-// متاجر/وسيطات (بنفس شكل بيانات getMyStore تقريبًا). إذا كان اسم المسار
-// مختلف عند الباك اند، بس غيّري السطر يلي فيه '/api/stores' تحت.
 export async function getStores() {
   const result = await request('/api/stores', {
     errorMessage: 'تعذر جلب قائمة الوسيطات',
