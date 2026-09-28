@@ -3,6 +3,8 @@ import { Link } from "react-router-dom";
 import { getServices, getOrders, getOrderStats, getMyStore, updateStore, BASE_URL } from "../api";
 import DashboardLayout from "../components/DashboardLayout";
 import { useAuth } from "../context/AuthContext";
+import { formatDateTime } from "../utils/dates";
+import { formatProductsCount } from "../utils/orders";
 
 // رابط صورة المتجر يجي أحيانًا من الباك اند كمسار نسبي (بدون دومين) —
 // هاي الدالة بتتأكد إنه رابط كامل قبل ما نعرضه، وإلا بترجع null
@@ -16,6 +18,24 @@ function resolveImageUrl(path) {
     return `${BASE_URL}/storage/${clean}`;
   }
   return `${BASE_URL}/${clean}`;
+}
+
+// نفس أسماء وألوان حالات الطلب المستخدمة بصفحة "الطلبات" الكاملة، حتى يكون
+// شكل الحالة موحّد بكل مكان بيظهر فيه
+const STATUS_META = {
+  pending: { label: "تم الطلب", className: "pending" },
+  ordered_from_shein: { label: "تم الطلب من SHEIN", className: "ordered" },
+  shipped: { label: "تم الشحن", className: "shipped" },
+  arrived: { label: "وصلت", className: "progress" },
+  inspected: { label: "تم الفحص", className: "ready" },
+  received: { label: "تم الاستلام", className: "done" },
+  cancelled: { label: "ملغي", className: "rejected" },
+  rejected: { label: "مرفوض", className: "rejected" },
+};
+
+// طلب "ملغي" فعليًا أو "مرفوض" من الوسيطة — كلاهما ما إلهم تفاصيل نعرضها
+function isClosedNegative(status) {
+  return status === "cancelled" || status === "rejected";
 }
 
 export default function MediatorDashboard() {
@@ -71,7 +91,9 @@ export default function MediatorDashboard() {
     }
   };
 
-  const latestNewOrder = orders.find((o) => o.status === "new");
+  // ملاحظة: ما في حالة اسمها "new" بالحالات الحقيقية (pending, ordered_from_shein...)
+  // الطلب "الجديد" فعليًا هو أي طلب لسا بانتظار قبول/رفض الوسيطة، أي status === "pending"
+  const latestNewOrder = orders.find((o) => o.status === "pending");
 
   const inProgressCount = stats ? stats.inProgressCount : 0;
   const newOrdersCount = stats ? stats.newCount : 0;
@@ -139,7 +161,7 @@ export default function MediatorDashboard() {
             <span className="new-order-badge">جديد</span>
             لديك طلب جديد من <strong>{latestNewOrder.customer}</strong>
             <div className="new-order-banner-sub">
-              طلب #{latestNewOrder.id} · {latestNewOrder.itemsCount} منتجات
+              طلب #{latestNewOrder.id} · {formatProductsCount(latestNewOrder)} منتجات
             </div>
           </div>
           <div className="new-order-banner-icon">📦</div>
@@ -199,16 +221,24 @@ export default function MediatorDashboard() {
                   <tr key={order.id}>
                     <td>#{order.id}</td>
                     <td>{order.customer}</td>
-                    <td>{order.date}</td>
-                    <td>{order.itemsCount}</td>
+                    <td>{formatDateTime(order.date)}</td>
+                    <td>{formatProductsCount(order)}</td>
                     <td>{order.amount}₪</td>
                     <td>
-                      <span className={`status-badge ${order.status}`}>{order.status}</span>
+                      <span
+                        className={`status-badge ${STATUS_META[order.status]?.className || ""}`}
+                      >
+                        {STATUS_META[order.status]?.label || order.status}
+                      </span>
                     </td>
                     <td>
-                      <Link to={`/mediator-orders/${order.id}`} className="details-link">
-                        عرض التفاصيل
-                      </Link>
+                      {isClosedNegative(order.status) ? (
+                        <span className="no-action">—</span>
+                      ) : (
+                        <Link to={`/mediator-orders/${order.id}`} className="details-link">
+                          عرض التفاصيل
+                        </Link>
+                      )}
                     </td>
                   </tr>
                 ))}

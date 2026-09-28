@@ -167,14 +167,29 @@ nav a.active {
 }
 
 /* Hero */
-.hero {
-  padding: 100px 0;
-  background-size: cover;
-  background-position: center;
+.hero{
+  position:relative;
+  padding:100px 0;
+  overflow:hidden;
 }
-
-.hero .container {
-  max-width: 100%;
+.hero-video{
+  position:absolute;
+  inset:0;
+  width:100%;
+  height:100%;
+  object-fit:cover;
+  z-index:0;
+}
+.hero-overlay{
+  position:absolute;
+  inset:0;
+  background:rgba(255,255,255,.5);
+  z-index:1;
+}
+.hero .container{
+  position:relative;
+  z-index:2;
+  max-width:100%;
 }
 
 .hero-copy {
@@ -1505,7 +1520,50 @@ footer .copyright {
   background: #fee2e2;
   color: #b91c1c;
 }
+.text-action-btn {
+  border: none;
+  border-radius: 6px;
+  padding: 5px 12px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  margin-inline-start: 6px;
+}
 
+.text-action-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.text-action-btn.accept {
+  background: #dcfce7;
+  color: #15803d;
+}
+
+.text-action-btn.reject {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+.accept-price-field {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.accept-price-label {
+  font-size: 12px;
+  color: var(--gray);
+}
+
+.accept-price-input {
+  width: 90px;
+  padding: 6px 8px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  font-size: 13px;
+  text-align: center;
+}
 /* ============ خاص بلوحة الزبونة (CustomerDashboard) ============ */
 .dashboard-search {
   display: flex;
@@ -2384,17 +2442,15 @@ footer .copyright {
   font-size: 12px;
 }
 
-.status-tab.active {
-  background: var(--blue);
-  color: #fff;
-  border-color: var(--blue);
+.status-tab.active{
+  background:var(--brand-gradient);
+  color:#fff;
+  border-color:transparent;
 }
-
-.status-tab.active .status-tab-count {
-  background: rgba(255, 255, 255, .25);
-  color: #fff;
+.status-tab.active .status-tab-count{
+  background:rgba(255,255,255,.25);
+  color:#fff;
 }
-
 .status-badge.new {
   background: #fef3c7;
   color: #b45309;

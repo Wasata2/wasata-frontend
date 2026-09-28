@@ -1,7 +1,17 @@
 import { useState, useEffect, useMemo } from "react";
 import { Link } from "react-router-dom";
-import { getOrders, getOrderStats, acceptOrder, rejectOrder, getMyStore, BASE_URL } from "../api";
+import {
+  getOrders,
+  getOrderStats,
+  getOrderDetails,
+  acceptOrder,
+  rejectOrder,
+  getMyStore,
+  BASE_URL,
+} from "../api";
 import DashboardLayout from "../components/DashboardLayout";
+import { formatDateTime } from "../utils/dates";
+import { formatProductsCount } from "../utils/orders";
 
 // رابط صورة المتجر يجي أحيانًا من الباك اند كمسار نسبي (بدون دومين) —
 // هاي الدالة بتتأكد إنه رابط كامل قبل ما نعرضه، وإلا بترجع null
@@ -17,12 +27,10 @@ function resolveImageUrl(path) {
   return `${BASE_URL}/${clean}`;
 }
 
-// تنسيق التاريخ القادم من الباك اند (ISO) لشكل عربي مقروء بدل ما يطلع فاضي أو خام
-function formatDate(value) {
-  if (!value) return "—";
-  const d = new Date(value);
-  if (isNaN(d.getTime())) return value;
-  return d.toLocaleDateString("ar-EG", { year: "numeric", month: "long", day: "numeric" });
+// طلب "ملغي" فعليًا (ألغته الزبونة مثلاً) أو "مرفوض" من الوسيطة — كلاهما
+// بيندرجوا تحت نفس تبويب/عدّاد "ملغاة"، وما إلهم تفاصيل ولا تحديث حالة
+function isClosedNegative(status) {
+  return status === "cancelled" || status === "rejected";
 }
 
 const STATUS_META = {
@@ -33,6 +41,7 @@ const STATUS_META = {
   inspected: { label: "تم الفحص", className: "ready" },
   received: { label: "تم الاستلام", className: "done" },
   cancelled: { label: "ملغي", className: "rejected" },
+  rejected: { label: "مرفوض", className: "rejected" },
 };
 
 const PAGE_SIZE = 6;
@@ -45,6 +54,13 @@ export default function MediatorOrders() {
 
   const [actionOrderId, setActionOrderId] = useState(null);
   const [actionError, setActionError] = useState("");
+
+  // ===== قبول الطلب مع تحديد السعر النهائي لكل منتج =====
+  const [acceptOrderData, setAcceptOrderData] = useState(null);
+  const [acceptPrices, setAcceptPrices] = useState({});
+  const [acceptLoading, setAcceptLoading] = useState(false);
+  const [acceptSubmitting, setAcceptSubmitting] = useState(false);
+  const [acceptModalError, setAcceptModalError] = useState("");
 
   const [activeTab, setActiveTab] = useState("all");
   const [dateFilter, setDateFilter] = useState("");
@@ -75,16 +91,64 @@ export default function MediatorOrders() {
       });
   }, []);
 
-  const handleAccept = async (orderId) => {
+  // فتح نافذة تحديد السعر النهائي — منجيب تفاصيل الطلب كاملة (بمنتجاتها)
+  // لأنه جدول الطلبات نفسه ما بالضرورة يجيب قائمة منتجات كاملة لكل طلب
+  const openAcceptModal = async (orderId) => {
     setActionError("");
-    setActionOrderId(orderId);
+    setAcceptModalError("");
+    setAcceptOrderData(null);
+    setAcceptLoading(true);
     try {
-      const updated = await acceptOrder(orderId);
-      setOrders((prev) => prev.map((o) => (o.id === orderId ? updated : o)));
+      const full = await getOrderDetails(orderId);
+      const initialPrices = {};
+      (full.items || []).forEach((item) => {
+        initialPrices[item.id] = "";
+      });
+      setAcceptPrices(initialPrices);
+      setAcceptOrderData(full);
     } catch (err) {
       setActionError(err.message);
     } finally {
-      setActionOrderId(null);
+      setAcceptLoading(false);
+    }
+  };
+
+  const closeAcceptModal = () => {
+    setAcceptOrderData(null);
+    setAcceptPrices({});
+    setAcceptModalError("");
+  };
+
+  const handlePriceChange = (itemId, value) => {
+    setAcceptPrices((prev) => ({ ...prev, [itemId]: value }));
+  };
+
+  const confirmAccept = async () => {
+    if (!acceptOrderData) return;
+    const items = acceptOrderData.items || [];
+    const hasInvalidPrice = items.some((item) => {
+      const value = acceptPrices[item.id];
+      return value === "" || value === undefined || isNaN(Number(value)) || Number(value) < 0;
+    });
+    if (hasInvalidPrice) {
+      setAcceptModalError("لازم تحددي سعر نهائي صحيح لكل منتج بالطلب قبل التأكيد");
+      return;
+    }
+
+    setAcceptSubmitting(true);
+    setAcceptModalError("");
+    try {
+      const payload = items.map((item) => ({
+        id: item.id,
+        unit_price: Number(acceptPrices[item.id]),
+      }));
+      const updated = await acceptOrder(acceptOrderData.id, payload);
+      setOrders((prev) => prev.map((o) => (o.id === updated.id ? updated : o)));
+      closeAcceptModal();
+    } catch (err) {
+      setAcceptModalError(err.message);
+    } finally {
+      setAcceptSubmitting(false);
     }
   };
 
@@ -104,7 +168,10 @@ export default function MediatorOrders() {
   const counts = useMemo(() => {
     const c = { all: orders.length };
     Object.keys(STATUS_META).forEach((key) => {
-      c[key] = orders.filter((o) => o.status === key).length;
+      c[key] =
+        key === "cancelled"
+          ? orders.filter((o) => isClosedNegative(o.status)).length
+          : orders.filter((o) => o.status === key).length;
     });
     return c;
   }, [orders]);
@@ -113,7 +180,11 @@ export default function MediatorOrders() {
 
   const filteredOrders = useMemo(() => {
     return orders.filter((o) => {
-      if (activeTab !== "all" && o.status !== activeTab) return false;
+      if (activeTab !== "all") {
+        if (activeTab === "cancelled" ? !isClosedNegative(o.status) : o.status !== activeTab) {
+          return false;
+        }
+      }
       if (statusFilter && o.status !== statusFilter) return false;
       if (dateFilter && o.date !== dateFilter) return false;
       if (search && !`${o.id} ${o.customer}`.includes(search)) return false;
@@ -283,9 +354,9 @@ export default function MediatorOrders() {
                       <tr key={order.id}>
                         <td>#{order.id}</td>
                         <td>{order.customer}</td>
-                        <td>{formatDate(order.date)}</td>
-                        <td>{order.itemsCount}</td>
-                        <td>{order.amount} ₪</td>
+                        <td>{formatDateTime(order.date)}</td>
+                        <td>{formatProductsCount(order)}</td>
+                        <td>{order.amount} ر.س</td>
                         <td>
                           <span
                             className={`status-badge ${STATUS_META[order.status]?.className || ""}`}
@@ -294,7 +365,8 @@ export default function MediatorOrders() {
                           </span>
                         </td>
                         <td>
-                          {order.status === "cancelled" ? (
+                          {isClosedNegative(order.status) ? (
+                            // الطلب المرفوض/الملغي خلص، ما إلو تفاصيل نعرضها ولا حالة نحدثها
                             <span className="no-action">—</span>
                           ) : (
                             <Link to={`/mediator-orders/${order.id}`} className="details-link">
@@ -304,20 +376,18 @@ export default function MediatorOrders() {
                           {order.status === "pending" && (
                             <span className="row-actions">
                               <button
-                                className="icon-btn accept"
-                                onClick={() => handleAccept(order.id)}
-                                disabled={actionOrderId === order.id}
-                                title="قبول الطلب"
+                                className="text-action-btn accept"
+                                onClick={() => openAcceptModal(order.id)}
+                                disabled={acceptLoading}
                               >
-                                ✓
+                                قبول
                               </button>
                               <button
-                                className="icon-btn reject"
+                                className="text-action-btn reject"
                                 onClick={() => handleReject(order.id)}
                                 disabled={actionOrderId === order.id}
-                                title="رفض الطلب"
                               >
-                                ✕
+                                رفض
                               </button>
                             </span>
                           )}
@@ -351,6 +421,86 @@ export default function MediatorOrders() {
             </>
           )}
         </div>
+
+        {/* ===== نافذة تحديد السعر النهائي لكل منتج قبل تأكيد القبول ===== */}
+        {acceptOrderData && (
+          <div className="modal-overlay" onClick={closeAcceptModal}>
+            <div className="modal-card" onClick={(e) => e.stopPropagation()}>
+              <div className="modal-header">
+                <span>تحديد السعر النهائي — طلب #{acceptOrderData.id}</span>
+                <button className="modal-close-btn" onClick={closeAcceptModal}>
+                  ✕
+                </button>
+              </div>
+              <div className="modal-body">
+                <p className="service-description">
+                  حددي السعر النهائي الحقيقي لكل منتج قبل تأكيد قبول الطلب.
+                </p>
+
+                {(acceptOrderData.items || []).length === 0 ? (
+                  <p className="service-description">لا توجد منتجات بهذا الطلب.</p>
+                ) : (
+                  acceptOrderData.items.map((item) => (
+                    <div className="order-item-row" key={item.id}>
+                      {item.image && (
+                        <img src={item.image} alt={item.name} className="order-item-image" />
+                      )}
+                      <div className="order-item-info">
+                        <div className="order-item-name">{item.name}</div>
+                        {item.quantity && (
+                          <span className="service-fee-tag">الكمية: {item.quantity}</span>
+                        )}
+                      </div>
+                      <div className="accept-price-field">
+                        <label className="accept-price-label" htmlFor={`price-${item.id}`}>
+                          السعر (₪)
+                        </label>
+                        <input
+                          id={`price-${item.id}`}
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          className="accept-price-input"
+                          value={acceptPrices[item.id] ?? ""}
+                          onChange={(e) => handlePriceChange(item.id, e.target.value)}
+                        />
+                      </div>
+                    </div>
+                  ))
+                )}
+
+                {acceptModalError && <p className="form-error">{acceptModalError}</p>}
+
+                <div className="modal-actions confirm-actions">
+                  <button
+                    className="btn btn-outline"
+                    onClick={closeAcceptModal}
+                    disabled={acceptSubmitting}
+                  >
+                    إلغاء
+                  </button>
+                  <button
+                    className="btn btn-primary"
+                    onClick={confirmAccept}
+                    disabled={acceptSubmitting}
+                  >
+                    {acceptSubmitting ? "جاري التأكيد..." : "تأكيد القبول"}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {acceptLoading && (
+          <div className="modal-overlay">
+            <div className="modal-card">
+              <div className="modal-body">
+                <p>جاري تحميل تفاصيل الطلب...</p>
+              </div>
+            </div>
+          </div>
+        )}
     </DashboardLayout>
   );
 }

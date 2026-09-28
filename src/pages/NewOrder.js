@@ -79,6 +79,9 @@ export default function NewOrder() {
   const [selectedServiceId, setSelectedServiceId] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState("");
+  // بتصير true لو الباك اند رفض الطلب لأنه الوسيطة ما حدّدت نقطة استلام —
+  // منمنع تكرار نفس الخطأ بمنعنا زر الإرسال طول ما الزبونة مختارة "نقطة استلام"
+  const [pickupUnavailable, setPickupUnavailable] = useState(false);
 
   const isValidSheinLink = (url) => /^https?:\/\/.*shein\.com/i.test(url.trim());
 
@@ -188,16 +191,19 @@ export default function NewOrder() {
     setSubmitting(true);
     setSubmitError("");
     try {
-      // ما في حقل مخصص بالباك اند لعنوان التوصيل أو نقطة الاستلام حاليًا، فبنضيفهم كجزء من ملاحظة الزبونة
+      // ملاحظة: العنوان صار يترسل كحقل مستقل (address) للباك اند لأنه هو
+      // إلزامي وقت home_delivery — بس منسيبه كمان جوا الملاحظة حتى يبان
+      // بوضوح للوسيطة مع رقم التواصل (يلي ما إله حقل مخصص لهلق)
       const deliveryNote =
         deliveryMethod === "home"
-          ? `طريقة الاستلام: توصيل إلى المنزل\nالعنوان: ${homeAddress.trim()}\nرقم التواصل: ${homePhone.trim()}`
+          ? `طريقة الاستلام: توصيل إلى المنزل\nرقم التواصل: ${homePhone.trim()}`
           : `طريقة الاستلام: استلام من نقطة استلام (${selectedMediator.city || "حسب مدينة الوسيطة"})`;
       const customerNote = [deliveryNote, notesToMediator.trim()].filter(Boolean).join("\n\n");
 
       await createOrder({
         storeId: selectedMediator.id,
         deliveryMethod: deliveryMethod === "home" ? "home_delivery" : "pickup",
+        address: deliveryMethod === "home" ? homeAddress.trim() : undefined,
         customerNote,
         estimatedAmount: estimatedTotal,
         items: products.map((p) => ({
@@ -212,6 +218,9 @@ export default function NewOrder() {
       });
       navigate("/my-orders");
     } catch (err) {
+      if (/pickup location/i.test(err.message || "")) {
+        setPickupUnavailable(true);
+      }
       setSubmitError(translateOrderError(err.message) || "تعذر إرسال الطلب، حاولي مرة ثانية.");
     } finally {
       setSubmitting(false);
@@ -522,7 +531,7 @@ export default function NewOrder() {
                 type="button"
                 className="btn btn-primary review-submit-btn"
                 onClick={handleFinalSubmit}
-                disabled={submitting}
+                disabled={submitting || (pickupUnavailable && deliveryMethod === "pickup")}
               >
                 {submitting ? "جاري الإرسال..." : `إرسال الطلب إلى ${selectedMediator.name} →`}
               </button>
@@ -589,7 +598,10 @@ export default function NewOrder() {
                     type="radio"
                     name="delivery"
                     checked={deliveryMethod === "home"}
-                    onChange={() => setDeliveryMethod("home")}
+                    onChange={() => {
+                      setDeliveryMethod("home");
+                      setSubmitError("");
+                    }}
                   />
                 </label>
 

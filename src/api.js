@@ -291,9 +291,10 @@ export async function getOrderStats() {
 }
 
 // قبول طلب — بينقل الحالة من pending إلى ordered_from_shein
-export async function acceptOrder(id) {
+export async function acceptOrder(id, items) {
   const result = await request(`/api/orders/${id}/accept`, {
     method: 'PATCH',
+    body: { items },
     errorMessage: 'تعذر قبول الطلب',
   });
   return mapOrderFromApi(result.order || result);
@@ -311,26 +312,50 @@ export async function rejectOrder(id) {
 function mapOrderItemFromApi(item) {
   return {
     id: item.id,
-    name: item.product_name,
-    image: item.image_url,
-    sheinUrl: item.shein_url,
+    name: item.product_name || item.name,
+    image: item.image_url || item.product_image,
+    sheinUrl: item.shein_url || item.product_url,
     color: item.color,
     size: item.size,
     quantity: item.quantity,
-    notes: item.notes,
+    notes: item.notes || item.item_note,
   };
 }
 
+// اسم الزبونة: بنجرب أكتر من شكل ممكن يرجعه الباك اند (نص مباشر أو كائن customer)
+function pickCustomerName(o) {
+  return (
+    o.customer?.full_name ||
+    o.customer?.name ||
+    o.customer_name ||
+    (typeof o.customer === 'string' ? o.customer : '') ||
+    o.user?.full_name ||
+    o.user?.name ||
+    ''
+  );
+}
+
 function mapOrderFromApi(o) {
+  const rawItems = o.items || o.order_items || [];
+  const items = rawItems.map(mapOrderItemFromApi);
+  // مجموع الكميات (منتج واحد بكمية 2 = عدد 2) — لو الباك اند ما رجّع المنتجات
+  // نجرب حقول جاهزة للمجموع
+  const totalQuantity = items.length
+    ? items.reduce((sum, i) => sum + (Number(i.quantity) || 1), 0)
+    : o.total_quantity ?? o.items_sum_quantity ?? o.total_items_quantity ?? null;
+
   return {
     id: o.id,
-    customer: o.customer_name,
-    date: o.date || o.created_at || o.order_date || o.placed_at,
+    customer: pickCustomerName(o),
+    // created_at أول شي لأنه دايمًا بصيغة ISO قابلة للتحويل الصحيح للتوقيت المحلي،
+    // بينما date ممكن يجي كنص جاهز للعرض
+    date: o.created_at || o.date || o.order_date || o.placed_at,
     statusUpdatedAt: o.status_updated_at || o.updated_at || o.created_at,
-    itemsCount: o.items_count ?? (o.items ? o.items.length : 0),
+    itemsCount: o.items_count ?? rawItems.length,
+    totalQuantity,
     amount: o.estimated_amount ?? o.total_amount ?? o.amount ?? 0,
     status: o.status,
-    items: (o.items || []).map(mapOrderItemFromApi),
+    items,
   };
 }
 
@@ -362,8 +387,9 @@ function mapMyOrderFromApi(o) {
     id: o.id,
     store: o.store_name || "—",
     itemsCount: o.items_count ?? 0,
+    totalQuantity: o.total_quantity ?? o.items_sum_quantity ?? o.total_items_quantity ?? null,
     price: o.estimated_amount ?? o.total_amount ?? 0,
-    date: o.date || o.created_at || o.order_date || "",
+    date: o.created_at || o.date || o.order_date || "",
     reviewed: !!o.reviewed,
     rawStatus: o.status,
     type: isCancelled ? "cancelled" : isCompleted ? "completed" : "active",
@@ -394,6 +420,7 @@ export async function getMyOrders() {
 export async function createOrder({
   storeId,
   deliveryMethod, // "home_delivery" | "pickup"
+  address, // إلزامي من الباك اند لو deliveryMethod = home_delivery
   customerNote,
   estimatedAmount,
   items,
@@ -401,10 +428,12 @@ export async function createOrder({
   const form = new FormData();
   form.append('store_id', storeId);
   form.append('delivery_method', deliveryMethod);
+  if (address) form.append('address', address);
   if (customerNote) form.append('customer_note', customerNote);
   if (estimatedAmount !== null && estimatedAmount !== undefined) {
     form.append('estimated_amount', estimatedAmount);
   }
+  // ... باقي الدالة (items.forEach...) زي ما هو، ما تغيّر
 
   items.forEach((item, i) => {
     form.append(`items[${i}][service_listing_id]`, item.serviceListingId);

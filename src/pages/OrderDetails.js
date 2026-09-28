@@ -2,6 +2,8 @@ import { useState, useEffect } from "react";
 import { Link, useParams } from "react-router-dom";
 import { getOrderDetails, updateOrderStatus } from "../api";
 import DashboardLayout from "../components/DashboardLayout";
+import { formatDateTime } from "../utils/dates";
+import { formatProductsCount } from "../utils/orders";
 
 // خطوات مسار الطلب — بنفس ترتيب وأسماء الحالات الحقيقية القادمة من الباك اند
 // (pending, ordered_from_shein, shipped, arrived, inspected, received)
@@ -22,16 +24,8 @@ const STATUS_META = {
   inspected: { label: "تم الفحص", className: "ready" },
   received: { label: "تم الاستلام", className: "done" },
   cancelled: { label: "ملغي", className: "rejected" },
+  rejected: { label: "مرفوض", className: "rejected" },
 };
-
-function formatDateTime(value) {
-  if (!value) return "";
-  const d = new Date(value);
-  if (isNaN(d.getTime())) return value;
-  const date = d.toLocaleDateString("ar-EG", { year: "numeric", month: "long", day: "numeric" });
-  const time = d.toLocaleTimeString("ar-EG", { hour: "2-digit", minute: "2-digit" });
-  return `${date} — ${time}`;
-}
 
 export default function OrderDetails() {
   const { id } = useParams();
@@ -59,10 +53,14 @@ export default function OrderDetails() {
   }, [id]);
 
   const currentStepIndex = order ? STATUS_STEPS.findIndex((s) => s.key === order.status) : -1;
-  const isCancelled = order && order.status === "cancelled";
+  const isCancelled = order && (order.status === "cancelled" || order.status === "rejected");
+  // طلب "تم الطلب" (pending) لسا ما انقبل رسميًا — الانتقال منه لأي حالة بعده
+  // لازم يصير فقط عن طريق "قبول الطلب" (مع تسعير المنتجات)، مش زر "تحديث الحالة"
+  // العام هون، عشان هيك منمنع نفس هالزر من تخطي هاي الخطوة
+  const isPending = order && order.status === "pending";
   const isFinalStep = currentStepIndex === STATUS_STEPS.length - 1;
   const nextStep =
-    !isCancelled && currentStepIndex >= 0 && currentStepIndex < STATUS_STEPS.length - 1
+    !isCancelled && !isPending && currentStepIndex >= 0 && currentStepIndex < STATUS_STEPS.length - 1
       ? STATUS_STEPS[currentStepIndex + 1]
       : null;
 
@@ -132,7 +130,7 @@ export default function OrderDetails() {
                 </div>
                 <div>
                   <div className="profile-field-label">تاريخ الطلب</div>
-                  <div className="profile-field-value">{order.date}</div>
+                  <div className="profile-field-value">{formatDateTime(order.date)}</div>
                 </div>
                 <div>
                   <div className="profile-field-label">اسم الزبونة</div>
@@ -140,7 +138,7 @@ export default function OrderDetails() {
                 </div>
                 <div>
                   <div className="profile-field-label">عدد المنتجات</div>
-                  <div className="profile-field-value">{order.itemsCount}</div>
+                  <div className="profile-field-value">{formatProductsCount(order)}</div>
                 </div>
               </div>
             </div>
@@ -201,16 +199,29 @@ export default function OrderDetails() {
               <div className="order-details-card order-status-update-card">
                 <div>
                   <h2 className="order-details-section-title">تحديث حالة الطلب</h2>
-                  <p className="service-description">
-                    اختاري الحالة المناسبة للانتقال إلى المرحلة التالية
-                  </p>
-                  <span className="current-status-pill">
-                    <span className="current-status-dot" /> الحالة الحالية:{" "}
-                    {STATUS_META[order.status]?.label}
-                  </span>
+                  {isPending ? (
+                    <p className="service-description">
+                      هاد الطلب لسا بانتظار قبول أو رفض — أكّدي القبول (مع تحديد السعر النهائي
+                      لكل منتج) أو الرفض من صفحة "الطلبات".
+                    </p>
+                  ) : (
+                    <>
+                      <p className="service-description">
+                        اختاري الحالة المناسبة للانتقال إلى المرحلة التالية
+                      </p>
+                      <span className="current-status-pill">
+                        <span className="current-status-dot" /> الحالة الحالية:{" "}
+                        {STATUS_META[order.status]?.label}
+                      </span>
+                    </>
+                  )}
                 </div>
 
-                {isFinalStep ? (
+                {isPending ? (
+                  <Link to="/mediator-orders" className="btn btn-outline">
+                    الرجوع لصفحة الطلبات
+                  </Link>
+                ) : isFinalStep ? (
                   <span className="order-completed-pill">✓ تم إتمام الطلب</span>
                 ) : (
                   <button className="btn btn-primary" onClick={openUpdateModal}>

@@ -7,13 +7,19 @@ export default function Home() {
     <>
       <Navbar />
 
-      <section
-        className="hero"
-        id="home"
-        style={{
-          backgroundImage: `linear-gradient(rgba(255,255,255,0.5), rgba(255,255,255,0.5)), url(${process.env.PUBLIC_URL}/hero-bg.jpg)`,
-        }}
-      >
+      <section className="hero" id="home">
+        {/* فيديو خلفية القسم الرئيسي — حطي ملف الفيديو باسم hero-bg.mp4 داخل مجلد public */}
+        <video
+          className="hero-video"
+          src={`${process.env.PUBLIC_URL}/hero-bg.mp4`}
+          poster={`${process.env.PUBLIC_URL}/hero-bg.jpg`}
+          autoPlay
+          muted
+          loop
+          playsInline
+        />
+        <div className="hero-overlay"></div>
+        
         <div className="container">
           <div className="hero-copy">
             <span className="badge">⏱ منصة تنظيم طلبات ذكي</span>

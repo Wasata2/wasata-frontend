@@ -4,6 +4,24 @@ import DashboardLayout from "../components/DashboardLayout";
 import { getMyOrders } from "../api";
 
 
+// الباك اند بيرجع التاريخ بدون معلومة عن المنطقة الزمنية (بدون Z أو offset)
+// رغم إنه فعليًا UTC — فلو سلمناه متل ما هو لـ new Date()، المتصفح بيفتهمه
+// غلط كأنه توقيت محلي أصلاً وما بيعمل تحويل، فيطلع الوقت أبكر من الحقيقي
+function parseApiDate(value) {
+  if (!value) return null;
+  const hasTz = /Z$|[+-]\d{2}:\d{2}$/.test(value);
+  const normalized = value.includes("T") ? value : value.replace(" ", "T");
+  return new Date(hasTz ? normalized : `${normalized}Z`);
+}
+
+// تنسيق التاريخ القادم من الباك اند لشكل عربي مقروء بدل ما يطلع فاضي أو خام
+function formatDate(value) {
+  if (!value) return "—";
+  const d = parseApiDate(value);
+  if (!d || isNaN(d.getTime())) return value;
+  return d.toLocaleDateString("ar-EG", { year: "numeric", month: "long", day: "numeric" });
+}
+
 // تحويل وقت مخزّن (timestamp) لنص "منذ كذا" — بيتحسب وقت العرض، مش وقت الإنشاء
 function getRelativeTime(timestamp) {
   const diffSeconds = Math.floor((Date.now() - timestamp) / 1000);
@@ -234,7 +252,7 @@ export default function MyOrders() {
                   <div className="order-id">طلب #{order.id}</div>
                   <div className="order-store">🕐 {order.store}</div>
                   <div className="order-list-info">
-                    📦 {order.itemsCount} منتجات &nbsp; 🗓 {order.date}
+                    📦 {order.itemsCount} منتجات &nbsp; 🗓 {formatDate(order.date)}
                   </div>
                 </div>
                 <div className="order-list-price">{order.price} ₪</div>

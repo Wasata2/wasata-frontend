@@ -2,6 +2,8 @@ import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { getOrders, getOrderStats, acceptOrder, rejectOrder } from "../api";
 import DashboardLayout from "../components/DashboardLayout";
+import { formatDateTime } from "../utils/dates";
+import { formatProductsCount } from "../utils/orders";
 
 // صفحة الإشعارات — بتعرض الطلبات الجديدة (status === "pending") يلي محتاجة
 // قرار الوسيطة (قبول / رفض)، ونفس هالعدد هو يلي بيظهر كرقم صغير فوق زر 🔔
@@ -91,7 +93,7 @@ export default function MediatorNotifications() {
                       طلب جديد #{order.id} من {order.customer}
                     </div>
                     <div className="notification-card-sub">
-                      {order.itemsCount} منتج · {order.amount} ₪ · {order.date}
+                      {formatProductsCount(order)} منتج · {order.amount} ₪ · {formatDateTime(order.date)}
                     </div>
                   </div>
                   <div className="notification-card-actions">

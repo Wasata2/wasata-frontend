@@ -32,13 +32,14 @@ export default function CustomerDashboard() {
     }
   };
 
-  // الطلب النشط الحالي: آخر طلب لسا ما انقبل ولا انرفض من الوسيطة (أول خطوة بمسار الطلب: "تم الطلب")
+  // الطلب النشط الحالي: بيضل ظاهر طول مسار التتبع (من "تم الطلب" لحد "تم الفحص")،
+  // وبيختفي بس لما يوصل "تم الاستلام" (يصير مكتمل) أو يتلغى/يترفض
   const [pendingOrder, setPendingOrder] = useState(null);
   useEffect(() => {
     getMyOrders()
       .then(({ orders }) => {
-        const pending = orders.find((o) => o.type === "active" && o.currentStepIndex === 0);
-        setPendingOrder(pending || null);
+        const active = orders.find((o) => o.type === "active");
+        setPendingOrder(active || null);
       })
       .catch(() => {});
   }, []);
@@ -159,7 +160,7 @@ export default function CustomerDashboard() {
         <section className="order-card">
           <div className="order-card-top">
             <div>
-              <span className="order-status-badge">بانتظار رد الوسيطة</span>
+              <span className="order-status-badge">{pendingOrder.statusLabel}</span>
               <div className="order-id">طلب #{pendingOrder.id}</div>
               <div className="order-store">{pendingOrder.store}</div>
             </div>
