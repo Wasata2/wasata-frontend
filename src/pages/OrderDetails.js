@@ -3,7 +3,7 @@ import { Link, useParams } from "react-router-dom";
 import { getOrderDetails, updateOrderStatus } from "../api";
 import DashboardLayout from "../components/DashboardLayout";
 import { formatDateTime } from "../utils/dates";
-import { formatProductsCount } from "../utils/orders";
+import { formatProductsCount, getStepTime, applyStatusUpdate } from "../utils/orders";
 
 // خطوات مسار الطلب — بنفس ترتيب وأسماء الحالات الحقيقية القادمة من الباك اند
 // (pending, ordered_from_shein, shipped, arrived, inspected, received)
@@ -84,7 +84,8 @@ export default function OrderDetails() {
     setUpdateError("");
     try {
       const updated = await updateOrderStatus(order.id, nextStep.key);
-      setOrder(updated);
+      // نحافظ على اسم الزبونة والمنتجات (رد الـ PATCH ما بيرجّعهم)
+      setOrder((prev) => applyStatusUpdate(prev, updated));
       setConfirmModalOpen(false);
     } catch (err) {
       setUpdateError(err.message);
@@ -152,7 +153,7 @@ export default function OrderDetails() {
                   {STATUS_STEPS.map((step, index) => {
                     const isDone = index < currentStepIndex;
                     const isCurrent = index === currentStepIndex;
-                    const timestamp = index === 0 ? order.date : order.statusUpdatedAt;
+                    const timestamp = getStepTime(order, step.key, index, currentStepIndex);
                     return (
                       <div className="order-track-step" key={step.key}>
                         <div className="order-track-step-top">
@@ -178,7 +179,7 @@ export default function OrderDetails() {
                         >
                           {step.label}
                         </div>
-                        {(isDone || isCurrent) && (
+                        {(isDone || isCurrent) && timestamp && (
                           <div className="order-track-date">{formatDateTime(timestamp)}</div>
                         )}
                       </div>

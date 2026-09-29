@@ -11,7 +11,7 @@ import {
 } from "../api";
 import DashboardLayout from "../components/DashboardLayout";
 import { formatDateTime } from "../utils/dates";
-import { formatProductsCount } from "../utils/orders";
+import { formatProductsCount, applyStatusUpdate } from "../utils/orders";
 
 // رابط صورة المتجر يجي أحيانًا من الباك اند كمسار نسبي (بدون دومين) —
 // هاي الدالة بتتأكد إنه رابط كامل قبل ما نعرضه، وإلا بترجع null
@@ -143,7 +143,7 @@ export default function MediatorOrders() {
         unit_price: Number(acceptPrices[item.id]),
       }));
       const updated = await acceptOrder(acceptOrderData.id, payload);
-      setOrders((prev) => prev.map((o) => (o.id === updated.id ? updated : o)));
+      setOrders((prev) => prev.map((o) => (o.id === updated.id ? applyStatusUpdate(o, updated) : o)));
       closeAcceptModal();
     } catch (err) {
       setAcceptModalError(err.message);
@@ -157,7 +157,7 @@ export default function MediatorOrders() {
     setActionOrderId(orderId);
     try {
       const updated = await rejectOrder(orderId);
-      setOrders((prev) => prev.map((o) => (o.id === orderId ? updated : o)));
+      setOrders((prev) => prev.map((o) => (o.id === orderId ? applyStatusUpdate(o, updated) : o)));
     } catch (err) {
       setActionError(err.message);
     } finally {

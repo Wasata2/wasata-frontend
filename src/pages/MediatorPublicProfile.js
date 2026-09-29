@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { getStores, getStoreProfile, getStoreReviews } from "../api";
+import { formatDate } from "../utils/dates";
 
 // الملف العام للوسيطة — بنفس شكل "معاينة الملف كما يظهر للزبائن" بصفحة ملف الوسيطة،
 // بس هون بيانات أي وسيطة (حسب الـ id بالرابط) مش وسيطة واحدة.
@@ -285,11 +286,7 @@ export default function MediatorPublicProfile() {
                     <div className="review-card" key={review.id}>
                       <div className="review-card-top">
                         <div className="review-date">
-                          {new Date(review.date).toLocaleDateString("ar-EG", {
-                            year: "numeric",
-                            month: "long",
-                            day: "numeric",
-                          })}
+                          {formatDate(review.date)}
                         </div>
                         <div className="review-author">
                           <div className="review-author-info">

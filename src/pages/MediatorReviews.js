@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from "react";
 import { Link } from "react-router-dom";
 import { getReviews, getOrderStats, getMyStore, BASE_URL } from "../api";
 import DashboardLayout from "../components/DashboardLayout";
+import { formatDate } from "../utils/dates";
 
 // رابط صورة المتجر يجي أحيانًا من الباك اند كمسار نسبي (بدون دومين) —
 // هاي الدالة بتتأكد إنه رابط كامل قبل ما نعرضه، وإلا بترجع null
@@ -148,11 +149,7 @@ export default function MediatorReviews() {
           <div className="review-card" key={review.id}>
             <div className="review-card-top">
               <div className="review-date">
-                {new Date(review.date).toLocaleDateString("ar-EG", {
-                  year: "numeric",
-                  month: "long",
-                  day: "numeric",
-                })}
+                {formatDate(review.date)}
               </div>
               <div className="review-author">
                 <div className="review-author-info">

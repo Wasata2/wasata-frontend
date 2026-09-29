@@ -335,6 +335,28 @@ function pickCustomerName(o) {
   );
 }
 
+// وقت كل حالة بمسار الطلب: بنقراه من سجل الحالات لو الباك اند بيرجّعه
+// (status_history: [{ status, created_at }]) أو من أعمدة مثل shipped_at / arrived_at.
+const ORDER_STATUS_KEYS = ["pending", "ordered_from_shein", "shipped", "arrived", "inspected", "received"];
+
+function buildStatusTimes(o) {
+  const times = {};
+  const history =
+    o.status_history || o.status_histories || o.statusHistory || o.status_logs || o.timeline || o.history;
+  if (Array.isArray(history)) {
+    history.forEach((h) => {
+      const key = h.status || h.to_status || h.new_status;
+      const at = h.created_at || h.changed_at || h.updated_at || h.at;
+      // أول مرة وصلت فيها الحالة هي وقتها
+      if (key && at && !times[key]) times[key] = at;
+    });
+  }
+  ORDER_STATUS_KEYS.forEach((key) => {
+    if (!times[key] && o[`${key}_at`]) times[key] = o[`${key}_at`];
+  });
+  return times;
+}
+
 function mapOrderFromApi(o) {
   const rawItems = o.items || o.order_items || [];
   const items = rawItems.map(mapOrderItemFromApi);
@@ -351,6 +373,7 @@ function mapOrderFromApi(o) {
     // بينما date ممكن يجي كنص جاهز للعرض
     date: o.created_at || o.date || o.order_date || o.placed_at,
     statusUpdatedAt: o.status_updated_at || o.updated_at || o.created_at,
+    statusTimes: buildStatusTimes(o),
     itemsCount: o.items_count ?? rawItems.length,
     totalQuantity,
     amount: o.estimated_amount ?? o.total_amount ?? o.amount ?? 0,
@@ -390,6 +413,8 @@ function mapMyOrderFromApi(o) {
     totalQuantity: o.total_quantity ?? o.items_sum_quantity ?? o.total_items_quantity ?? null,
     price: o.estimated_amount ?? o.total_amount ?? 0,
     date: o.created_at || o.date || o.order_date || "",
+    statusUpdatedAt: o.status_updated_at || o.updated_at || o.created_at || "",
+    statusTimes: buildStatusTimes(o),
     reviewed: !!o.reviewed,
     rawStatus: o.status,
     type: isCancelled ? "cancelled" : isCompleted ? "completed" : "active",

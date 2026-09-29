@@ -1,26 +1,10 @@
 import { useState, useMemo, useEffect } from "react";
 import { Link } from "react-router-dom";
 import DashboardLayout from "../components/DashboardLayout";
-import { getMyOrders, cancelOrder } from "../api";
+import { getMyOrders, cancelOrder, CUSTOMER_ORDER_STATUSES } from "../api";
+import { formatDateTime } from "../utils/dates";
+import { getStepTime } from "../utils/orders";
 
-
-// الباك اند بيرجع التاريخ بدون معلومة عن المنطقة الزمنية (بدون Z أو offset)
-// رغم إنه فعليًا UTC — فلو سلمناه متل ما هو لـ new Date()، المتصفح بيفتهمه
-// غلط كأنه توقيت محلي أصلاً وما بيعمل تحويل، فيطلع الوقت أبكر من الحقيقي
-function parseApiDate(value) {
-  if (!value) return null;
-  const hasTz = /Z$|[+-]\d{2}:\d{2}$/.test(value);
-  const normalized = value.includes("T") ? value : value.replace(" ", "T");
-  return new Date(hasTz ? normalized : `${normalized}Z`);
-}
-
-// تنسيق التاريخ القادم من الباك اند لشكل عربي مقروء بدل ما يطلع فاضي أو خام
-function formatDate(value) {
-  if (!value) return "—";
-  const d = parseApiDate(value);
-  if (!d || isNaN(d.getTime())) return value;
-  return d.toLocaleDateString("ar-EG", { year: "numeric", month: "long", day: "numeric" });
-}
 
 // تحويل وقت مخزّن (timestamp) لنص "منذ كذا" — بيتحسب وقت العرض، مش وقت الإنشاء
 function getRelativeTime(timestamp) {
@@ -269,7 +253,7 @@ export default function MyOrders() {
                   <div className="order-id">طلب #{order.id}</div>
                   <div className="order-store">🕐 {order.store}</div>
                   <div className="order-list-info">
-                    📦 {order.itemsCount} منتجات &nbsp; 🗓 {formatDate(order.date)}
+                    📦 {order.itemsCount} منتجات &nbsp; 🗓 {formatDateTime(order.date)}
                   </div>
                 </div>
                 <div className="order-list-price">{order.price} ₪</div>
@@ -288,6 +272,11 @@ export default function MyOrders() {
                           : index === order.currentStepIndex
                             ? "current"
                             : "upcoming";
+                      // وقت كل خطوة لحاله — بنفس أسلوب مسار الوسيطة
+                      const stepTime =
+                        status === "upcoming"
+                          ? null
+                          : getStepTime(order, CUSTOMER_ORDER_STATUSES[index], index, order.currentStepIndex);
                       return (
                         <div key={label} className={`timeline-step ${status}`}>
                           <div className="timeline-line"></div>
@@ -295,6 +284,7 @@ export default function MyOrders() {
                             {status === "done" ? "✓" : index + 1}
                           </div>
                           <div className="timeline-label">{label}</div>
+                          {stepTime && <div className="timeline-date">{formatDateTime(stepTime)}</div>}
                         </div>
                       );
                     })}

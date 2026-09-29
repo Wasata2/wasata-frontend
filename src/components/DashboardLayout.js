@@ -1,8 +1,20 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { useFavorites } from "../context/FavoritesContext";
 import LogoutButton from "./LogoutButton";
+import { getMyStore, BASE_URL } from "../api";
+
+// رابط الصورة بيجي أحيانًا كمسار نسبي
+function resolveImageUrl(path) {
+  if (!path) return null;
+  if (/^https?:\/\//i.test(path) || path.startsWith("blob:") || path.startsWith("data:")) {
+    return path;
+  }
+  const clean = path.startsWith("/") ? path.slice(1) : path;
+  if (!clean.includes("/")) return `${BASE_URL}/storage/${clean}`;
+  return `${BASE_URL}/${clean}`;
+}
 
 const BROKER_LINKS = [
   { to: "/", icon: "🏠", label: "الرئيسية" },
@@ -33,6 +45,24 @@ export default function DashboardLayout({
 }) {
   const { user } = useAuth();
   const { favoritesCount } = useFavorites();
+
+  // لو الصفحة ما مرّرت avatarImage (undefined) والدور وسيطة، بنجيب صورة المتجر هون
+  // بدل ما كل صفحة تعيد نفس الكود (هيك ما بتضيع الصورة بأي صفحة جديدة)
+  const [storeAvatar, setStoreAvatar] = useState(null);
+  useEffect(() => {
+    if (role !== "broker" || avatarImage !== undefined) return;
+    let active = true;
+    getMyStore()
+      .then((data) => {
+        const store = data.store || data;
+        if (active) setStoreAvatar(resolveImageUrl(store.image_url || store.image));
+      })
+      .catch(() => {});
+    return () => {
+      active = false;
+    };
+  }, [role, avatarImage]);
+  const avatarSrc = avatarImage !== undefined ? avatarImage : storeAvatar;
   const location = useLocation();
 
   // حالة فتح/إغلاق قائمة الموبايل — false يعني مقفولة بشكل افتراضي
@@ -139,16 +169,16 @@ export default function DashboardLayout({
             <div
               className="user-avatar"
               style={
-                avatarImage
+                avatarSrc
                   ? {
-                      backgroundImage: `url(${avatarImage})`,
+                      backgroundImage: `url(${avatarSrc})`,
                       backgroundSize: "cover",
                       backgroundPosition: "center",
                     }
                   : undefined
               }
             >
-              {!avatarImage && userInitial}
+              {!avatarSrc && userInitial}
             </div>
           </div>
         </div>

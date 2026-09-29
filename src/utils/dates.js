@@ -11,12 +11,21 @@ export function parseApiDate(value) {
   return isNaN(d.getTime()) ? null : d;
 }
 
+// كل الأوقات بالموقع بتنعرض بتوقيت فلسطين (بغض النظر عن توقيت جهاز المستخدم).
+// Intl بيتعامل لحاله مع التوقيت الصيفي/الشتوي.
+export const APP_TIME_ZONE = "Asia/Hebron";
+
 // تاريخ فقط: ٢٧ سبتمبر ٢٠٢٦
 export function formatDate(value) {
   if (!value) return "—";
   const d = parseApiDate(value);
   if (!d) return value;
-  return d.toLocaleDateString("ar-EG", { year: "numeric", month: "long", day: "numeric" });
+  return d.toLocaleDateString("ar-EG", {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+    timeZone: APP_TIME_ZONE,
+  });
 }
 
 // تاريخ + ساعة: ٢٧ سبتمبر ٢٠٢٦ — ١١:٠٠ م
@@ -24,7 +33,16 @@ export function formatDateTime(value) {
   if (!value) return "";
   const d = parseApiDate(value);
   if (!d) return value;
-  const date = d.toLocaleDateString("ar-EG", { year: "numeric", month: "long", day: "numeric" });
-  const time = d.toLocaleTimeString("ar-EG", { hour: "2-digit", minute: "2-digit" });
+  const date = d.toLocaleDateString("ar-EG", {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+    timeZone: APP_TIME_ZONE,
+  });
+  const time = d.toLocaleTimeString("ar-EG", {
+    hour: "2-digit",
+    minute: "2-digit",
+    timeZone: APP_TIME_ZONE,
+  });
   return `${date} — ${time}`;
 }

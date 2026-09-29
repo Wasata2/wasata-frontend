@@ -12,6 +12,7 @@ import {
   confirmStockSale,
 } from "../api";
 import DashboardLayout from "../components/DashboardLayout";
+import { formatDate } from "../utils/dates";
 import {
   STAGNANT_CATEGORIES as CATEGORIES,
   STAGNANT_STATUS as STATUS,
@@ -248,13 +249,6 @@ export default function StagnantItems() {
     } catch (err) {
       setActionError(err.message || "تعذر إلغاء الحجز");
     }
-  };
-
-  const formatDate = (isoDate) => {
-    if (!isoDate) return "—";
-    const d = new Date(isoDate);
-    if (isNaN(d.getTime())) return isoDate;
-    return d.toLocaleDateString("ar", { year: "numeric", month: "long", day: "numeric" });
   };
 
   return (
