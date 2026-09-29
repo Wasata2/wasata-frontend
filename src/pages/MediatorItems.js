@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import { getStores } from "../api";
-import { STAGNANT_CATEGORIES as CATEGORIES, loadListedItems, reserveItem } from "../stagnantItemsStore";
+import { getStores, getStoreStockItems, reserveStockItem } from "../api";
+import { STAGNANT_CATEGORIES as CATEGORIES } from "../stagnantItemsStore";
 
 // صفحة كاملة: القطع المعروضة للبيع عند وسيطة معيّنة — الزبونة بتقدر تطلب القطعة من هون.
 // القطع والحجز مؤقتًا بالمتصفح (localStorage) لحد ما يجهز مسار للقطع بالباك اند.
@@ -35,7 +35,12 @@ export default function MediatorItems() {
   }, [id]);
 
   // ===== القطع المعروضة =====
-  const [items, setItems] = useState(() => loadListedItems(id));
+  const [items, setItems] = useState([]);
+  useEffect(() => {
+    getStoreStockItems(id)
+      .then(setItems)
+      .catch(() => setItems([]));
+  }, [id]);
   const [searchTerm, setSearchTerm] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("");
 
@@ -52,39 +57,25 @@ export default function MediatorItems() {
   const [selectedItem, setSelectedItem] = useState(null);
   const [message, setMessage] = useState("");
 
-  const confirmOrder = () => {
+  const [reserving, setReserving] = useState(false);
+
+  const confirmOrder = async () => {
     if (!selectedItem || !mediator) return;
-
-    // بنحجز القطعة أول شي، ولو انحجزت قبل (زبونة ثانية) بنبلّغ الزبونة
-    const reserved = reserveItem(id, selectedItem.id);
-    if (!reserved) {
-      setItems(loadListedItems(id));
+    setReserving(true);
+    try {
+      // بنحجز القطعة من الباك اند — لو انحجزت قبل (زبونة ثانية) بيرجع خطأ ومنبلّغ الزبونة
+      await reserveStockItem(selectedItem.id);
       setSelectedItem(null);
-      setMessage("عذرًا، هاي القطعة ما عادت متاحة.");
-      return;
+      navigate("/my-orders");
+    } catch (err) {
+      getStoreStockItems(id)
+        .then(setItems)
+        .catch(() => {});
+      setSelectedItem(null);
+      setMessage(err.message || "عذرًا، هاي القطعة ما عادت متاحة.");
+    } finally {
+      setReserving(false);
     }
-
-    // نفس شكل الطلبات الموجودة بصفحة "طلباتي"
-    const newOrder = {
-      id: String(Math.floor(1000 + Math.random() * 9000)),
-      type: "active",
-      price: String(selectedItem.price),
-      store: mediator.name,
-      mediatorId: mediator.id,
-      itemsCount: 1,
-      date: new Date().toLocaleDateString("ar-EG", {
-        day: "numeric",
-        month: "long",
-        year: "numeric",
-      }),
-      statusLabel: "تم الطلب",
-      updatedAt: Date.now(),
-      currentStepIndex: 0,
-    };
-    const existing = JSON.parse(localStorage.getItem("wasata_new_orders")) || [];
-    localStorage.setItem("wasata_new_orders", JSON.stringify([newOrder, ...existing]));
-
-    navigate("/my-orders");
   };
 
   const topbar = (
@@ -234,10 +225,10 @@ export default function MediatorItems() {
               </p>
 
               <div className="stagnant-modal-actions">
-                <button type="button" className="btn btn-primary shop-card-btn" onClick={confirmOrder}>
-                  تأكيد الطلب
+                <button type="button" className="btn btn-primary shop-card-btn" onClick={confirmOrder} disabled={reserving}>
+                  {reserving ? "جاري التأكيد..." : "تأكيد الطلب"}
                 </button>
-                <button type="button" className="stagnant-btn outline" onClick={() => setSelectedItem(null)}>
+                <button type="button" className="stagnant-btn outline" onClick={() => setSelectedItem(null)} disabled={reserving}>
                   إلغاء
                 </button>
               </div>

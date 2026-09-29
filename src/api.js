@@ -1,4 +1,10 @@
-const BASE_URL = process.env.REACT_APP_API_URL;
+const BASE_URL = 'https://wasata-backend-production-nojkxd.laravel.cloud';
+
+export async function getCsrfCookie() {
+  await fetch(`${BASE_URL}/sanctum/csrf-cookie`, {
+    credentials: 'include',
+  });
+}
 
 // نقطة مرور وحيدة لكل طلبات الشبكة بالتطبيق. أي دالة تانية بهاد الملف
 // (getOrders, createService...) بتنده على هاي بدل ما تكرر نفس الكود.
@@ -11,6 +17,7 @@ async function request(endpoint, { method = 'GET', body, isFormData = false, err
 
   const response = await fetch(`${BASE_URL}${endpoint}`, {
     method,
+    credentials: 'include',
     headers,
     body: isFormData ? body : body !== undefined ? JSON.stringify(body) : undefined,
   });
@@ -41,6 +48,7 @@ async function request(endpoint, { method = 'GET', body, isFormData = false, err
 }
 
 export async function registerUser(data) {
+  await getCsrfCookie();
   return request('/api/auth/register', {
     method: 'POST',
     body: data,
@@ -49,6 +57,8 @@ export async function registerUser(data) {
 }
 
 export async function loginUser(data) {
+  await getCsrfCookie();
+
   const result = await request('/api/auth/login', {
     method: 'POST',
     body: data,
@@ -244,6 +254,7 @@ export async function deleteService(id) {
 }
 
 export async function forgotPassword(email) {
+  await getCsrfCookie();
   return request('/api/auth/forgot-password', {
     method: 'POST',
     body: { email },
@@ -252,6 +263,7 @@ export async function forgotPassword(email) {
 }
 
 export async function resetPassword({ email, token, password, passwordConfirmation }) {
+  await getCsrfCookie();
   return request('/api/auth/reset-password', {
     method: 'POST',
     body: {
@@ -288,20 +300,11 @@ export async function acceptOrder(id, items) {
   return mapOrderFromApi(result.order || result);
 }
 
-// رفض طلب من الوسيطة
+// رفض طلب
 export async function rejectOrder(id) {
   const result = await request(`/api/orders/${id}/reject`, {
     method: 'PATCH',
     errorMessage: 'تعذر رفض الطلب',
-  });
-  return mapOrderFromApi(result.order || result);
-}
-
-// إلغاء الطلب من طرف الزبونة — بيشتغل بس لو الطلب لسا بحالة pending
-export async function cancelOrder(id) {
-  const result = await request(`/api/orders/${id}/cancel`, {
-    method: 'PATCH',
-    errorMessage: 'تعذر إلغاء الطلب',
   });
   return mapOrderFromApi(result.order || result);
 }
@@ -316,9 +319,6 @@ function mapOrderItemFromApi(item) {
     size: item.size,
     quantity: item.quantity,
     notes: item.notes || item.item_note,
-    // سعر الوحدة — بيتحدد بس وقت ما الوسيطة تقبل الطلب (PATCH /orders/{id}/accept)،
-    // فقبلها بيكون null
-    price: item.unit_price ?? null,
   };
 }
 
@@ -589,6 +589,9 @@ function resolveStoreImageUrl(path) {
 }
 
 // جلب كل الوسيطات المتاحة عشان الزبونة تتصفحهم — endpoint GET /api/stores
+// ملاحظة: لازم نتأكد إنه هاد المسار موجود فعليًا بالباك اند وبيرجع مصفوفة
+// متاجر/وسيطات (بنفس شكل بيانات getMyStore تقريبًا). إذا كان اسم المسار
+// مختلف عند الباك اند، بس غيّري السطر يلي فيه '/api/stores' تحت.
 export async function getStores() {
   const result = await request('/api/stores', {
     errorMessage: 'تعذر جلب قائمة الوسيطات',
@@ -596,6 +599,144 @@ export async function getStores() {
 
   const list = result.stores || result.data || result;
   return Array.isArray(list) ? list.map(mapStoreFromApi) : [];
+}
+
+// ===== القطع الراكدة (stock-items) =====
+// الفئة بالباك اند بالإنجليزي (shoes / clothes)، وبالواجهة بالعربي (أحذية / ملابس)
+const CATEGORY_TO_API = { "ملابس": "clothes", "أحذية": "shoes" };
+const CATEGORY_FROM_API = { clothes: "ملابس", shoes: "أحذية" };
+
+function categoryFromApi(value) {
+  return CATEGORY_FROM_API[value] || value || "ملابس";
+}
+export function categoryToApi(value) {
+  return CATEGORY_TO_API[value] || value;
+}
+
+// حالة القطعة: نطبّع أي شكل يرجعه الباك اند (not_listed / notListed / draft...)
+// لمفاتيحنا الداخلية الأربعة. لازم يتأكد من القيم الحقيقية اللي بترجع فعليًا
+// من /stock-items وتتعدّل هاي الدالة لو الأسماء مختلفة.
+function normalizeStockStatus(value) {
+  const v = String(value || "").toLowerCase();
+  if (v.includes("reserv")) return "reserved";
+  if (v.includes("sold")) return "sold";
+  if (v.includes("list")) return "listed"; // "listed" و"not_listed" مع بعض، فمنتأكد من reserv/sold قبلها
+  return "notListed";
+}
+
+function mapStockItemFromApi(o) {
+  const category = categoryFromApi(o.category);
+  return {
+    id: o.id,
+    name: o.name,
+    category,
+    icon: category === "أحذية" ? "👟" : "👗",
+    price: Number(o.price ?? 0),
+    status: normalizeStockStatus(o.status),
+    createdAt: o.created_at || o.date || "",
+  };
+}
+
+// قائمة القطع الراكدة عند الوسيطة الحالية (فلاتر اختيارية: search, status, category, sort)
+export async function getStockItems(filters = {}) {
+  const params = new URLSearchParams();
+  if (filters.search) params.append("search", filters.search);
+  if (filters.status) params.append("status", filters.status);
+  if (filters.category) params.append("category", categoryToApi(filters.category));
+  if (filters.sort) params.append("sort", filters.sort);
+
+  const result = await request(`/api/stock-items?${params.toString()}`, {
+    errorMessage: "تعذر جلب القطع الراكدة",
+  });
+  const list = result.stock_items || result.data || result;
+  return Array.isArray(list) ? list.map(mapStockItemFromApi) : [];
+}
+
+// إضافة قطعة جديدة
+export async function createStockItem({ name, category, price }) {
+  const result = await request("/api/stock-items", {
+    method: "POST",
+    body: { name, category: categoryToApi(category), price },
+    errorMessage: "تعذر إضافة القطعة",
+  });
+  return mapStockItemFromApi(result.stock_item || result);
+}
+
+// تعديل العرض (الاسم / الفئة / السعر)
+export async function updateStockItem(id, { name, category, price }) {
+  const body = {};
+  if (name !== undefined) body.name = name;
+  if (category !== undefined) body.category = categoryToApi(category);
+  if (price !== undefined) body.price = price;
+
+  const result = await request(`/api/stock-items/${id}`, {
+    method: "PATCH",
+    body,
+    errorMessage: "تعذر تعديل القطعة",
+  });
+  return mapStockItemFromApi(result.stock_item || result);
+}
+
+// إلغاء العرض — القطعة بترجع "غير معروضة" (لسا مطلوب من الباك اند إضافته)
+export async function unlistStockItem(id) {
+  const result = await request(`/api/stock-items/${id}/unlist`, {
+    method: "PATCH",
+    errorMessage: "تعذر إلغاء العرض",
+  });
+  return mapStockItemFromApi(result.stock_item || result);
+}
+
+// عرض للبيع
+export async function listStockItem(id) {
+  const result = await request(`/api/stock-items/${id}/list`, {
+    method: "PATCH",
+    errorMessage: "تعذر عرض القطعة للبيع",
+  });
+  return mapStockItemFromApi(result.stock_item || result);
+}
+
+// إلغاء الحجز (من الوسيطة) — القطعة بترجع معروضة للبيع
+export async function cancelStockReservation(id) {
+  const result = await request(`/api/stock-items/${id}/cancel-reservation`, {
+    method: "PATCH",
+    errorMessage: "تعذر إلغاء الحجز",
+  });
+  return mapStockItemFromApi(result.stock_item || result);
+}
+
+// تأكيد البيع
+export async function confirmStockSale(id) {
+  const result = await request(`/api/stock-items/${id}/confirm-sale`, {
+    method: "PATCH",
+    errorMessage: "تعذر تأكيد البيع",
+  });
+  return mapStockItemFromApi(result.stock_item || result);
+}
+
+// حذف قطعة
+export async function deleteStockItem(id) {
+  await request(`/api/stock-items/${id}`, {
+    method: "DELETE",
+    errorMessage: "تعذر حذف القطعة",
+  });
+}
+
+// جهة الزبونة: تصفح القطع المعروضة (بس) عند متجر معيّن
+export async function getStoreStockItems(storeId) {
+  const result = await request(`/api/stores/${storeId}/stock-items`, {
+    errorMessage: "تعذر جلب القطع المعروضة",
+  });
+  const list = result.stock_items || result.data || result;
+  return Array.isArray(list) ? list.map(mapStockItemFromApi) : [];
+}
+
+// جهة الزبونة: طلب حجز قطعة
+export async function reserveStockItem(id) {
+  const result = await request(`/api/stock-items/${id}/reserve`, {
+    method: "PATCH",
+    errorMessage: "تعذر حجز القطعة، يمكن حجزها قبل قليل",
+  });
+  return mapStockItemFromApi(result.stock_item || result);
 }
 
 export { BASE_URL };

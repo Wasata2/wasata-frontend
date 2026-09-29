@@ -1,12 +1,20 @@
 import { useState, useMemo, useEffect } from "react";
-import { getOrderStats, getMyStore, BASE_URL } from "../api";
+import {
+  getOrderStats,
+  getMyStore,
+  BASE_URL,
+  getStockItems,
+  createStockItem,
+  updateStockItem,
+  listStockItem,
+  unlistStockItem,
+  cancelStockReservation,
+  confirmStockSale,
+} from "../api";
 import DashboardLayout from "../components/DashboardLayout";
 import {
   STAGNANT_CATEGORIES as CATEGORIES,
   STAGNANT_STATUS as STATUS,
-  iconForCategory,
-  loadStagnantItems,
-  saveStagnantItems,
 } from "../stagnantItemsStore";
 
 const SORT_OPTIONS = {
@@ -32,16 +40,27 @@ function resolveImageUrl(path) {
 }
 
 export default function StagnantItems() {
-  // القطع بتنقرا وبتنحفظ من المخزن المشترك، فالقطع "المعروضة" بتظهر للزبونة
-  // كل وسيطة إلها قطعها الخاصة (حسب id المتجر)، فبنستنى نعرف المتجر قبل ما نحمّلها
-  const [storeId, setStoreId] = useState(null);
+  // القطع هلأ من الباك اند مباشرة (endpoints /api/stock-items)
   const [items, setItems] = useState([]);
   const [itemsReady, setItemsReady] = useState(false);
+  const [loadError, setLoadError] = useState("");
+
+  const refreshItems = () => {
+    getStockItems()
+      .then((list) => {
+        setItems(list);
+        setItemsReady(true);
+      })
+      .catch((err) => {
+        setLoadError(err.message || "تعذر جلب القطع الراكدة");
+        setItemsReady(true);
+      });
+  };
+
   useEffect(() => {
-    if (itemsReady && storeId !== null) {
-      saveStagnantItems(storeId, items);
-    }
-  }, [items, storeId, itemsReady]);
+    refreshItems();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // بيانات الشريط العلوي (إشعارات + صورة المتجر) — نفس أسلوب بقية صفحات الوسيطة
   const [stats, setStats] = useState(null);
@@ -55,16 +74,8 @@ export default function StagnantItems() {
       .then((data) => {
         const store = data.store || data;
         setImagePreview(resolveImageUrl(store.image_url || store.image));
-        setStoreId(store.id);
-        setItems(loadStagnantItems(store.id));
-        setItemsReady(true);
       })
-      .catch(() => {
-        // لو تعذر جلب المتجر بنشتغل بمخزن مؤقت عشان الصفحة ما تعلق
-        setStoreId("me");
-        setItems(loadStagnantItems("me"));
-        setItemsReady(true);
-      });
+      .catch(() => {});
   }, []);
 
   const [searchTerm, setSearchTerm] = useState("");
@@ -80,6 +91,9 @@ export default function StagnantItems() {
   const [editingId, setEditingId] = useState(null);
   const [form, setForm] = useState(EMPTY_FORM);
   const [formError, setFormError] = useState("");
+  const [saving, setSaving] = useState(false);
+  // أخطاء عمليات سريعة (عرض للبيع / تأكيد البيع / إلغاء حجز / حذف)
+  const [actionError, setActionError] = useState("");
 
   const editingItem = editingId === null ? null : items.find((i) => i.id === editingId);
 
@@ -129,7 +143,7 @@ export default function StagnantItems() {
 
   const closeModal = () => setShowModal(false);
 
-  const handleSave = (e) => {
+  const handleSave = async (e) => {
     e.preventDefault();
     const name = form.name.trim();
     const price = Number(form.price);
@@ -143,55 +157,74 @@ export default function StagnantItems() {
       return;
     }
 
-    if (editingId === null) {
-      const newItem = {
-        id: Date.now(),
-        name,
-        category: form.category,
-        icon: iconForCategory(form.category),
-        price,
-        status: "notListed",
-        createdAt: new Date().toISOString().slice(0, 10),
-      };
-      setItems((prev) => [newItem, ...prev]);
-    } else {
-      setItems((prev) =>
-        prev.map((item) =>
-          item.id === editingId
-            ? { ...item, name, category: form.category, icon: iconForCategory(form.category), price }
-            : item
-        )
-      );
+    setSaving(true);
+    setFormError("");
+    try {
+      if (editingId === null) {
+        const created = await createStockItem({ name, category: form.category, price });
+        setItems((prev) => [created, ...prev]);
+      } else {
+        const updated = await updateStockItem(editingId, { name, category: form.category, price });
+        setItems((prev) => prev.map((item) => (item.id === editingId ? updated : item)));
+      }
+      setShowModal(false);
+    } catch (err) {
+      setFormError(err.message || "تعذر حفظ القطعة");
+    } finally {
+      setSaving(false);
     }
-    setShowModal(false);
   };
 
   // إلغاء العرض: القطعة بترجع "غير معروضة" وبتختفي من صفحة الزبونة
-  const unlist = (id) => {
-    setItems((prev) =>
-      prev.map((item) => (item.id === id ? { ...item, status: "notListed" } : item))
-    );
-    setShowModal(false);
+  const unlist = async (id) => {
+    setActionError("");
+    try {
+      const updated = await unlistStockItem(id);
+      setItems((prev) => prev.map((item) => (item.id === id ? updated : item)));
+      setShowModal(false);
+    } catch (err) {
+      setActionError(err.message || "تعذر إلغاء العرض");
+    }
   };
 
-  // القطعة المحجوزة: الوسيطة بتأكد البيع (تم البيع) أو بتلغي الحجز فبترجع معروضة للزبونات
-  const setItemStatus = (id, status) => {
-    setItems((prev) => prev.map((item) => (item.id === id ? { ...item, status } : item)));
-    setExpandedId(null);
+  const listForSale = async (id) => {
+    setActionError("");
+    try {
+      const updated = await listStockItem(id);
+      setItems((prev) => prev.map((item) => (item.id === id ? updated : item)));
+    } catch (err) {
+      setActionError(err.message || "تعذر عرض القطعة للبيع");
+    }
   };
 
-  const listForSale = (id) => {
-    setItems((prev) =>
-      prev.map((item) => (item.id === id ? { ...item, status: "listed" } : item))
-    );
+  const confirmSale = async (id) => {
+    setActionError("");
+    try {
+      const updated = await confirmStockSale(id);
+      setItems((prev) => prev.map((item) => (item.id === id ? updated : item)));
+      setExpandedId(null);
+    } catch (err) {
+      setActionError(err.message || "تعذر تأكيد البيع");
+    }
   };
 
-  const formatDate = (isoDate) =>
-    new Date(isoDate).toLocaleDateString("ar", {
-      year: "numeric",
-      month: "long",
-      day: "numeric",
-    });
+  const cancelReservation = async (id) => {
+    setActionError("");
+    try {
+      const updated = await cancelStockReservation(id);
+      setItems((prev) => prev.map((item) => (item.id === id ? updated : item)));
+      setExpandedId(null);
+    } catch (err) {
+      setActionError(err.message || "تعذر إلغاء الحجز");
+    }
+  };
+
+  const formatDate = (isoDate) => {
+    if (!isoDate) return "—";
+    const d = new Date(isoDate);
+    if (isNaN(d.getTime())) return isoDate;
+    return d.toLocaleDateString("ar", { year: "numeric", month: "long", day: "numeric" });
+  };
 
   return (
     <DashboardLayout
@@ -304,9 +337,15 @@ export default function StagnantItems() {
         <span className="stagnant-count">{visibleItems.length} قطع</span>
       </div>
 
+      {actionError && <div className="stagnant-form-error">{actionError}</div>}
+
       {!itemsReady ? (
         <div className="orders-empty-state">
           <p>جاري التحميل...</p>
+        </div>
+      ) : loadError ? (
+        <div className="orders-empty-state">
+          <p>تعذر تحميل القطع: {loadError}</p>
         </div>
       ) : visibleItems.length === 0 ? (
         <div className="orders-empty-state">
@@ -346,10 +385,10 @@ export default function StagnantItems() {
                   )}
                   {item.status === "reserved" && (
                     <div className="stagnant-item-actions">
-                      <button type="button" className="stagnant-btn primary" onClick={() => setItemStatus(item.id, "sold")}>
+                      <button type="button" className="stagnant-btn primary" onClick={() => confirmSale(item.id)}>
                         تأكيد البيع
                       </button>
-                      <button type="button" className="stagnant-btn outline" onClick={() => setItemStatus(item.id, "listed")}>
+                      <button type="button" className="stagnant-btn outline" onClick={() => cancelReservation(item.id)}>
                         إلغاء الحجز
                       </button>
                     </div>
@@ -419,14 +458,19 @@ export default function StagnantItems() {
             {formError && <div className="stagnant-form-error">{formError}</div>}
 
             <div className="stagnant-modal-actions">
-              <button type="submit" className="stagnant-btn primary">
-                حفظ
+              <button type="submit" className="stagnant-btn primary" disabled={saving}>
+                {saving ? "جاري الحفظ..." : "حفظ"}
               </button>
-              <button type="button" className="stagnant-btn outline" onClick={closeModal}>
+              <button type="button" className="stagnant-btn outline" onClick={closeModal} disabled={saving}>
                 إلغاء
               </button>
               {editingItem && editingItem.status === "listed" && (
-                <button type="button" className="stagnant-btn danger" onClick={() => unlist(editingItem.id)}>
+                <button
+                  type="button"
+                  className="stagnant-btn danger"
+                  onClick={() => unlist(editingItem.id)}
+                  disabled={saving}
+                >
                   إلغاء العرض
                 </button>
               )}

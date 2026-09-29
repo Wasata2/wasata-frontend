@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import { getMyStore, updateProfile, updateStore, getServices, getReviews, getOrderStats, BASE_URL } from "../api";
 import LogoutButton from "../components/LogoutButton";
 import { useAuth } from "../context/AuthContext";
-import { loadListedItems } from "../stagnantItemsStore";
+import { getStoreStockItems } from "../api";
 
 // رابط صورة المتجر يجي أحيانًا من الباك اند كمسار نسبي (بدون دومين) —
 // هاي الدالة بتتأكد إنه رابط كامل قبل ما نعرضه، وإلا بترجع null
@@ -101,8 +101,12 @@ export default function MediatorProfile() {
   const [listedItems, setListedItems] = useState([]);
   const [myStoreId, setMyStoreId] = useState(null);
   const openItems = () => {
-    setListedItems(myStoreId === null ? [] : loadListedItems(myStoreId));
     setShowItems(true);
+    if (myStoreId !== null) {
+      getStoreStockItems(myStoreId)
+        .then(setListedItems)
+        .catch(() => setListedItems([]));
+    }
   };
 
   const [toast, setToast] = useState("");
