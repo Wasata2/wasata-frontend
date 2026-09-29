@@ -556,7 +556,14 @@ export async function getReviews() {
   });
   return mapReviewsResponse(result);
 }
-
+export async function createOrderReview(orderId, { rating, comment }) {
+  const result = await request(`/api/orders/${orderId}/review`, {
+    method: 'POST',
+    body: { rating, comment: comment || null },
+    errorMessage: 'تعذر إرسال التقييم',
+  });
+  return result.review ? mapReviewFromApi(result.review) : result;
+}
 // تقييمات وسيطة معيّنة (للملف العام اللي بتشوفه الزبونة) — GET /api/stores/{id}/reviews
 export async function getStoreReviews(storeId) {
   const result = await request(`/api/stores/${storeId}/reviews`, {

@@ -5371,7 +5371,6 @@ footer .copyright {
   line-height: 1;
   color: #e11d48;
 }
-<<<<<<< HEAD
 /* ============ المفضلة (قلب بطاقة الوسيطة + زر المفضلة بالشريط العلوي) ============ */
 .explore-card-heart.is-active{
   color:#e11d48;
@@ -5385,6 +5384,7 @@ footer .copyright {
 }
 /* بطاقة الوسيطة المقترحة بلوحة التحكم: وسيطة غير متاحة */
 .mediator-tag.off{ background:#f2f4f7; color:var(--gray); }
+
 /* اختيار نوع الخدمة بمراجعة الطلب (إلزامي لكل طلب) */
 .service-select-label{
   display:flex;
@@ -5406,9 +5406,181 @@ footer .copyright {
   background:#fff;
 }
 .service-select-label select:focus{ outline:none; border-color:var(--blue); }
-=======
+/* ===== شاشة تقييم الوسيطة (OrderReview) ===== */
+.review-page-card {
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  padding: 28px 32px;
+  max-width: 640px;
+  margin: 0 auto 20px;
+}
 
->>>>>>> 472ee7d1c2fb423c69d323efc53d38f3385517ff
+.review-page-order {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding-bottom: 20px;
+  margin-bottom: 24px;
+  border-bottom: 1px solid var(--line);
+}
+
+.review-page-order-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  background: var(--blue-tint);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 22px;
+  flex-shrink: 0;
+}
+
+.review-page-order-name {
+  font-size: 16px;
+  font-weight: 800;
+  margin-bottom: 4px;
+}
+
+.review-page-order-meta {
+  font-size: 12px;
+  color: var(--gray-light);
+}
+
+.review-page-label {
+  font-size: 15px;
+  font-weight: 800;
+  margin-bottom: 12px;
+  display: block;
+}
+
+.review-page-label span {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--gray-light);
+}
+
+.star-picker {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.star-picker-btn {
+  background: none;
+  border: none;
+  padding: 2px;
+  font-size: 42px;
+  line-height: 1;
+  color: var(--line);
+  cursor: pointer;
+  transition: transform .12s ease, color .12s ease;
+}
+
+.star-picker-btn:hover {
+  transform: scale(1.12);
+}
+
+.star-picker-btn.filled {
+  color: #f59e0b;
+}
+
+.star-picker-hint {
+  text-align: center;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--blue);
+  min-height: 22px;
+  margin-bottom: 24px;
+}
+
+.review-page-textarea {
+  width: 100%;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 14px 16px;
+  font-family: inherit;
+  font-size: 14px;
+  resize: vertical;
+  min-height: 120px;
+  margin-bottom: 6px;
+}
+
+.review-page-textarea:focus {
+  outline: none;
+  border-color: var(--blue);
+}
+
+.review-page-counter {
+  font-size: 11px;
+  color: var(--gray-light);
+  text-align: end;
+  margin-bottom: 22px;
+}
+
+.review-page-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+}
+
+.review-page-actions .btn[disabled] {
+  opacity: .6;
+  cursor: not-allowed;
+}
+
+.review-page-done {
+  text-align: center;
+  padding: 16px 0 8px;
+}
+
+.review-page-done-icon {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: #dcfce7;
+  color: #16a34a;
+  font-size: 30px;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 16px;
+}
+
+.review-page-done h2 {
+  font-size: 20px;
+  font-weight: 900;
+  margin-bottom: 8px;
+}
+
+.review-page-done p {
+  font-size: 14px;
+  color: var(--gray);
+  margin-bottom: 22px;
+}
+
+.review-page-done .btn {
+  margin: 0 6px;
+}
+
+@media (max-width: 640px) {
+  .review-page-card {
+    padding: 22px 18px;
+  }
+  .star-picker-btn {
+    font-size: 36px;
+  }
+  .review-page-actions {
+    flex-direction: column-reverse;
+  }
+  .review-page-actions .btn {
+    width: 100%;
+    text-align: center;
+  }
+}
 /* ============ Responsive ============ */
 @media (max-width:1024px) {
   .suggested-grid {

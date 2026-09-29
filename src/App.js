@@ -11,6 +11,7 @@ import MediatorProfile from "./pages/MediatorProfile";
 import MediatorOrders from "./pages/MediatorOrders";
 import MediatorReviews from "./pages/MediatorReviews";
 import MyOrders from "./pages/MyOrders";
+import OrderReview from "./pages/OrderReview";
 import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
 import MediatorServices from "./pages/MediatorServices";
@@ -117,6 +118,14 @@ function App() {
         element={
           <ProtectedRoute allowedRole="customer">
             <MyOrders />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/orders/:id/review"
+        element={
+          <ProtectedRoute allowedRole="customer">
+            <OrderReview />
           </ProtectedRoute>
         }
       />

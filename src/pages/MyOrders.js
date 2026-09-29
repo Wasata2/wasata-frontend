@@ -321,7 +321,7 @@ export default function MyOrders() {
                       عرض التفاصيل
                     </Link>
                     {!order.reviewed && (
-                      <Link to={`/orders/${order.id}`} className="btn btn-primary">
+                      <Link to={`/orders/${order.id}/review`} className="btn btn-primary">
                         ★ تقييم الوسيطة
                       </Link>
                     )}
