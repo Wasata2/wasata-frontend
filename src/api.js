@@ -487,6 +487,12 @@ export async function updateOrderStatus(id, status) {
   return mapOrderFromApi(result.order || result);
 }
 
+// إلغاء طلب من طرف الزبونة — نفس endpoint تحديث الحالة، بس بحالة "cancelled".
+// الباك اند بيرفض الإلغاء إذا الطلب صار بأي حالة بعد "pending" (بيرجع خطأ 422).
+export async function cancelOrder(id) {
+  return updateOrderStatus(id, 'cancelled');
+}
+
 // تقييمات الزبائن الحقيقية عن الوسيطة الحالية
 function mapReviewFromApi(r) {
   return {
