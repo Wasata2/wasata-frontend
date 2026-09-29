@@ -24,7 +24,7 @@ const SORT_OPTIONS = {
   priceDesc: "السعر: الأعلى أولًا",
 };
 
-const EMPTY_FORM = { name: "", category: CATEGORIES[0], price: "" };
+const EMPTY_FORM = { name: "", category: CATEGORIES[0], price: "", color: "", size: "", image: null };
 
 // رابط صورة المتجر يجي أحيانًا كمسار نسبي — نفس الدالة المستخدمة ببقية صفحات الوسيطة
 function resolveImageUrl(path) {
@@ -91,6 +91,7 @@ export default function StagnantItems() {
   const [editingId, setEditingId] = useState(null);
   const [form, setForm] = useState(EMPTY_FORM);
   const [formError, setFormError] = useState("");
+  const [imagePreviewUrl, setImagePreviewUrl] = useState(null);
   const [saving, setSaving] = useState(false);
   // أخطاء عمليات سريعة (عرض للبيع / تأكيد البيع / إلغاء حجز / حذف)
   const [actionError, setActionError] = useState("");
@@ -131,14 +132,30 @@ export default function StagnantItems() {
     setEditingId(null);
     setForm(EMPTY_FORM);
     setFormError("");
+    setImagePreviewUrl(null);
     setShowModal(true);
   };
 
   const openEditModal = (item) => {
     setEditingId(item.id);
-    setForm({ name: item.name, category: item.category, price: String(item.price) });
+    setForm({
+      name: item.name,
+      category: item.category,
+      price: String(item.price),
+      color: item.color || "",
+      size: item.size || "",
+      image: null,
+    });
     setFormError("");
+    setImagePreviewUrl(item.image || null);
     setShowModal(true);
+  };
+
+  const handleImageChange = (e) => {
+    const file = e.target.files && e.target.files[0];
+    if (!file) return;
+    setForm((f) => ({ ...f, image: file }));
+    setImagePreviewUrl(URL.createObjectURL(file));
   };
 
   const closeModal = () => setShowModal(false);
@@ -161,10 +178,24 @@ export default function StagnantItems() {
     setFormError("");
     try {
       if (editingId === null) {
-        const created = await createStockItem({ name, category: form.category, price });
+        const created = await createStockItem({
+          name,
+          category: form.category,
+          price,
+          color: form.color.trim(),
+          size: form.size.trim(),
+          image: form.image,
+        });
         setItems((prev) => [created, ...prev]);
       } else {
-        const updated = await updateStockItem(editingId, { name, category: form.category, price });
+        const updated = await updateStockItem(editingId, {
+          name,
+          category: form.category,
+          price,
+          color: form.color.trim(),
+          size: form.size.trim(),
+          image: form.image,
+        });
         setItems((prev) => prev.map((item) => (item.id === editingId ? updated : item)));
       }
       setShowModal(false);
@@ -360,13 +391,26 @@ export default function StagnantItems() {
           return (
             <div className="stagnant-item" key={item.id}>
               <div className="stagnant-item-row">
-                <div className={`stagnant-item-icon ${item.category === "أحذية" ? "cat-shoes" : "cat-clothes"}`}>
-                  {item.icon}
-                </div>
+                {item.image ? (
+                  <img
+                    src={item.image}
+                    alt={item.name}
+                    className="stagnant-item-icon"
+                    style={{ objectFit: "cover", width: 48, height: 48, borderRadius: 8 }}
+                  />
+                ) : (
+                  <div className={`stagnant-item-icon ${item.category === "أحذية" ? "cat-shoes" : "cat-clothes"}`}>
+                    {item.icon}
+                  </div>
+                )}
 
                 <div className="stagnant-item-info">
                   <div className="stagnant-item-name">{item.name}</div>
-                  <div className="stagnant-item-meta">الفئة: {item.category}</div>
+                  <div className="stagnant-item-meta">
+                    الفئة: {item.category}
+                    {item.size ? ` — مقاس: ${item.size}` : ""}
+                    {item.color ? ` — اللون: ${item.color}` : ""}
+                  </div>
                   <span className={`stagnant-status ${status.className}`}>{status.label}</span>
                 </div>
 
@@ -454,6 +498,39 @@ export default function StagnantItems() {
                 placeholder="0"
               />
             </label>
+
+            <label>
+              <span>المقاس (اختياري)</span>
+              <input
+                type="text"
+                value={form.size}
+                onChange={(e) => setForm({ ...form, size: e.target.value })}
+                placeholder="مثال: M أو 38"
+              />
+            </label>
+
+            <label>
+              <span>اللون (اختياري)</span>
+              <input
+                type="text"
+                value={form.color}
+                onChange={(e) => setForm({ ...form, color: e.target.value })}
+                placeholder="مثال: أسود"
+              />
+            </label>
+
+            <label>
+              <span>صورة القطعة (اختياري)</span>
+              <input type="file" accept="image/*" onChange={handleImageChange} />
+            </label>
+
+            {imagePreviewUrl && (
+              <img
+                src={imagePreviewUrl}
+                alt="معاينة القطعة"
+                style={{ width: 90, height: 90, objectFit: "cover", borderRadius: 8, marginTop: 4 }}
+              />
+            )}
 
             {formError && <div className="stagnant-form-error">{formError}</div>}
 

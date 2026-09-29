@@ -179,11 +179,24 @@ export default function MediatorItems() {
             <div className="shop-grid">
               {visibleItems.map((item) => (
                 <div className="shop-card" key={item.id}>
-                  <div className={`shop-card-icon ${item.category === "أحذية" ? "cat-shoes" : "cat-clothes"}`}>
-                    {item.icon}
-                  </div>
+                  {item.image ? (
+                    <img
+                      src={item.image}
+                      alt={item.name}
+                      className="shop-card-icon"
+                      style={{ objectFit: "cover", width: "100%", height: 120, borderRadius: 8 }}
+                    />
+                  ) : (
+                    <div className={`shop-card-icon ${item.category === "أحذية" ? "cat-shoes" : "cat-clothes"}`}>
+                      {item.icon}
+                    </div>
+                  )}
                   <div className="shop-card-name">{item.name}</div>
-                  <div className="shop-card-meta">الفئة: {item.category}</div>
+                  <div className="shop-card-meta">
+                    الفئة: {item.category}
+                    {item.size ? ` — مقاس: ${item.size}` : ""}
+                    {item.color ? ` — اللون: ${item.color}` : ""}
+                  </div>
                   <div className="shop-card-price">{item.price} ₪</div>
                   <button
                     type="button"

@@ -638,6 +638,9 @@ function mapStockItemFromApi(o) {
     category,
     icon: category === "أحذية" ? "👟" : "👗",
     price: Number(o.price ?? 0),
+    color: o.color || "",
+    size: o.size || "",
+    image: o.image_url || o.image || null,
     status: normalizeStockStatus(o.status),
     createdAt: o.created_at || o.date || "",
   };
@@ -659,25 +662,41 @@ export async function getStockItems(filters = {}) {
 }
 
 // إضافة قطعة جديدة
-export async function createStockItem({ name, category, price }) {
+// إضافة قطعة جديدة (مع مقاس/لون/صورة اختياريين — لازم يتأكد الباك اند إنه بيقبلهم)
+export async function createStockItem({ name, category, price, color, size, image }) {
+  const formData = new FormData();
+  formData.append("name", name);
+  formData.append("category", categoryToApi(category));
+  formData.append("price", price);
+  if (color) formData.append("color", color);
+  if (size) formData.append("size", size);
+  if (image) formData.append("image", image);
+
   const result = await request("/api/stock-items", {
     method: "POST",
-    body: { name, category: categoryToApi(category), price },
+    body: formData,
+    isFormData: true,
     errorMessage: "تعذر إضافة القطعة",
   });
   return mapStockItemFromApi(result.stock_item || result);
 }
 
-// تعديل العرض (الاسم / الفئة / السعر)
-export async function updateStockItem(id, { name, category, price }) {
-  const body = {};
-  if (name !== undefined) body.name = name;
-  if (category !== undefined) body.category = categoryToApi(category);
-  if (price !== undefined) body.price = price;
+// تعديل العرض (الاسم / الفئة / السعر / المقاس / اللون / الصورة)
+export async function updateStockItem(id, { name, category, price, color, size, image }) {
+  const formData = new FormData();
+  // Laravel بيحتاج POST + _method=PATCH لما بيكون فيه ملف (multipart/form-data)
+  formData.append("_method", "PATCH");
+  if (name !== undefined) formData.append("name", name);
+  if (category !== undefined) formData.append("category", categoryToApi(category));
+  if (price !== undefined) formData.append("price", price);
+  if (color !== undefined) formData.append("color", color);
+  if (size !== undefined) formData.append("size", size);
+  if (image) formData.append("image", image);
 
   const result = await request(`/api/stock-items/${id}`, {
-    method: "PATCH",
-    body,
+    method: "POST",
+    body: formData,
+    isFormData: true,
     errorMessage: "تعذر تعديل القطعة",
   });
   return mapStockItemFromApi(result.stock_item || result);
