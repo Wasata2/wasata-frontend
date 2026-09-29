@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Link, useParams } from "react-router-dom";
 import DashboardLayout from "../components/DashboardLayout";
-import { getMyOrders, createOrderReview } from "../api";
+import { getMyOrders, createOrderReview, getStoreProfile } from "../api";
 import { formatDateTime } from "../utils/dates";
 
 const RATING_LABELS = {
@@ -20,6 +20,7 @@ export default function OrderReview() {
   const [order, setOrder] = useState(null);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
+  const [storeImage, setStoreImage] = useState(null);
 
   const [rating, setRating] = useState(0);
   const [hoverRating, setHoverRating] = useState(0);
@@ -34,7 +35,17 @@ export default function OrderReview() {
     getMyOrders()
       .then(({ orders }) => {
         if (!active) return;
-        setOrder(orders.find((o) => String(o.id) === String(id)) || null);
+        const found = orders.find((o) => String(o.id) === String(id)) || null;
+        setOrder(found);
+        if (!found) return;
+        if (found.storeImage) {
+          setStoreImage(found.storeImage);
+        } else if (found.storeId) {
+          // /my-orders ما رجّع صورة المتجر — بنجيبها من ملف المتجر
+          getStoreProfile(found.storeId)
+            .then((profile) => active && setStoreImage(profile.store?.image || null))
+            .catch(() => {});
+        }
       })
       .catch((err) => active && setLoadError(err.message || "تعذر جلب بيانات الطلب"))
       .finally(() => active && setLoading(false));
@@ -133,7 +144,13 @@ export default function OrderReview() {
     return (
       <form className="review-page-card" onSubmit={handleSubmit}>
         <div className="review-page-order">
-          <div className="review-page-order-icon">🏪</div>
+          <div className="review-page-order-icon">
+            {storeImage ? (
+              <img src={storeImage} alt={order.store} />
+            ) : (
+              <span>{(order.store || "?").trim().charAt(0)}</span>
+            )}
+          </div>
           <div>
             <div className="review-page-order-name">{order.store}</div>
             <div className="review-page-order-meta">
