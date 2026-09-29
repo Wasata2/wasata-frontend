@@ -487,10 +487,15 @@ export async function updateOrderStatus(id, status) {
   return mapOrderFromApi(result.order || result);
 }
 
-// إلغاء طلب من طرف الزبونة — نفس endpoint تحديث الحالة، بس بحالة "cancelled".
-// الباك اند بيرفض الإلغاء إذا الطلب صار بأي حالة بعد "pending" (بيرجع خطأ 422).
+// إلغاء طلب من طرف الزبونة — endpoint مخصص PATCH /api/orders/{id}/cancel (بدون body).
+// ملاحظة: PATCH /orders/{id}/status للوسيطة بس (بيرجع 404 للزبونة لأنه بدوّر على متجر).
+// الباك اند بيرجع 422 لو الطلب مش pending، و403 لو الطلب مش للزبونة.
 export async function cancelOrder(id) {
-  return updateOrderStatus(id, 'cancelled');
+  const result = await request(`/api/orders/${id}/cancel`, {
+    method: 'PATCH',
+    errorMessage: 'تعذر إلغاء الطلب',
+  });
+  return mapOrderFromApi(result.order || result);
 }
 
 // تقييمات الزبائن الحقيقية عن الوسيطة الحالية
@@ -619,15 +624,15 @@ export function categoryToApi(value) {
   return CATEGORY_TO_API[value] || value;
 }
 
-// حالة القطعة: نطبّع أي شكل يرجعه الباك اند (not_listed / notListed / draft...)
-// لمفاتيحنا الداخلية الأربعة. لازم يتأكد من القيم الحقيقية اللي بترجع فعليًا
-// من /stock-items وتتعدّل هاي الدالة لو الأسماء مختلفة.
+// حالة القطعة: القيم المخزّنة بقاعدة البيانات (enum) هي بالظبط هاي الأربعة،
+// ونفس القيم بترجع بالـ JSON، فمنستخدمها كمفاتيح داخلية مباشرة (exact match).
+// ملاحظة: مطابقة النص الجزئي (includes("list")) كانت بتحوّل "unlisted" لـ "listed" بالغلط.
+const STOCK_STATUSES = ["unlisted", "listed", "reserved", "sold"];
+
 function normalizeStockStatus(value) {
-  const v = String(value || "").toLowerCase();
-  if (v.includes("reserv")) return "reserved";
-  if (v.includes("sold")) return "sold";
-  if (v.includes("list")) return "listed"; // "listed" و"not_listed" مع بعض، فمنتأكد من reserv/sold قبلها
-  return "notListed";
+  if (STOCK_STATUSES.includes(value)) return value;
+  console.warn("قيمة status غير متوقعة من الباك اند:", value);
+  return "unlisted"; // احتياط بس عشان الواجهة ما تنهار
 }
 
 function mapStockItemFromApi(o) {
@@ -702,7 +707,7 @@ export async function updateStockItem(id, { name, category, price, color, size, 
   return mapStockItemFromApi(result.stock_item || result);
 }
 
-// إلغاء العرض — القطعة بترجع "غير معروضة" (لسا مطلوب من الباك اند إضافته)
+// إلغاء العرض — القطعة بترجع "غير معروضة" بدون ما تنحذف (بيرفض 422 لو القطعة مش listed)
 export async function unlistStockItem(id) {
   const result = await request(`/api/stock-items/${id}/unlist`, {
     method: "PATCH",

@@ -6,7 +6,7 @@ export const STAGNANT_CATEGORIES = ["ملابس", "أحذية"];
 
 // حالات القطعة
 export const STAGNANT_STATUS = {
-  notListed: { label: "غير معروضة", className: "st-not-listed" },
+  unlisted: { label: "غير معروضة", className: "st-not-listed" },
   listed: { label: "معروضة للبيع", className: "st-listed" },
   reserved: { label: "محجوزة", className: "st-reserved" },
   sold: { label: "تم البيع", className: "st-sold" },

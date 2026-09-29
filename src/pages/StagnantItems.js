@@ -417,7 +417,7 @@ export default function StagnantItems() {
                 <div className="stagnant-item-side">
                   <div className="stagnant-item-price">{item.price} ₪</div>
 
-                  {item.status === "notListed" && (
+                  {item.status === "unlisted" && (
                     <button type="button" className="stagnant-btn primary" onClick={() => listForSale(item.id)}>
                       عرض للبيع
                     </button>
