@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { getStores, getStoreProfile, getStoreReviews } from "../api";
 import { formatDate, latestByDate } from "../utils/dates";
+import ReviewAvatar from "../components/ReviewAvatar";
 // الملف العام للوسيطة — بنفس شكل "معاينة الملف كما يظهر للزبائن" بصفحة ملف الوسيطة،
 // بس هون بيانات أي وسيطة (حسب الـ id بالرابط) مش وسيطة واحدة.
 
@@ -292,8 +293,7 @@ export default function MediatorPublicProfile() {
                             <div className="review-author-name">{review.customer}</div>
                             <StarRating rating={review.rating} />
                           </div>
-                          <div className="review-avatar">{review.customer.charAt(0)}</div>
-                        </div>
+<ReviewAvatar name={review.customer} image={review.customerImage} />                        </div>
                       </div>
                       <p className="review-comment">{review.comment}</p>
                     </div>

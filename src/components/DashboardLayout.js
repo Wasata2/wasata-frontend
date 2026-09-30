@@ -63,8 +63,17 @@ export default function DashboardLayout({
       active = false;
     };
   }, [role, avatarImage]);
-  const avatarSrc = avatarImage !== undefined ? avatarImage : storeAvatar;
-  const location = useLocation();
+  // صورة الزبونة من بيانات حسابها (profile_picture_url) عشان تظهر بكل صفحات الزبونة
+  const customerAvatar =
+    role === "customer"
+      ? resolveImageUrl(user?.profile_picture_url || user?.image_url || user?.image)
+      : null;
+  const avatarSrc =
+    avatarImage !== undefined
+      ? avatarImage
+      : role === "broker"
+        ? storeAvatar
+        : customerAvatar;  const location = useLocation();
 
   // عدد التقييمات الجديدة (اللي الوسيطة لسا ما شافتها) — بيظهر على رابط "التقييمات" بالقائمة الجانبية.
   // "الجديد" = أي تقييم رقمه أكبر من آخر رقم شافته الوسيطة بصفحة التقييمات (محفوظ بالمتصفح).

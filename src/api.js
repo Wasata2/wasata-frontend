@@ -1,4 +1,4 @@
-import { parseApiDate } from './utils/dates';
+import { parseApiDate } from "./utils/dates";
 
 const BASE_URL = "https://wasata-backend-production-nojkxd.laravel.cloud";
 
@@ -179,7 +179,12 @@ export async function updateProfile(data) {
       formData.append("full_name", data.full_name);
     if (data.phone !== undefined) formData.append("phone", data.phone);
     formData.append("image", data.image);
-
+        if (data.city !== undefined) {
+      formData.append("city", data.city);
+      formData.append("location", data.city); // عمود المدينة بجدول المستخدمين اسمه location
+    }
+        formData.append("image", data.image);
+    formData.append("profile_picture", data.image); // اسم عمود صورة المستخدمين بالباك اند
     result = await request("/api/auth/profile", {
       method: "POST",
       body: formData,
@@ -191,6 +196,10 @@ export async function updateProfile(data) {
     const body = {};
     if (data.full_name !== undefined) body.full_name = data.full_name;
     if (data.phone !== undefined) body.phone = data.phone;
+       if (data.city !== undefined) {
+      body.city = data.city;
+      body.location = data.city; // عمود المدينة بجدول المستخدمين اسمه location
+    }
 
     result = await request("/api/auth/profile", {
       method: "PUT",
@@ -373,7 +382,7 @@ const ORDER_STATUS_KEYS = [
 function buildStatusTimes(o) {
   const times = {};
   const direct = o.status_times || o.statusTimes;
-  if (direct && typeof direct === 'object' && !Array.isArray(direct)) {
+  if (direct && typeof direct === "object" && !Array.isArray(direct)) {
     Object.entries(direct).forEach(([key, at]) => {
       if (at) times[key] = at;
     });
@@ -399,8 +408,18 @@ function buildStatusTimes(o) {
   return times;
 }
 function pickOrderDate(o, statusTimes) {
-  const candidates = [statusTimes.pending, o.created_at, o.order_date, o.placed_at, o.date];
-  return candidates.find((v) => v && parseApiDate(v)) || candidates.find(Boolean) || '';
+  const candidates = [
+    statusTimes.pending,
+    o.created_at,
+    o.order_date,
+    o.placed_at,
+    o.date,
+  ];
+  return (
+    candidates.find((v) => v && parseApiDate(v)) ||
+    candidates.find(Boolean) ||
+    ""
+  );
 }
 
 function mapOrderFromApi(o) {
@@ -418,7 +437,7 @@ function mapOrderFromApi(o) {
   return {
     id: o.id,
     customer: pickCustomerName(o),
-    date: pickOrderDate(o, buildStatusTimes(o)),  
+    date: pickOrderDate(o, buildStatusTimes(o)),
     statusUpdatedAt: o.status_updated_at || o.updated_at || o.created_at,
     statusTimes: buildStatusTimes(o),
     itemsCount: o.items_count ?? rawItems.length,
@@ -470,7 +489,7 @@ function mapMyOrderFromApi(o) {
       o.total_items_quantity ??
       null,
     price: o.estimated_amount ?? o.total_amount ?? 0,
-    date: pickOrderDate(o, buildStatusTimes(o)),  
+    date: pickOrderDate(o, buildStatusTimes(o)),
     statusUpdatedAt: o.status_updated_at || o.updated_at || o.created_at || "",
     statusTimes: buildStatusTimes(o),
     reviewed: !!o.reviewed,
@@ -592,6 +611,13 @@ function mapReviewFromApi(r) {
   return {
     id: r.id,
     customer: r.customer_name || r.customer || r.user_name || "زبونة",
+        customerImage: resolveStoreImageUrl(
+      r.customer_image_url ||
+        r.customer_profile_picture_url ||
+        r.customer_profile_picture ||
+        r.customer?.profile_picture_url ||
+        r.user?.profile_picture_url,
+    ),
     date: r.created_at || r.date,
     rating: r.rating,
     comment: r.comment || r.review || "",
@@ -774,7 +800,11 @@ function mapStockItemFromApi(o) {
 
 // مسار الصورة ممكن يجي نسبي (stock-items/xxx.jpg) — منحوله لرابط كامل عشان يظهر
 function resolveStockImage(path) {
-  if (/^https?:\/\//i.test(path) || path.startsWith("blob:") || path.startsWith("data:")) {
+  if (
+    /^https?:\/\//i.test(path) ||
+    path.startsWith("blob:") ||
+    path.startsWith("data:")
+  ) {
     return path;
   }
   const clean = path.startsWith("/") ? path.slice(1) : path;

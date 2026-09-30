@@ -13,6 +13,7 @@ import LogoutButton from "../components/LogoutButton";
 import { useAuth } from "../context/AuthContext";
 import { getStoreStockItems } from "../api";
 import { formatDate, latestByDate } from "../utils/dates";
+import ReviewAvatar from "../components/ReviewAvatar";
 // رابط صورة المتجر يجي أحيانًا من الباك اند كمسار نسبي (بدون دومين) —
 // هاي الدالة بتتأكد إنه رابط كامل قبل ما نعرضه، وإلا بترجع null
 function resolveImageUrl(path) {
@@ -539,9 +540,7 @@ export default function MediatorProfile() {
                           </div>
                           <StarRating rating={review.rating} />
                         </div>
-                        <div className="review-avatar">
-                          {review.customer.charAt(0)}
-                        </div>
+                        <ReviewAvatar name={review.customer} image={review.customerImage} />
                       </div>
                     </div>
                     <p className="review-comment">{review.comment}</p>
