@@ -440,6 +440,33 @@ export async function getMyOrders() {
   };
 }
 
+function mapMyOrderDetailFromApi(o) {
+  const items = (o.items || []).map(mapOrderItemFromApi);
+  const allPriced = items.length > 0 && items.every((it) => it.price != null);
+  const totalPrice = allPriced
+    ? items.reduce((sum, it) => sum + it.price * it.quantity, 0)
+    : null;
+  return {
+    id: o.id,
+    store: o.store_name || (o.store && o.store.name) || "الوسيطة",
+    date: o.date || o.created_at || "",
+    statusUpdatedAt: o.status_updated_at || o.updated_at || o.created_at,
+    status: o.status,
+    price: totalPrice,
+    rejectionReason: o.rejection_reason || o.cancellation_reason || null,
+    deliveryMethod: o.delivery_method === "home_delivery" ? "توصيل إلى المنزل" : "استلام من نقطة",
+    customerNote: o.customer_note || "",
+    items,
+  };
+}
+
+export async function getMyOrderDetail(id) {
+  const result = await request(`/api/orders/${id}`, {
+    errorMessage: 'تعذر جلب تفاصيل الطلب',
+  });
+  return mapMyOrderDetailFromApi(result.order || result);
+}
+
 // إنشاء طلب جديد (الزبونة) — POST /api/orders، multipart/form-data عشان صور المنتجات
 // items: [{ serviceListingId, quantity, productName, productUrl, productImage, color, size, itemNote }]
 export async function createOrder({

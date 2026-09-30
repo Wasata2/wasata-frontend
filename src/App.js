@@ -25,158 +25,167 @@ import MediatorPublicProfile from "./pages/MediatorPublicProfile";
 import MediatorItems from "./pages/MediatorItems";
 import ProtectedRoute from "./components/ProtectedRoute";
 import { FavoritesProvider } from "./context/FavoritesContext";
+import CustomerOrderDetails from "./pages/CustomerOrderDetails";
 
 function App() {
   return (
     <FavoritesProvider>
-    <Routes>
-      <Route path="/" element={<Home />} />
-      <Route path="/account-type" element={<AccountType />} />
-      <Route path="/signup-customer" element={<SignupCustomer />} />
-      <Route path="/signup-mediator" element={<SignupMediator />} />
-      <Route path="/login" element={<Login />} />
-      <Route path="/forgot-password" element={<ForgotPassword />} />
-      <Route path="/reset-password" element={<ResetPassword />} />
-      <Route
-        path="/create-store"
-        element={
-          <ProtectedRoute allowedRole="broker">
-            {" "}
-            <CreateStore />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/mediator-dashboard"
-        element={
-          <ProtectedRoute allowedRole="broker">
-            <MediatorDashboard />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/mediator-profile"
-        element={
-          <ProtectedRoute allowedRole="broker">
-            <MediatorProfile />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/mediator-orders"
-        element={
-          <ProtectedRoute allowedRole="broker">
-            <MediatorOrders />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/mediator-orders/:id"
-        element={
-          <ProtectedRoute allowedRole="broker">
-            <OrderDetails />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/mediator-reviews"
-        element={
-          <ProtectedRoute allowedRole="broker">
-            <MediatorReviews />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/mediator-services"
-        element={
-          <ProtectedRoute allowedRole="broker">
-            <MediatorServices />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/mediator-notifications"
-        element={
-          <ProtectedRoute allowedRole="broker">
-            <MediatorNotifications />
-          </ProtectedRoute>
-        }
-      />
+      <Routes>
+        <Route path="/" element={<Home />} />
+        <Route path="/account-type" element={<AccountType />} />
+        <Route path="/signup-customer" element={<SignupCustomer />} />
+        <Route path="/signup-mediator" element={<SignupMediator />} />
+        <Route path="/login" element={<Login />} />
+        <Route path="/forgot-password" element={<ForgotPassword />} />
+        <Route path="/reset-password" element={<ResetPassword />} />
+        <Route
+          path="/create-store"
+          element={
+            <ProtectedRoute allowedRole="broker">
+              {" "}
+              <CreateStore />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/mediator-dashboard"
+          element={
+            <ProtectedRoute allowedRole="broker">
+              <MediatorDashboard />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/mediator-profile"
+          element={
+            <ProtectedRoute allowedRole="broker">
+              <MediatorProfile />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/mediator-orders"
+          element={
+            <ProtectedRoute allowedRole="broker">
+              <MediatorOrders />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/mediator-orders/:id"
+          element={
+            <ProtectedRoute allowedRole="broker">
+              <OrderDetails />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/mediator-reviews"
+          element={
+            <ProtectedRoute allowedRole="broker">
+              <MediatorReviews />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/mediator-services"
+          element={
+            <ProtectedRoute allowedRole="broker">
+              <MediatorServices />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/mediator-notifications"
+          element={
+            <ProtectedRoute allowedRole="broker">
+              <MediatorNotifications />
+            </ProtectedRoute>
+          }
+        />
 
-      {/* ===== صفحات الزبونة (customer) ===== */}
-      <Route
-        path="/customer-dashboard"
-        element={
-          <ProtectedRoute allowedRole="customer">
-            <CustomerDashboard />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/my-orders"
-        element={
-          <ProtectedRoute allowedRole="customer">
-            <MyOrders />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/new-order"
-        element={
-          <ProtectedRoute allowedRole="customer">
-            <NewOrder />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/profile"
-        element={
-          <ProtectedRoute allowedRole="customer">
-            <CustomerProfile />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/stagnant-items"
-        element={
-          <ProtectedRoute allowedRole="broker">
-            <StagnantItems />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/mediators/:id/items"
-        element={
-          <ProtectedRoute allowedRole="customer">
-            <MediatorItems />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/mediators/:id"
-        element={
-          <ProtectedRoute allowedRole="customer">
-            <MediatorPublicProfile />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/favorites"
-        element={
-          <ProtectedRoute allowedRole="customer">
-            <FavoriteMediators />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/explore-mediators"
-        element={
-          <ProtectedRoute allowedRole="customer">
-            <ExploreMediators />
-          </ProtectedRoute>
-        }
-      />
-    </Routes>
+        {/* ===== صفحات الزبونة (customer) ===== */}
+        <Route
+          path="/customer-dashboard"
+          element={
+            <ProtectedRoute allowedRole="customer">
+              <CustomerDashboard />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/my-orders"
+          element={
+            <ProtectedRoute allowedRole="customer">
+              <MyOrders />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/orders/:id"
+          element={
+            <ProtectedRoute allowedRole="customer">
+              <CustomerOrderDetails />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/new-order"
+          element={
+            <ProtectedRoute allowedRole="customer">
+              <NewOrder />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/profile"
+          element={
+            <ProtectedRoute allowedRole="customer">
+              <CustomerProfile />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/stagnant-items"
+          element={
+            <ProtectedRoute allowedRole="broker">
+              <StagnantItems />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/mediators/:id/items"
+          element={
+            <ProtectedRoute allowedRole="customer">
+              <MediatorItems />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/mediators/:id"
+          element={
+            <ProtectedRoute allowedRole="customer">
+              <MediatorPublicProfile />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/favorites"
+          element={
+            <ProtectedRoute allowedRole="customer">
+              <FavoriteMediators />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/explore-mediators"
+          element={
+            <ProtectedRoute allowedRole="customer">
+              <ExploreMediators />
+            </ProtectedRoute>
+          }
+        />
+      </Routes>
     </FavoritesProvider>
   );
 }
