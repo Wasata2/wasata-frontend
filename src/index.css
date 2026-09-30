@@ -79,7 +79,9 @@ header .container {
 .nav-overlay {
   display: none;
 }
-
+.nav-mobile-header {
+  display: none;
+}
 .nav-mobile-actions {
   display: none;
 }
@@ -5639,6 +5641,56 @@ footer .copyright {
   color: #f59e0b;
   font-size: 13px;
   letter-spacing: 1px;
+}
+/* ============ بطاقة القطعة الراكدة — عرض أفقي (صورة | تفاصيل | سعر | زر) ============ */
+.stagnant-item-thumb {
+  width: 84px;
+  height: 84px;
+  flex-shrink: 0;
+  object-fit: cover;
+  border-radius: 14px;
+  background: #f2f4f7;
+}
+.stagnant-item-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+}
+.stagnant-item-row > .stagnant-item-price {
+  flex-shrink: 0;
+  min-width: 80px;
+  text-align: center;
+  font-size: 18px;
+  color: var(--blue);
+}
+.stagnant-item-row > .stagnant-item-side {
+  flex-shrink: 0;
+  min-width: 130px;
+  align-items: stretch;
+}
+.stagnant-item-row > .stagnant-item-side .stagnant-btn {
+  width: 100%;
+}
+
+@media (max-width: 640px) {
+  .stagnant-item-row {
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    align-items: center;
+    gap: 10px 12px;
+  }
+  .stagnant-item-row > .stagnant-item-side {
+    grid-column: 1 / -1;
+    width: 100%;
+  }
+  .stagnant-item-thumb {
+    width: 68px;
+    height: 68px;
+  }
+  .stagnant-item-row > .stagnant-item-price {
+    min-width: 0;
+    font-size: 16px;
+  }
 }
 @media (max-width: 640px) {
   .review-page-card {

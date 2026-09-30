@@ -46,3 +46,11 @@ export function formatDateTime(value) {
   });
   return `${date} — ${time}`;
 }
+// أحدث N عناصر حسب التاريخ (الأحدث أولًا) — بنستخدمها لعرض آخر 3 تقييمات بملف الوسيطة
+export function latestByDate(list, limit = 3, getDate = (item) => item.date) {
+  const time = (item) => {
+    const d = parseApiDate(getDate(item));
+    return d ? d.getTime() : 0;
+  };
+  return [...list].sort((a, b) => time(b) - time(a)).slice(0, limit);
+}

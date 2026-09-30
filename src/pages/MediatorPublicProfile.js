@@ -1,8 +1,7 @@
 import { useState, useEffect } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { getStores, getStoreProfile, getStoreReviews } from "../api";
-import { formatDate } from "../utils/dates";
-
+import { formatDate, latestByDate } from "../utils/dates";
 // الملف العام للوسيطة — بنفس شكل "معاينة الملف كما يظهر للزبائن" بصفحة ملف الوسيطة،
 // بس هون بيانات أي وسيطة (حسب الـ id بالرابط) مش وسيطة واحدة.
 
@@ -282,7 +281,7 @@ export default function MediatorPublicProfile() {
                 {reviews.length === 0 ? (
                   <p className="service-description">لا توجد تقييمات بعد.</p>
                 ) : (
-                  reviews.map((review) => (
+                 latestByDate(reviews, 3).map((review) => (
                     <div className="review-card" key={review.id}>
                       <div className="review-card-top">
                         <div className="review-date">

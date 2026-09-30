@@ -200,6 +200,8 @@ export default function StagnantItems() {
         setItems((prev) => prev.map((item) => (item.id === editingId ? updated : item)));
       }
       setShowModal(false);
+      // نعيد جلب القائمة من الباك اند عشان تظهر القطعة بكل بياناتها الفعلية (الاسم/السعر/الصورة)
+      refreshItems();
     } catch (err) {
       setFormError(err.message || "تعذر حفظ القطعة");
     } finally {
@@ -386,12 +388,7 @@ export default function StagnantItems() {
             <div className="stagnant-item" key={item.id}>
               <div className="stagnant-item-row">
                 {item.image ? (
-                  <img
-                    src={item.image}
-                    alt={item.name}
-                    className="stagnant-item-icon"
-                    style={{ objectFit: "cover", width: 48, height: 48, borderRadius: 8 }}
-                  />
+                  <img src={item.image} alt={item.name} className="stagnant-item-thumb" />
                 ) : (
                   <div className={`stagnant-item-icon ${item.category === "أحذية" ? "cat-shoes" : "cat-clothes"}`}>
                     {item.icon}
@@ -401,16 +398,16 @@ export default function StagnantItems() {
                 <div className="stagnant-item-info">
                   <div className="stagnant-item-name">{item.name}</div>
                   <div className="stagnant-item-meta">
-                    الفئة: {item.category}
-                    {item.size ? ` — مقاس: ${item.size}` : ""}
-                    {item.color ? ` — اللون: ${item.color}` : ""}
+                    <span>الفئة: {item.category}</span>
+                    {item.size && <span>مقاس: {item.size}</span>}
+                    {item.color && <span>اللون: {item.color}</span>}
                   </div>
                   <span className={`stagnant-status ${status.className}`}>{status.label}</span>
                 </div>
 
-                <div className="stagnant-item-side">
-                  <div className="stagnant-item-price">{item.price} ₪</div>
+                <div className="stagnant-item-price">{item.price} ₪</div>
 
+                <div className="stagnant-item-side">
                   {item.status === "unlisted" && (
                     <button type="button" className="stagnant-btn primary" onClick={() => listForSale(item.id)}>
                       عرض للبيع

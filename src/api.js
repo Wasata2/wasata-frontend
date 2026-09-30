@@ -742,20 +742,44 @@ function normalizeStockStatus(value) {
   return "unlisted"; // احتياط بس عشان الواجهة ما تنهار
 }
 
+// الباك اند ممكن يرجّع القطعة مباشرة، أو داخل stock_item، أو داخل data (أو data.stock_item)
+// فمنفك الغلاف بأي شكل عشان ما تضيع بيانات القطعة (الاسم/السعر/الصورة)
+function unwrapStockItem(result) {
+  if (!result || typeof result !== "object") return {};
+  const inner = result.stock_item || result.item || result.data || result;
+  if (inner && typeof inner === "object" && inner.stock_item) {
+    return inner.stock_item;
+  }
+  return inner;
+}
+
 function mapStockItemFromApi(o) {
+  o = o || {};
   const category = categoryFromApi(o.category);
+  const rawImage = o.image_url || o.image || o.image_path || o.photo || null;
+  const rawPrice = o.price ?? o.selling_price ?? o.amount ?? 0;
   return {
     id: o.id,
-    name: o.name,
+    name: o.name || o.title || "",
     category,
     icon: category === "أحذية" ? "👟" : "👗",
-    price: Number(o.price ?? 0),
+    price: Number(rawPrice) || 0,
     color: o.color || "",
     size: o.size || "",
-    image: o.image_url || o.image || null,
+    image: rawImage ? resolveStockImage(rawImage) : null,
     status: normalizeStockStatus(o.status),
     createdAt: o.created_at || o.date || "",
   };
+}
+
+// مسار الصورة ممكن يجي نسبي (stock-items/xxx.jpg) — منحوله لرابط كامل عشان يظهر
+function resolveStockImage(path) {
+  if (/^https?:\/\//i.test(path) || path.startsWith("blob:") || path.startsWith("data:")) {
+    return path;
+  }
+  const clean = path.startsWith("/") ? path.slice(1) : path;
+  if (clean.startsWith("storage/")) return `${BASE_URL}/${clean}`;
+  return `${BASE_URL}/storage/${clean}`;
 }
 
 // قائمة القطع الراكدة عند الوسيطة الحالية (فلاتر اختيارية: search, status, category, sort)
@@ -798,7 +822,7 @@ export async function createStockItem({
     isFormData: true,
     errorMessage: "تعذر إضافة القطعة",
   });
-  return mapStockItemFromApi(result.stock_item || result);
+  return mapStockItemFromApi(unwrapStockItem(result));
 }
 
 // تعديل العرض (الاسم / الفئة / السعر / المقاس / اللون / الصورة)
@@ -823,7 +847,7 @@ export async function updateStockItem(
     isFormData: true,
     errorMessage: "تعذر تعديل القطعة",
   });
-  return mapStockItemFromApi(result.stock_item || result);
+  return mapStockItemFromApi(unwrapStockItem(result));
 }
 
 // إلغاء العرض — القطعة بترجع "غير معروضة" بدون ما تنحذف (بيرفض 422 لو القطعة مش listed)
@@ -832,7 +856,7 @@ export async function unlistStockItem(id) {
     method: "PATCH",
     errorMessage: "تعذر إلغاء العرض",
   });
-  return mapStockItemFromApi(result.stock_item || result);
+  return mapStockItemFromApi(unwrapStockItem(result));
 }
 
 // عرض للبيع
@@ -841,7 +865,7 @@ export async function listStockItem(id) {
     method: "PATCH",
     errorMessage: "تعذر عرض القطعة للبيع",
   });
-  return mapStockItemFromApi(result.stock_item || result);
+  return mapStockItemFromApi(unwrapStockItem(result));
 }
 
 // إلغاء الحجز (من الوسيطة) — القطعة بترجع معروضة للبيع
@@ -850,7 +874,7 @@ export async function cancelStockReservation(id) {
     method: "PATCH",
     errorMessage: "تعذر إلغاء الحجز",
   });
-  return mapStockItemFromApi(result.stock_item || result);
+  return mapStockItemFromApi(unwrapStockItem(result));
 }
 
 // تأكيد البيع
@@ -859,7 +883,7 @@ export async function confirmStockSale(id) {
     method: "PATCH",
     errorMessage: "تعذر تأكيد البيع",
   });
-  return mapStockItemFromApi(result.stock_item || result);
+  return mapStockItemFromApi(unwrapStockItem(result));
 }
 
 // حذف قطعة
@@ -885,7 +909,7 @@ export async function reserveStockItem(id) {
     method: "PATCH",
     errorMessage: "تعذر حجز القطعة، يمكن حجزها قبل قليل",
   });
-  return mapStockItemFromApi(result.stock_item || result);
+  return mapStockItemFromApi(unwrapStockItem(result));
 }
 
 export { BASE_URL };
