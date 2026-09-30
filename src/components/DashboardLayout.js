@@ -3,7 +3,8 @@ import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { useFavorites } from "../context/FavoritesContext";
 import LogoutButton from "./LogoutButton";
-import { getMyStore, BASE_URL } from "../api";
+import { getMyStore, getReviews, BASE_URL } from "../api";
+import { getUnseenReviews, markReviewsSeen } from "../utils/reviewsSeen";
 
 // رابط الصورة بيجي أحيانًا كمسار نسبي
 function resolveImageUrl(path) {
@@ -22,7 +23,7 @@ const BROKER_LINKS = [
   { to: "/mediator-orders", icon: "📋", label: "الطلبات", showBadge: true },
   { to: "/mediator-services", icon: "🛍", label: "الخدمات" },
   { to: "/stagnant-items", icon: "📦", label: "القطع الراكدة" },
-  { to: "/mediator-reviews", icon: "⭐", label: "التقييمات" },
+  { to: "/mediator-reviews", icon: "⭐", label: "التقييمات", showReviewsBadge: true },
   { to: "/mediator-profile", icon: "👤", label: "الملف الشخصي" },
 ];
 
@@ -65,8 +66,37 @@ export default function DashboardLayout({
   const avatarSrc = avatarImage !== undefined ? avatarImage : storeAvatar;
   const location = useLocation();
 
+  // عدد التقييمات الجديدة (اللي الوسيطة لسا ما شافتها) — بيظهر على رابط "التقييمات" بالقائمة الجانبية.
+  // "الجديد" = أي تقييم رقمه أكبر من آخر رقم شافته الوسيطة بصفحة التقييمات (محفوظ بالمتصفح).
+  // لما تفتح صفحة التقييمات بنسجّل إنها شافتهم كلهم ويختفي التنبيه.
+  const [newReviewsCount, setNewReviewsCount] = useState(0);
+  const userId = user?.id ?? "me";
+  const onReviewsPage = location.pathname === "/mediator-reviews";
+  useEffect(() => {
+    if (role !== "broker") return;
+    let active = true;
+    getReviews()
+      .then(({ reviews }) => {
+        if (!active) return;
+        if (onReviewsPage) {
+          markReviewsSeen(userId, reviews);
+          setNewReviewsCount(0);
+          return;
+        }
+        setNewReviewsCount(getUnseenReviews(userId, reviews).length);
+      })
+      .catch(() => {});
+    return () => {
+      active = false;
+    };
+  }, [role, userId, onReviewsPage]);
+
   // حالة فتح/إغلاق قائمة الموبايل — false يعني مقفولة بشكل افتراضي
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  // الجرس 🔔: طلبات جديدة (من الصفحة) + تقييمات جديدة (من هون)، وللوسيطة بيروح دايمًا لصفحة الإشعارات
+  const bellLink = notifLink || (role === "broker" ? "/mediator-notifications" : null);
+  const bellCount = (notifBadge || 0) + (role === "broker" ? newReviewsCount : 0);
 
   const links = role === "broker" ? BROKER_LINKS : CUSTOMER_LINKS;
   const roleLabel = role === "broker" ? "وسيطة" : "زبونة";
@@ -105,6 +135,9 @@ export default function DashboardLayout({
               {link.showBadge && ordersBadge > 0 && (
                 <span className="sidebar-badge">{ordersBadge}</span>
               )}
+              {link.showReviewsBadge && newReviewsCount > 0 && (
+                <span className="sidebar-badge">{newReviewsCount}</span>
+              )}
             </Link>
           ))}
         </nav>
@@ -133,12 +166,12 @@ export default function DashboardLayout({
               ☰
             </button>
 
-            {notifLink ? (
-              <Link to={notifLink} className="notif-btn-wrap">
+            {bellLink ? (
+              <Link to={bellLink} className="notif-btn-wrap">
                 <button className="notif-btn" aria-label="الإشعارات">
                   🔔
                 </button>
-                {notifBadge > 0 && <span className="notif-badge">{notifBadge}</span>}
+                {bellCount > 0 && <span className="notif-badge">{bellCount}</span>}
               </Link>
             ) : (
               <button className="notif-btn" aria-label="الإشعارات">

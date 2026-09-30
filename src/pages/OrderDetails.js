@@ -151,8 +151,9 @@ export default function OrderDetails() {
 
                 <div className="order-track-row">
                   {STATUS_STEPS.map((step, index) => {
-                    const isDone = index < currentStepIndex;
-                    const isCurrent = index === currentStepIndex;
+                    // آخر مرحلة (تم الاستلام) لما توصلها تعتبر مكتملة: ✓ وخط كامل
+                    const isDone = index < currentStepIndex || (isFinalStep && index === currentStepIndex);
+                    const isCurrent = index === currentStepIndex && !isFinalStep;
                     const timestamp = getStepTime(order, step.key, index, currentStepIndex);
                     return (
                       <div className="order-track-step" key={step.key}>
@@ -164,10 +165,11 @@ export default function OrderDetails() {
                           >
                             {isDone ? "✓" : index + 1}
                           </div>
-                          {index < STATUS_STEPS.length - 1 && (
+                          {/* خط بيربط هاي المرحلة بالمرحلة اللي قبلها */}
+                          {index > 0 && (
                             <div
                               className={`order-track-connector ${
-                                index < currentStepIndex ? "filled" : ""
+                                index <= currentStepIndex ? "filled" : ""
                               }`}
                             />
                           )}

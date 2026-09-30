@@ -1,13 +1,18 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
-import { getOrders, getOrderStats, acceptOrder, rejectOrder } from "../api";
+import { getOrders, getOrderStats, acceptOrder, rejectOrder, getReviews } from "../api";
+import { useAuth } from "../context/AuthContext";
+import { getUnseenReviews } from "../utils/reviewsSeen";
 import DashboardLayout from "../components/DashboardLayout";
 import { formatDateTime } from "../utils/dates";
 import { formatProductsCount } from "../utils/orders";
 
 // صفحة الإشعارات — بتعرض الطلبات الجديدة (status === "pending") يلي محتاجة
-// قرار الوسيطة (قبول / رفض)، ونفس هالعدد هو يلي بيظهر كرقم صغير فوق زر 🔔
+// قرار الوسيطة (قبول / رفض)، والتقييمات الجديدة اللي لسا ما شافتها، ومجموعهم
+// هو الرقم الصغير فوق زر 🔔
 export default function MediatorNotifications() {
+  const { user } = useAuth();
+  const [newReviews, setNewReviews] = useState([]);
 
   const [orders, setOrders] = useState([]);
   const [stats, setStats] = useState(null);
@@ -18,17 +23,20 @@ export default function MediatorNotifications() {
   const [actionError, setActionError] = useState("");
 
   useEffect(() => {
-    Promise.all([getOrders({ status: "pending" }), getOrderStats()])
-      .then(([ordersData, statsData]) => {
+    // لو فشل جلب التقييمات ما بنوقّف الطلبات
+    const reviewsPromise = getReviews().catch(() => ({ reviews: [] }));
+    Promise.all([getOrders({ status: "pending" }), getOrderStats(), reviewsPromise])
+      .then(([ordersData, statsData, reviewsData]) => {
         setOrders(ordersData);
         setStats(statsData);
+        setNewReviews(getUnseenReviews(user?.id ?? "me", reviewsData.reviews));
         setLoading(false);
       })
       .catch((err) => {
         setLoadError(err.message);
         setLoading(false);
       });
-  }, []);
+  }, [user?.id]);
 
   const handleAccept = async (orderId) => {
     setActionError("");
@@ -64,7 +72,7 @@ export default function MediatorNotifications() {
 
         <div className="dashboard-welcome">
           <h1>الإشعارات</h1>
-          <p>الطلبات الجديدة يلي وصلتك ولسا محتاجة قرارك (قبول أو رفض).</p>
+          <p>الطلبات الجديدة يلي محتاجة قرارك (قبول أو رفض)، والتقييمات الجديدة على متجرك.</p>
         </div>
 
         {loadError && (
@@ -80,12 +88,40 @@ export default function MediatorNotifications() {
             <div className="empty-orders">
               <p>جاري التحميل...</p>
             </div>
-          ) : orders.length === 0 ? (
+          ) : orders.length === 0 && newReviews.length === 0 ? (
             <div className="empty-orders">
-              <p>ما في طلبات جديدة حاليًا 🎉</p>
+              <p>ما في إشعارات جديدة حاليًا 🎉</p>
             </div>
           ) : (
             <div className="notifications-list">
+              {newReviews.length > 0 && <h3 className="notifications-section-title">تقييمات جديدة</h3>}
+              {newReviews.map((review) => (
+                <div className="notification-card" key={`review-${review.id}`}>
+                  <div className="notification-card-main">
+                    <div className="notification-card-title">
+                      تقييم جديد من {review.customer}{" "}
+                      <span className="notification-stars">
+                        {"★".repeat(Math.max(0, Math.min(5, review.rating || 0)))}
+                        {"☆".repeat(5 - Math.max(0, Math.min(5, review.rating || 0)))}
+                      </span>
+                    </div>
+                    <div className="notification-card-sub">
+                      {review.comment ? `"${review.comment}" · ` : ""}
+                      {review.orderId ? `طلب #${review.orderId} · ` : ""}
+                      {formatDateTime(review.date)}
+                    </div>
+                  </div>
+                  <div className="notification-card-actions">
+                    <Link to="/mediator-reviews" className="details-link">
+                      عرض التقييم
+                    </Link>
+                  </div>
+                </div>
+              ))}
+
+              {orders.length > 0 && newReviews.length > 0 && (
+                <h3 className="notifications-section-title">طلبات جديدة</h3>
+              )}
               {orders.map((order) => (
                 <div className="notification-card" key={order.id}>
                   <div className="notification-card-main">

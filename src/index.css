@@ -5583,6 +5583,63 @@ footer .copyright {
   text-align: center;
   line-height: 1.5;
 }
+/* ===== اختيار الوسيطة: صورة الوسيطة + عدّاد النتائج ===== */
+.mediator-pick-avatar {
+  overflow: hidden;
+}
+
+.mediator-pick-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.mediator-pick-count {
+  font-size: 13px;
+  color: var(--gray-light);
+  margin-bottom: 14px;
+}
+/* ===== إصلاح مسار الطلب عند الوسيطة: خطوط متصلة بين كل الدوائر + دوائر تحت نفس مركز التسمية ===== */
+.order-track-step {
+  position: relative;
+}
+
+.order-track-step-top {
+  justify-content: center;
+  margin-inline-start: 0;
+}
+
+.order-track-step-top:first-child {
+  margin-inline-start: 0;
+}
+
+.order-track-circle {
+  position: relative;
+  z-index: 1;
+  margin: 0;
+}
+
+.order-track-connector {
+  position: absolute;
+  top: 19px;
+  left: 50%;
+  width: 100%;
+  flex: none;
+  margin: 0;
+  z-index: 0;
+}/* ===== صفحة الإشعارات: عناوين الأقسام + نجوم التقييم ===== */
+.notifications-section-title {
+  font-size: 14px;
+  font-weight: 800;
+  color: var(--gray);
+  margin: 4px 0 2px;
+}
+
+.notification-stars {
+  color: #f59e0b;
+  font-size: 13px;
+  letter-spacing: 1px;
+}
 @media (max-width: 640px) {
   .review-page-card {
     padding: 22px 18px;

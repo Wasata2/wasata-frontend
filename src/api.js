@@ -1,3 +1,5 @@
+import { parseApiDate } from './utils/dates';
+
 const BASE_URL = "https://wasata-backend-production-nojkxd.laravel.cloud";
 
 export async function getCsrfCookie() {
@@ -396,6 +398,10 @@ function buildStatusTimes(o) {
   });
   return times;
 }
+function pickOrderDate(o, statusTimes) {
+  const candidates = [statusTimes.pending, o.created_at, o.order_date, o.placed_at, o.date];
+  return candidates.find((v) => v && parseApiDate(v)) || candidates.find(Boolean) || '';
+}
 
 function mapOrderFromApi(o) {
   const rawItems = o.items || o.order_items || [];
@@ -412,9 +418,7 @@ function mapOrderFromApi(o) {
   return {
     id: o.id,
     customer: pickCustomerName(o),
-    // created_at أول شي لأنه دايمًا بصيغة ISO قابلة للتحويل الصحيح للتوقيت المحلي،
-    // بينما date ممكن يجي كنص جاهز للعرض
-    date: o.created_at || o.date || o.order_date || o.placed_at,
+    date: pickOrderDate(o, buildStatusTimes(o)),  
     statusUpdatedAt: o.status_updated_at || o.updated_at || o.created_at,
     statusTimes: buildStatusTimes(o),
     itemsCount: o.items_count ?? rawItems.length,
@@ -466,7 +470,7 @@ function mapMyOrderFromApi(o) {
       o.total_items_quantity ??
       null,
     price: o.estimated_amount ?? o.total_amount ?? 0,
-    date: o.created_at || o.date || o.order_date || "",
+    date: pickOrderDate(o, buildStatusTimes(o)),  
     statusUpdatedAt: o.status_updated_at || o.updated_at || o.created_at || "",
     statusTimes: buildStatusTimes(o),
     reviewed: !!o.reviewed,
