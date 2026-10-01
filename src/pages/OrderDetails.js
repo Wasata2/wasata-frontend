@@ -144,6 +144,46 @@ export default function OrderDetails() {
               </div>
             </div>
 
+            {/* ===== بيانات التوصيل (عنوان الزبونة ورقم تواصلها) ===== */}
+            <div className="order-details-card">
+              <h2 className="order-details-section-title">بيانات التوصيل</h2>
+              <div className="order-details-meta">
+                <div>
+                  <div className="profile-field-label">طريقة الاستلام</div>
+                  <div className="profile-field-value">
+                    {order.deliveryType === "home_delivery"
+                      ? "توصيل إلى المنزل"
+                      : order.deliveryType === "pickup"
+                        ? "استلام من نقطة استلام"
+                        : "—"}
+                  </div>
+                </div>
+                {order.deliveryType === "home_delivery" && (
+                  <div>
+                    <div className="profile-field-label">العنوان</div>
+                    <div className="profile-field-value">{order.address || "—"}</div>
+                  </div>
+                )}
+                <div>
+                  <div className="profile-field-label">رقم التواصل</div>
+                  <div className="profile-field-value">
+                    {order.contactPhone ? (
+                      <a href={`tel:${order.contactPhone}`} dir="ltr">
+                        {order.contactPhone}
+                      </a>
+                    ) : (
+                      "—"
+                    )}
+                  </div>
+                </div>
+              </div>
+              {order.customerNote && (
+                <div className="service-notes" style={{ whiteSpace: "pre-line", marginTop: "12px" }}>
+                  ملاحظات الزبونة: {order.customerNote}
+                </div>
+              )}
+            </div>
+
             {/* ===== مسار الطلب ===== */}
             {!isCancelled && (
               <div className="order-details-card">
@@ -264,11 +304,36 @@ export default function OrderDetails() {
                         {item.quantity && (
                           <span className="service-fee-tag">الكمية: {item.quantity}</span>
                         )}
+                        {item.price != null && (
+                          <span className="service-fee-tag">سعر القطعة: {item.price} ₪</span>
+                        )}
+                        {item.price != null && Number(item.quantity) > 1 && (
+                          <span className="service-fee-tag">
+                            المجموع: {item.price * Number(item.quantity)} ₪
+                          </span>
+                        )}
                       </div>
                       {item.notes && <div className="service-notes">ملاحظة: {item.notes}</div>}
                     </div>
                   </div>
                 ))
+              )}
+              {(order.items || []).length > 0 && (
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    marginTop: "14px",
+                    paddingTop: "14px",
+                    borderTop: "1px solid var(--line)",
+                    fontWeight: 800,
+                  }}
+                >
+                  <span>إجمالي سعر الطلب</span>
+                  <span>
+                    {order.totalPrice != null ? `${order.totalPrice} ₪` : "لم يتم التسعير بعد"}
+                  </span>
+                </div>
               )}
             </div>
 

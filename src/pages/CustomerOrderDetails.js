@@ -51,6 +51,7 @@ export default function CustomerOrderDetails() {
 
     const currentStepIndex = order ? STATUS_STEPS.findIndex((s) => s.key === order.status) : -1;
     const isCancelled = order?.status === "cancelled";
+    const isHomeDelivery = order?.deliveryType === "home_delivery";
 
     return (
         <DashboardLayout role="customer">
@@ -67,11 +68,7 @@ export default function CustomerOrderDetails() {
 
             {order && (
                 <>
-                    <div className="order-details-card">
-                        <h3 className="order-details-section-title">تفاصيل التوصيل</h3>
-                        <p>📦 {order.deliveryMethod}</p>
-                        {order.customerNote && <p style={{ marginTop: "10px" }}>📝 {order.customerNote}</p>}
-                    </div>
+                    {/* ===== بطاقة الطلب: الرقم + السعر + مسار الطلب ===== */}
                     <div className="order-details-card">
                         <div className="order-details-top">
                             <h1>طلب #{order.id}</h1>
@@ -117,6 +114,39 @@ export default function CustomerOrderDetails() {
                         {cancelError && <p className="form-error">{cancelError}</p>}
                     </div>
 
+                    {/* ===== تفاصيل التوصيل: كل معلومة بحقلها (بدون تكرار) ===== */}
+                    <div className="order-details-card">
+                        <h3 className="order-details-section-title">تفاصيل التوصيل</h3>
+                        <div className="order-details-meta">
+                            <div>
+                                <div className="profile-field-label">طريقة الاستلام</div>
+                                <div className="profile-field-value">
+                                    {isHomeDelivery ? "توصيل إلى المنزل" : "استلام من نقطة استلام"}
+                                </div>
+                            </div>
+                            {isHomeDelivery && (
+                                <div>
+                                    <div className="profile-field-label">العنوان</div>
+                                    <div className="profile-field-value">{order.address || "—"}</div>
+                                </div>
+                            )}
+                            {isHomeDelivery && (
+                                <div>
+                                    <div className="profile-field-label">رقم التواصل</div>
+                                    <div className="profile-field-value" dir="ltr" style={{ textAlign: "right" }}>
+                                        {order.contactPhone || "—"}
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                        {order.customerNote && (
+                            <p style={{ marginTop: "12px", whiteSpace: "pre-line" }}>
+                                📝 ملاحظاتك: {order.customerNote}
+                            </p>
+                        )}
+                    </div>
+
+                    {/* ===== المنتجات ===== */}
                     <div className="order-details-card">
                         <h3 className="order-details-section-title">المنتجات ({order.items.length})</h3>
                         {order.items.map((item) => (
@@ -133,12 +163,33 @@ export default function CustomerOrderDetails() {
                                         {item.color && <span className="service-fee-tag">اللون: {item.color}</span>}
                                         {item.size && <span className="service-fee-tag">المقاس: {item.size}</span>}
                                         <span className="service-fee-tag">الكمية: {item.quantity}</span>
-                                        {item.price != null && <span className="service-fee-tag">{item.price} ₪</span>}
+                                        {item.price != null && (
+                                            <span className="service-fee-tag">سعر القطعة: {item.price} ₪</span>
+                                        )}
+                                        {item.price != null && Number(item.quantity) > 1 && (
+                                            <span className="service-fee-tag">
+                                                المجموع: {item.price * Number(item.quantity)} ₪
+                                            </span>
+                                        )}
                                     </div>
                                     {item.notes && <p className="order-item-notes">📌 {item.notes}</p>}
                                 </div>
                             </div>
                         ))}
+
+                        <div
+                            style={{
+                                display: "flex",
+                                justifyContent: "space-between",
+                                marginTop: "14px",
+                                paddingTop: "14px",
+                                borderTop: "1px solid var(--line)",
+                                fontWeight: 800,
+                            }}
+                        >
+                            <span>إجمالي سعر الطلب</span>
+                            <span>{order.price != null ? `${order.price} ₪` : "السعر قيد التحديد"}</span>
+                        </div>
                     </div>
                 </>
             )}

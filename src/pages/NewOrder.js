@@ -66,21 +66,21 @@ export default function NewOrder() {
   const hasChosenMediator = preselectedId !== null && selectedMediator?.id === preselectedId;
 
   // خدمات الوسيطة المختارة (جاية من بروفايل المتجر) — بنستخدمها لعرض الخدمات وخيار التوصيل
-  const [profile, setProfile] = useState({ services: [], loading: false });
+  const [profile, setProfile] = useState({ services: [], store: null, loading: false });
   useEffect(() => {
     if (selectedMediatorId === null) return undefined;
     let cancelled = false;
-    setProfile({ services: [], loading: true });
+    setProfile({ services: [], store: null, loading: true });
     getStoreProfile(selectedMediatorId)
-      .then(({ services }) => {
+      .then(({ store, services }) => {
         if (cancelled) return;
         const available = services.filter((sv) => sv.available);
-        setProfile({ services: available, loading: false });
+        setProfile({ services: available, store, loading: false });
         // ما منخيّر الزبونة بنوع الخدمة — منستخدم أول خدمة متاحة عند الوسيطة تلقائيًا
         setSelectedServiceId(available.length > 0 ? String(available[0].id) : "");
       })
       .catch(() => {
-        if (!cancelled) setProfile({ services: [], loading: false });
+        if (!cancelled) setProfile({ services: [], store: null, loading: false });
       });
     return () => {
       cancelled = true;
@@ -130,8 +130,18 @@ export default function NewOrder() {
   const totalItems = products.length;
   const totalPieces = products.reduce((sum, p) => sum + p.qty, 0);
 
-  // الزبونة مخيّرة دايمًا بين توصيل للمنزل أو استلام من نقطة معيّنة — رسوم التوصيل تحددها الوسيطة لاحقًا
-  const deliveryFee = 0;
+  // ===== خيارات التوصيل الحقيقية للوسيطة المختارة =====
+  // رسوم التوصيل (null = الوسيطة ما حددتها)
+  const deliveryFee = profile.store?.deliveryFee ?? selectedMediator?.deliveryFee ?? null;
+  const homeFeeLabel = deliveryFee === null ? null : deliveryFee > 0 ? `${deliveryFee} ₪` : "مجاني";
+  // نقطة الاستلام: بتتوفر بس لو الوسيطة حددت pickup_location (لو الباك ما رجّع المعلومة منفترض متاحة والباك بيرفض لو لأ)
+  const pickupLocation = profile.store?.pickupLocation || "";
+  const pickupAvailable = selectedMediator?.pickupAvailable ?? profile.store?.pickupAvailable ?? true;
+
+  // لو الوسيطة ما عندها نقطة استلام، منحوّل الاختيار تلقائيًا للتوصيل للمنزل
+  useEffect(() => {
+    if (!pickupAvailable && deliveryMethod === "pickup") setDeliveryMethod("home");
+  }, [pickupAvailable, deliveryMethod]);
 
   // العمولة الحقيقية للوسيطة (ممكن تكون فاضية إذا ما حددتها)
   const commissionText = (m) =>
@@ -156,18 +166,16 @@ export default function NewOrder() {
     setSubmitting(true);
     setSubmitError("");
     try {
-      // ملاحظة: العنوان صار يترسل كحقل مستقل (address) للباك اند لأنه هو
-      // إلزامي وقت home_delivery — بس منسيبه كمان جوا الملاحظة حتى يبان
-      // بوضوح للوسيطة مع رقم التواصل (يلي ما إله حقل مخصص لهلق)
-      const deliveryNote =
-        deliveryMethod === "home"
-          ? `طريقة الاستلام: توصيل إلى المنزل\nرقم التواصل: ${homePhone.trim()}`
-          : `طريقة الاستلام: استلام من نقطة استلام (${selectedMediator.city || "حسب مدينة الوسيطة"})`;
-      const customerNote = [deliveryNote, notesToMediator.trim()].filter(Boolean).join("\n\n");
+      // العنوان ورقم التواصل وطريقة الاستلام بتنبعت كحقول مستقلة للباك اند
+      // (address, contact_phone, delivery_method) — الملاحظة بس كلام الزبونة
+      const customerNote = notesToMediator.trim();
 
       await createOrder({
         storeId: selectedMediator.id,
         deliveryMethod: deliveryMethod === "home" ? "home_delivery" : "pickup",
+        // إلزامي من الباك اند مع home_delivery — بدونه الطلب بيرجع 422
+        address: deliveryMethod === "home" ? homeAddress.trim() : undefined,
+        contactPhone: deliveryMethod === "home" ? homePhone.trim() : undefined,
         customerNote,
         items: products.map((p) => ({
           serviceListingId: selectedServiceId,
@@ -460,6 +468,12 @@ export default function NewOrder() {
               <span>عدد المنتجات</span>
               <span>{totalItems} منتج ({totalPieces} قطعة)</span>
             </div>
+            {deliveryMethod === "home" && homeFeeLabel && (
+              <div className="review-row">
+                <span>رسوم التوصيل</span>
+                <span>{homeFeeLabel}</span>
+              </div>
+            )}
             <p className="review-disclaimer">
               ⚠ السعر بيتحدد من الوسيطة بعد ما توافق على طلبك، وبيوصلك إشعار فيه.
             </p>
@@ -532,6 +546,9 @@ export default function NewOrder() {
                 <span>طريقة استلام الطلب</span>
               </div>
               <label className="delivery-option">
+                {homeFeeLabel && (
+                  <span className={`delivery-fee-tag ${deliveryFee === 0 ? "free" : ""}`}>{homeFeeLabel}</span>
+                )}
                 <span>التوصيل إلى المنزل</span>
                 <input
                   type="radio"
@@ -567,21 +584,26 @@ export default function NewOrder() {
                 </div>
               )}
 
-              <label className="delivery-option">
+              <label className="delivery-option" style={!pickupAvailable ? { opacity: 0.55 } : undefined}>
                 <span className="delivery-fee-tag free">مجاني</span>
                 <span>الاستلام من نقطة استلام</span>
                 <input
                   type="radio"
                   name="delivery"
                   checked={deliveryMethod === "pickup"}
+                  disabled={!pickupAvailable}
                   onChange={() => setDeliveryMethod("pickup")}
                 />
               </label>
 
-              {deliveryMethod === "pickup" && (
+              {!pickupAvailable && (
+                <p className="delivery-pickup-note">هاي الوسيطة ما حدّدت نقطة استلام بعد.</p>
+              )}
+
+              {pickupAvailable && deliveryMethod === "pickup" && (
                 <p className="delivery-pickup-note">
-                  📍 نقطة الاستلام حسب مدينة الوسيطة:{" "}
-                  {selectedMediator.city || "غير محددة، تواصلي مع الوسيطة"}
+                  📍 نقطة الاستلام:{" "}
+                  {pickupLocation || selectedMediator.city || "غير محددة، تواصلي مع الوسيطة"}
                 </p>
               )}
             </div>

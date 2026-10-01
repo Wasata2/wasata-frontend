@@ -343,15 +343,26 @@ export async function rejectOrder(id) {
 }
 
 function mapOrderItemFromApi(item) {
+  // الباك اند بيخزّن صورة المنتج كمسار نسبي (image_path) — منحوله لرابط كامل عشان تظهر
+  const rawImage =
+    item.image_url || item.image_path || item.product_image || item.image;
   return {
     id: item.id,
     name: item.product_name || item.name,
-    image: item.image_url || item.product_image,
+    image: rawImage ? resolveStockImage(rawImage) : null,
     sheinUrl: item.shein_url || item.product_url,
     color: item.color,
     size: item.size,
     quantity: item.quantity,
     notes: item.notes || item.item_note,
+    // السعر النهائي للقطعة الواحدة — بيتحدد من الوسيطة وقت قبول الطلب (unit_price)
+    // قبل القبول بيكون null، والواجهة بتعرض "السعر قيد التحديد"
+    price:
+      item.unit_price !== null && item.unit_price !== undefined
+        ? Number(item.unit_price)
+        : item.price !== null && item.price !== undefined
+          ? Number(item.price)
+          : null,
   };
 }
 
@@ -422,6 +433,36 @@ function pickOrderDate(o, statusTimes) {
   );
 }
 
+// بيانات التوصيل اللي لازم تشوفها الوسيطة: طريقة الاستلام + العنوان + رقم تواصل الزبونة.
+// رقم التواصل بنقراه من حقله الحقيقي (contact_phone) لو الباك اند بيرجّعه، وإلا
+// بنطلعه من سطر "رقم التواصل: ..." اللي بنكتبه بملاحظة الطلب (حل مؤقت لحد ما
+// الباك اند يضيف الحقل)، وآخر شي رقم حساب الزبونة نفسه.
+function pickContactPhone(o) {
+  if (o.contact_phone) return o.contact_phone;
+  const match = /رقم التواصل:\s*([^\n]+)/.exec(o.customer_note || "");
+  if (match) return match[1].trim();
+  return o.customer?.phone || o.customer_phone || "";
+}
+
+// ملاحظة الطلب فيها سطور آلية بنضيفها إحنا وقت الإرسال (طريقة الاستلام / رقم التواصل)
+// وهي معروضة بحقول مستقلة، فبنشيلها ونعرض بس كلام الزبونة الحقيقي
+function extractUserNote(note) {
+  return (note || "")
+    .split("\n")
+    .filter((line) => !/^\s*(طريقة الاستلام|رقم التواصل)\s*:/.test(line))
+    .join("\n")
+    .trim();
+}
+
+// مجموع سعر الطلب = سعر كل منتج × كميته. لو في منتج لسا ما انسعّر بنرجّع null
+function sumItemPrices(items) {
+  if (!items.length || items.some((it) => it.price == null)) return null;
+  return items.reduce(
+    (sum, it) => sum + it.price * (Number(it.quantity) || 1),
+    0,
+  );
+}
+
 function mapOrderFromApi(o) {
   const rawItems = o.items || o.order_items || [];
   const items = rawItems.map(mapOrderItemFromApi);
@@ -445,6 +486,12 @@ function mapOrderFromApi(o) {
     amount: o.estimated_amount ?? o.total_amount ?? o.amount ?? 0,
     status: o.status,
     items,
+    // بيانات التوصيل (بتظهر للوسيطة بصفحة تفاصيل الطلب)
+    deliveryType: o.delivery_method || null, // "home_delivery" | "pickup"
+    address: o.address || o.delivery_address || "",
+    contactPhone: pickContactPhone(o),
+    customerNote: extractUserNote(o.customer_note),
+    totalPrice: sumItemPrices(items),
   };
 }
 
@@ -523,10 +570,7 @@ export async function getMyOrders() {
 
 function mapMyOrderDetailFromApi(o) {
   const items = (o.items || []).map(mapOrderItemFromApi);
-  const allPriced = items.length > 0 && items.every((it) => it.price != null);
-  const totalPrice = allPriced
-    ? items.reduce((sum, it) => sum + it.price * it.quantity, 0)
-    : null;
+  const totalPrice = sumItemPrices(items);
   return {
     id: o.id,
     store: o.store_name || (o.store && o.store.name) || "الوسيطة",
@@ -536,7 +580,10 @@ function mapMyOrderDetailFromApi(o) {
     price: totalPrice,
     rejectionReason: o.rejection_reason || o.cancellation_reason || null,
     deliveryMethod: o.delivery_method === "home_delivery" ? "توصيل إلى المنزل" : "استلام من نقطة",
-    customerNote: o.customer_note || "",
+    deliveryType: o.delivery_method || null,
+    address: o.address || o.delivery_address || "",
+    contactPhone: pickContactPhone(o),
+    customerNote: extractUserNote(o.customer_note),
     items,
   };
 }
@@ -554,6 +601,7 @@ export async function createOrder({
   storeId,
   deliveryMethod, // "home_delivery" | "pickup"
   address, // إلزامي من الباك اند لو deliveryMethod = home_delivery
+  contactPhone, // رقم تواصل الزبونة للتوصيل (حقل contact_phone — لازم الباك اند يستقبله)
   customerNote,
   estimatedAmount,
   items,
@@ -562,6 +610,7 @@ export async function createOrder({
   form.append("store_id", storeId);
   form.append("delivery_method", deliveryMethod);
   if (address) form.append("address", address);
+  if (contactPhone) form.append("contact_phone", contactPhone);
   if (customerNote) form.append("customer_note", customerNote);
   if (estimatedAmount !== null && estimatedAmount !== undefined) {
     form.append("estimated_amount", estimatedAmount);
@@ -569,7 +618,9 @@ export async function createOrder({
   // ... باقي الدالة (items.forEach...) زي ما هو، ما تغيّر
 
   items.forEach((item, i) => {
-    form.append(`items[${i}][service_listing_id]`, item.serviceListingId);
+    // service_listing_id اختياري بالباك اند (nullable)
+    if (item.serviceListingId)
+      form.append(`items[${i}][service_listing_id]`, item.serviceListingId);
     form.append(`items[${i}][quantity]`, item.quantity);
     form.append(`items[${i}][product_name]`, item.productName);
     if (item.productUrl)
@@ -732,6 +783,17 @@ function mapStoreFromApi(s) {
     phone: s.phone || owner.phone || s.user_phone || s.owner_phone || "",
     image: resolveStoreImageUrl(s.image_url || s.image),
     commission: s.commission_rate ?? s.commission ?? null,
+    // خيارات التوصيل — الباك اند بيرجّع pickup_available بقائمة الوسيطات (GET /stores)
+    // و pickup_location بالملف العام (GET /stores/{id})، فبنقرا الاتنين وبنكمّل لبعض.
+    // التوصيل للمنزل متاح دايمًا (ما في حقل إله)، ورسومه بـ delivery_fee (نص مثل "15.00")
+    pickupAvailable:
+      s.pickup_available ??
+      (s.pickup_location !== undefined ? Boolean(s.pickup_location) : null),
+    pickupLocation: s.pickup_location || "",
+    deliveryFee:
+      s.delivery_fee !== undefined && s.delivery_fee !== null
+        ? Number(s.delivery_fee)
+        : null,
     acceptingOrders: !!s.is_accepting_orders,
     completedOrders:
       s.completed_orders_count ?? s.completed_orders ?? s.orders_completed ?? 0,
