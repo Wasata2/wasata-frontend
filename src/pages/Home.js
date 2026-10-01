@@ -12,7 +12,6 @@ export default function Home() {
         <video
           className="hero-video"
           src={`${process.env.PUBLIC_URL}/hero-bg.mp4`}
-          poster={`${process.env.PUBLIC_URL}/hero-bg.jpg`}
           autoPlay
           muted
           loop
