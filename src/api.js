@@ -1,34 +1,44 @@
-const BASE_URL = 'https://wasata-backend-production-nojkxd.laravel.cloud';
+import { parseApiDate } from "./utils/dates";
+
+const BASE_URL = "https://wasata-backend-production-nojkxd.laravel.cloud";
 
 export async function getCsrfCookie() {
   await fetch(`${BASE_URL}/sanctum/csrf-cookie`, {
-    credentials: 'include',
+    credentials: "include",
   });
 }
 
 // نقطة مرور وحيدة لكل طلبات الشبكة بالتطبيق. أي دالة تانية بهاد الملف
 // (getOrders, createService...) بتنده على هاي بدل ما تكرر نفس الكود.
-async function request(endpoint, { method = 'GET', body, isFormData = false, errorMessage } = {}) {
-  const token = localStorage.getItem('token');
+async function request(
+  endpoint,
+  { method = "GET", body, isFormData = false, errorMessage } = {},
+) {
+  const token = localStorage.getItem("token");
 
-  const headers = { Accept: 'application/json' };
-  if (!isFormData) headers['Content-Type'] = 'application/json';
-  if (token) headers['Authorization'] = `Bearer ${token}`;
+  const headers = { Accept: "application/json" };
+  if (!isFormData) headers["Content-Type"] = "application/json";
+  if (token) headers["Authorization"] = `Bearer ${token}`;
 
   const response = await fetch(`${BASE_URL}${endpoint}`, {
     method,
-    credentials: 'include',
+    credentials: "include",
     headers,
-    body: isFormData ? body : body !== undefined ? JSON.stringify(body) : undefined,
+    body: isFormData
+      ? body
+      : body !== undefined
+        ? JSON.stringify(body)
+        : undefined,
   });
 
   // ===== معالجة انتهاء الجلسة (401) — بمكان واحد بس، بتغطي كل الطلبات =====
-  const isAuthEndpoint = endpoint.includes('/auth/login') || endpoint.includes('/auth/register');
+  const isAuthEndpoint =
+    endpoint.includes("/auth/login") || endpoint.includes("/auth/register");
   if (response.status === 401 && !isAuthEndpoint) {
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
-    if (window.location.pathname !== '/login') {
-      window.location.href = '/login';
+    localStorage.removeItem("token");
+    localStorage.removeItem("user");
+    if (window.location.pathname !== "/login") {
+      window.location.href = "/login";
     }
   }
 
@@ -40,8 +50,10 @@ async function request(endpoint, { method = 'GET', body, isFormData = false, err
   } catch (e) {}
 
   if (!response.ok) {
-    const details = result.errors ? Object.values(result.errors).flat().join(' / ') : '';
-    throw new Error(details || result.message || errorMessage || 'حدث خطأ ما');
+    const details = result.errors
+      ? Object.values(result.errors).flat().join(" / ")
+      : "";
+    throw new Error(details || result.message || errorMessage || "حدث خطأ ما");
   }
 
   return result;
@@ -49,69 +61,72 @@ async function request(endpoint, { method = 'GET', body, isFormData = false, err
 
 export async function registerUser(data) {
   await getCsrfCookie();
-  return request('/api/auth/register', {
-    method: 'POST',
+  return request("/api/auth/register", {
+    method: "POST",
     body: data,
-    errorMessage: 'حدث خطأ أثناء إنشاء الحساب',
+    errorMessage: "حدث خطأ أثناء إنشاء الحساب",
   });
 }
 
 export async function loginUser(data) {
   await getCsrfCookie();
 
-  const result = await request('/api/auth/login', {
-    method: 'POST',
+  const result = await request("/api/auth/login", {
+    method: "POST",
     body: data,
-    errorMessage: 'خطأ في البريد الإلكتروني أو كلمة المرور',
+    errorMessage: "خطأ في البريد الإلكتروني أو كلمة المرور",
   });
 
   // مسح أي بيانات جلسة سابقة قبل تخزين الجديدة
-  localStorage.removeItem('token');
-  localStorage.removeItem('user');
+  localStorage.removeItem("token");
+  localStorage.removeItem("user");
 
-  localStorage.setItem('token', result.token);
-  localStorage.setItem('user', JSON.stringify(result.user));
+  localStorage.setItem("token", result.token);
+  localStorage.setItem("user", JSON.stringify(result.user));
 
   return result;
 }
 
 export async function apiPostWithAuth(endpoint, data) {
-  return request(endpoint, { method: 'POST', body: data });
+  return request(endpoint, { method: "POST", body: data });
 }
 
 export async function createStore(data) {
   const formData = new FormData();
-  formData.append('name', data.name);
-  formData.append('bio', data.bio || '');
-  formData.append('phone', data.phone);
-  formData.append('city', data.city);
-  formData.append('accepts_whatsapp_orders', data.accepts_whatsapp_orders ? 1 : 0);
+  formData.append("name", data.name);
+  formData.append("bio", data.bio || "");
+  formData.append("phone", data.phone);
+  formData.append("city", data.city);
+  formData.append(
+    "accepts_whatsapp_orders",
+    data.accepts_whatsapp_orders ? 1 : 0,
+  );
   if (data.image) {
-    formData.append('image', data.image);
+    formData.append("image", data.image);
   }
 
-  return request('/api/stores', {
-    method: 'POST',
+  return request("/api/stores", {
+    method: "POST",
     body: formData,
     isFormData: true,
-    errorMessage: 'حدث خطأ أثناء إنشاء المتجر',
+    errorMessage: "حدث خطأ أثناء إنشاء المتجر",
   });
 }
 
 export async function getMyStore() {
-  return request('/api/stores/me', {
-    errorMessage: 'تعذر جلب بيانات المتجر',
+  return request("/api/stores/me", {
+    errorMessage: "تعذر جلب بيانات المتجر",
   });
 }
 
 export async function logoutUser() {
   try {
-    await request('/api/auth/logout', { method: 'POST' });
+    await request("/api/auth/logout", { method: "POST" });
   } catch (err) {
-    console.log('logout error (ignored):', err);
+    console.log("logout error (ignored):", err);
   } finally {
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
+    localStorage.removeItem("token");
+    localStorage.removeItem("user");
   }
 }
 
@@ -120,31 +135,34 @@ export async function logoutUser() {
 export async function updateStore(data) {
   const formData = new FormData();
   // Laravel بيحتاج POST + _method=PATCH لما بيكون فيه ملف (multipart/form-data)
-  formData.append('_method', 'PATCH');
-  if (data.name !== undefined) formData.append('name', data.name);
-  if (data.bio !== undefined) formData.append('bio', data.bio);
-  if (data.phone !== undefined) formData.append('phone', data.phone);
-  if (data.city !== undefined) formData.append('city', data.city);
+  formData.append("_method", "PATCH");
+  if (data.name !== undefined) formData.append("name", data.name);
+  if (data.bio !== undefined) formData.append("bio", data.bio);
+  if (data.phone !== undefined) formData.append("phone", data.phone);
+  if (data.city !== undefined) formData.append("city", data.city);
   if (data.accepts_whatsapp_orders !== undefined) {
-    formData.append('accepts_whatsapp_orders', data.accepts_whatsapp_orders ? 1 : 0);
+    formData.append(
+      "accepts_whatsapp_orders",
+      data.accepts_whatsapp_orders ? 1 : 0,
+    );
   }
   // سويتش "استقبال الطلبات" — حقل منفصل تمامًا عن استقبال طلبات واتساب
   if (data.is_accepting_orders !== undefined) {
-    formData.append('is_accepting_orders', data.is_accepting_orders ? 1 : 0);
+    formData.append("is_accepting_orders", data.is_accepting_orders ? 1 : 0);
   }
   // نسبة العمولة — صارت مدعومة فعليًا بالباك اند (commission_rate)
   if (data.commission_rate !== undefined) {
-    formData.append('commission_rate', data.commission_rate);
+    formData.append("commission_rate", data.commission_rate);
   }
   if (data.image) {
-    formData.append('image', data.image);
+    formData.append("image", data.image);
   }
 
-  return request('/api/stores/me', {
-    method: 'POST',
+  return request("/api/stores/me", {
+    method: "POST",
     body: formData,
     isFormData: true,
-    errorMessage: 'حدث خطأ أثناء تحديث بيانات المتجر',
+    errorMessage: "حدث خطأ أثناء تحديث بيانات المتجر",
   });
 }
 
@@ -156,32 +174,42 @@ export async function updateProfile(data) {
     // فيه ملف => لازم multipart/form-data. الباك اند (Laravel) ما بيقرأ PUT حقيقي
     // مع FormData، فلازم نبعتها POST مع حقل _method=PUT (method override)
     const formData = new FormData();
-    formData.append('_method', 'PUT');
-    if (data.full_name !== undefined) formData.append('full_name', data.full_name);
-    if (data.phone !== undefined) formData.append('phone', data.phone);
-    formData.append('image', data.image);
-
-    result = await request('/api/auth/profile', {
-      method: 'POST',
+    formData.append("_method", "PUT");
+    if (data.full_name !== undefined)
+      formData.append("full_name", data.full_name);
+    if (data.phone !== undefined) formData.append("phone", data.phone);
+    formData.append("image", data.image);
+        if (data.city !== undefined) {
+      formData.append("city", data.city);
+      formData.append("location", data.city); // عمود المدينة بجدول المستخدمين اسمه location
+    }
+        formData.append("image", data.image);
+    formData.append("profile_picture", data.image); // اسم عمود صورة المستخدمين بالباك اند
+    result = await request("/api/auth/profile", {
+      method: "POST",
       body: formData,
       isFormData: true,
-      errorMessage: 'حدث خطأ أثناء تحديث الصورة',
+      errorMessage: "حدث خطأ أثناء تحديث الصورة",
     });
   } else {
     // تعديل نصي بس (بدون صورة) => JSON عادي بـ PUT حقيقي، زي ما كان
     const body = {};
     if (data.full_name !== undefined) body.full_name = data.full_name;
     if (data.phone !== undefined) body.phone = data.phone;
+       if (data.city !== undefined) {
+      body.city = data.city;
+      body.location = data.city; // عمود المدينة بجدول المستخدمين اسمه location
+    }
 
-    result = await request('/api/auth/profile', {
-      method: 'PUT',
+    result = await request("/api/auth/profile", {
+      method: "PUT",
       body,
-      errorMessage: 'حدث خطأ أثناء تحديث البيانات',
+      errorMessage: "حدث خطأ أثناء تحديث البيانات",
     });
   }
 
   // نحدّث localStorage بالبيانات الحقيقية الراجعة من الباك اند (مش بس محليًا متل قبل)
-  localStorage.setItem('user', JSON.stringify(result.user));
+  localStorage.setItem("user", JSON.stringify(result.user));
 
   return result;
 }
@@ -194,7 +222,7 @@ function mapServiceFromApi(s) {
     description: s.description,
     feeType: s.fee_type,
     feeValue: s.fee_amount,
-    notes: s.notes || '',
+    notes: s.notes || "",
     available: !!s.is_available,
   };
 }
@@ -206,79 +234,84 @@ function mapServiceToApi(service) {
     description: service.description,
     fee_type: service.feeType,
     fee_amount: service.feeValue || null,
-    notes: service.notes || '',
+    notes: service.notes || "",
     is_available: service.available,
   };
 }
 
 export async function getServices() {
-  const result = await request('/api/services', {
-    errorMessage: 'تعذر جلب الخدمات',
+  const result = await request("/api/services", {
+    errorMessage: "تعذر جلب الخدمات",
   });
   const list = result.services || result.data || result;
   return Array.isArray(list) ? list.map(mapServiceFromApi) : [];
 }
 
 export async function createService(service) {
-  const result = await request('/api/services', {
-    method: 'POST',
+  const result = await request("/api/services", {
+    method: "POST",
     body: mapServiceToApi(service),
-    errorMessage: 'حدث خطأ أثناء إضافة الخدمة',
+    errorMessage: "حدث خطأ أثناء إضافة الخدمة",
   });
   return mapServiceFromApi(result.service || result);
 }
 
 export async function updateService(id, service) {
   const result = await request(`/api/services/${id}`, {
-    method: 'PATCH',
+    method: "PATCH",
     body: mapServiceToApi(service),
-    errorMessage: 'حدث خطأ أثناء إضافة الخدمة',
+    errorMessage: "حدث خطأ أثناء إضافة الخدمة",
   });
   return mapServiceFromApi(result.service || result);
 }
 
 export async function toggleService(id) {
   const result = await request(`/api/services/${id}/toggle`, {
-    method: 'PATCH',
-    errorMessage: 'حدث خطأ أثناء تغيير حالة الخدمة',
+    method: "PATCH",
+    errorMessage: "حدث خطأ أثناء تغيير حالة الخدمة",
   });
   return mapServiceFromApi(result.service || result);
 }
 
 export async function deleteService(id) {
   await request(`/api/services/${id}`, {
-    method: 'DELETE',
-    errorMessage: 'حدث خطأ أثناء حذف الخدمة',
+    method: "DELETE",
+    errorMessage: "حدث خطأ أثناء حذف الخدمة",
   });
   return true;
 }
 
 export async function forgotPassword(email) {
   await getCsrfCookie();
-  return request('/api/auth/forgot-password', {
-    method: 'POST',
+  return request("/api/auth/forgot-password", {
+    method: "POST",
     body: { email },
   });
   // النتيجة: { message, reset_token }
 }
 
-export async function resetPassword({ email, token, password, passwordConfirmation }) {
+export async function resetPassword({
+  email,
+  token,
+  password,
+  passwordConfirmation,
+}) {
   await getCsrfCookie();
-  return request('/api/auth/reset-password', {
-    method: 'POST',
+  return request("/api/auth/reset-password", {
+    method: "POST",
     body: {
       email,
       token,
       password,
       password_confirmation: passwordConfirmation,
     },
-    errorMessage: 'حدث خطأ أثناء تعيين كلمة المرور',
+    errorMessage: "حدث خطأ أثناء تعيين كلمة المرور",
   });
 }
 
 export async function getOrderStats() {
-  const result = await request('/api/orders/stats', {
-    errorMessage: 'تعذر جلب إحصائيات الطلبات',
+  const result = await request("/api/orders/stats", {
+    errorMessage: "تعذر جلب إحصائيات الطلبات",
   });
 
   // أسماء الحقول الحقيقية القادمة من الباك اند: total, new, in_progress, completed
@@ -293,9 +326,9 @@ export async function getOrderStats() {
 // قبول طلب — بينقل الحالة من pending إلى ordered_from_shein
 export async function acceptOrder(id, items) {
   const result = await request(`/api/orders/${id}/accept`, {
-    method: 'PATCH',
+    method: "PATCH",
     body: { items },
-    errorMessage: 'تعذر قبول الطلب',
+    errorMessage: "تعذر قبول الطلب",
   });
   return mapOrderFromApi(result.order || result);
 }
@@ -303,8 +336,8 @@ export async function acceptOrder(id, items) {
 // رفض طلب
 export async function rejectOrder(id) {
   const result = await request(`/api/orders/${id}/reject`, {
-    method: 'PATCH',
-    errorMessage: 'تعذر رفض الطلب',
+    method: "PATCH",
+    errorMessage: "تعذر رفض الطلب",
   });
   return mapOrderFromApi(result.order || result);
 }
@@ -328,21 +361,39 @@ function pickCustomerName(o) {
     o.customer?.full_name ||
     o.customer?.name ||
     o.customer_name ||
-    (typeof o.customer === 'string' ? o.customer : '') ||
+    (typeof o.customer === "string" ? o.customer : "") ||
     o.user?.full_name ||
     o.user?.name ||
-    ''
+    ""
   );
 }
 
 // وقت كل حالة بمسار الطلب: بنقراه من سجل الحالات لو الباك اند بيرجّعه
 // (status_history: [{ status, created_at }]) أو من أعمدة مثل shipped_at / arrived_at.
-const ORDER_STATUS_KEYS = ["pending", "ordered_from_shein", "shipped", "arrived", "inspected", "received"];
+const ORDER_STATUS_KEYS = [
+  "pending",
+  "ordered_from_shein",
+  "shipped",
+  "arrived",
+  "inspected",
+  "received",
+];
 
 function buildStatusTimes(o) {
   const times = {};
+  const direct = o.status_times || o.statusTimes;
+  if (direct && typeof direct === "object" && !Array.isArray(direct)) {
+    Object.entries(direct).forEach(([key, at]) => {
+      if (at) times[key] = at;
+    });
+  }
   const history =
-    o.status_history || o.status_histories || o.statusHistory || o.status_logs || o.timeline || o.history;
+    o.status_history ||
+    o.status_histories ||
+    o.statusHistory ||
+    o.status_logs ||
+    o.timeline ||
+    o.history;
   if (Array.isArray(history)) {
     history.forEach((h) => {
       const key = h.status || h.to_status || h.new_status;
@@ -356,6 +407,20 @@ function buildStatusTimes(o) {
   });
   return times;
 }
+function pickOrderDate(o, statusTimes) {
+  const candidates = [
+    statusTimes.pending,
+    o.created_at,
+    o.order_date,
+    o.placed_at,
+    o.date,
+  ];
+  return (
+    candidates.find((v) => v && parseApiDate(v)) ||
+    candidates.find(Boolean) ||
+    ""
+  );
+}
 
 function mapOrderFromApi(o) {
   const rawItems = o.items || o.order_items || [];
@@ -364,14 +429,15 @@ function mapOrderFromApi(o) {
   // نجرب حقول جاهزة للمجموع
   const totalQuantity = items.length
     ? items.reduce((sum, i) => sum + (Number(i.quantity) || 1), 0)
-    : o.total_quantity ?? o.items_sum_quantity ?? o.total_items_quantity ?? null;
+    : (o.total_quantity ??
+      o.items_sum_quantity ??
+      o.total_items_quantity ??
+      null);
 
   return {
     id: o.id,
     customer: pickCustomerName(o),
-    // created_at أول شي لأنه دايمًا بصيغة ISO قابلة للتحويل الصحيح للتوقيت المحلي،
-    // بينما date ممكن يجي كنص جاهز للعرض
-    date: o.created_at || o.date || o.order_date || o.placed_at,
+    date: pickOrderDate(o, buildStatusTimes(o)),
     statusUpdatedAt: o.status_updated_at || o.updated_at || o.created_at,
     statusTimes: buildStatusTimes(o),
     itemsCount: o.items_count ?? rawItems.length,
@@ -409,10 +475,21 @@ function mapMyOrderFromApi(o) {
   return {
     id: o.id,
     store: o.store_name || "—",
+    storeId: o.store_id ?? o.store?.id ?? null,
+    storeImage: resolveStoreImageUrl(
+      o.store_image_url ||
+        o.store_image ||
+        o.store?.image_url ||
+        o.store?.image,
+    ),
     itemsCount: o.items_count ?? 0,
-    totalQuantity: o.total_quantity ?? o.items_sum_quantity ?? o.total_items_quantity ?? null,
+    totalQuantity:
+      o.total_quantity ??
+      o.items_sum_quantity ??
+      o.total_items_quantity ??
+      null,
     price: o.estimated_amount ?? o.total_amount ?? 0,
-    date: o.created_at || o.date || o.order_date || "",
+    date: pickOrderDate(o, buildStatusTimes(o)),
     statusUpdatedAt: o.status_updated_at || o.updated_at || o.created_at || "",
     statusTimes: buildStatusTimes(o),
     reviewed: !!o.reviewed,
@@ -430,12 +507,16 @@ function mapMyOrderFromApi(o) {
 }
 
 export async function getMyOrders() {
-  const result = await request('/api/my-orders', {
-    errorMessage: 'تعذر جلب طلباتك',
+  const result = await request("/api/my-orders", {
+    errorMessage: "تعذر جلب طلباتك",
   });
   const list = result.orders || [];
   return {
-    stats: result.stats || { active: 0, completed: 0, cancelled_or_rejected: 0 },
+    stats: result.stats || {
+      active: 0,
+      completed: 0,
+      cancelled_or_rejected: 0,
+    },
     orders: list.map(mapMyOrderFromApi),
   };
 }
@@ -478,12 +559,12 @@ export async function createOrder({
   items,
 }) {
   const form = new FormData();
-  form.append('store_id', storeId);
-  form.append('delivery_method', deliveryMethod);
-  if (address) form.append('address', address);
-  if (customerNote) form.append('customer_note', customerNote);
+  form.append("store_id", storeId);
+  form.append("delivery_method", deliveryMethod);
+  if (address) form.append("address", address);
+  if (customerNote) form.append("customer_note", customerNote);
   if (estimatedAmount !== null && estimatedAmount !== undefined) {
-    form.append('estimated_amount', estimatedAmount);
+    form.append("estimated_amount", estimatedAmount);
   }
   // ... باقي الدالة (items.forEach...) زي ما هو، ما تغيّر
 
@@ -491,30 +572,32 @@ export async function createOrder({
     form.append(`items[${i}][service_listing_id]`, item.serviceListingId);
     form.append(`items[${i}][quantity]`, item.quantity);
     form.append(`items[${i}][product_name]`, item.productName);
-    if (item.productUrl) form.append(`items[${i}][product_url]`, item.productUrl);
-    if (item.productImage) form.append(`items[${i}][product_image]`, item.productImage);
+    if (item.productUrl)
+      form.append(`items[${i}][product_url]`, item.productUrl);
+    if (item.productImage)
+      form.append(`items[${i}][product_image]`, item.productImage);
     if (item.color) form.append(`items[${i}][color]`, item.color);
     if (item.size) form.append(`items[${i}][size]`, item.size);
     if (item.itemNote) form.append(`items[${i}][item_note]`, item.itemNote);
   });
 
-  const result = await request('/api/orders', {
-    method: 'POST',
+  const result = await request("/api/orders", {
+    method: "POST",
     body: form,
     isFormData: true,
-    errorMessage: 'تعذر إرسال الطلب',
+    errorMessage: "تعذر إرسال الطلب",
   });
   return result.order || result;
 }
 
 export async function getOrders(filters = {}) {
   const params = new URLSearchParams();
-  if (filters.status) params.append('status', filters.status);
-  if (filters.date) params.append('date', filters.date);
-  if (filters.search) params.append('search', filters.search);
+  if (filters.status) params.append("status", filters.status);
+  if (filters.date) params.append("date", filters.date);
+  if (filters.search) params.append("search", filters.search);
 
   const result = await request(`/api/orders?${params.toString()}`, {
-    errorMessage: 'تعذر جلب الطلبات',
+    errorMessage: "تعذر جلب الطلبات",
   });
 
   const list = result.orders || result.data || result;
@@ -523,7 +606,7 @@ export async function getOrders(filters = {}) {
 
 export async function getOrderDetails(id) {
   const result = await request(`/api/orders/${id}`, {
-    errorMessage: 'تعذر جلب تفاصيل الطلب',
+    errorMessage: "تعذر جلب تفاصيل الطلب",
   });
   return mapOrderFromApi(result.order || result);
 }
@@ -532,9 +615,9 @@ export async function getOrderDetails(id) {
 // القيم المسموحة: pending, ordered_from_shein, shipped, arrived, inspected, received, cancelled
 export async function updateOrderStatus(id, status) {
   const result = await request(`/api/orders/${id}/status`, {
-    method: 'PATCH',
+    method: "PATCH",
     body: { status },
-    errorMessage: 'تعذر تحديث حالة الطلب',
+    errorMessage: "تعذر تحديث حالة الطلب",
   });
   return mapOrderFromApi(result.order || result);
 }
@@ -544,8 +627,8 @@ export async function updateOrderStatus(id, status) {
 // الباك اند بيرجع 422 لو الطلب مش pending، و403 لو الطلب مش للزبونة.
 export async function cancelOrder(id) {
   const result = await request(`/api/orders/${id}/cancel`, {
-    method: 'PATCH',
-    errorMessage: 'تعذر إلغاء الطلب',
+    method: "PATCH",
+    errorMessage: "تعذر إلغاء الطلب",
   });
   return mapOrderFromApi(result.order || result);
 }
@@ -554,10 +637,17 @@ export async function cancelOrder(id) {
 function mapReviewFromApi(r) {
   return {
     id: r.id,
-    customer: r.customer_name || r.customer || r.user_name || 'زبونة',
+    customer: r.customer_name || r.customer || r.user_name || "زبونة",
+        customerImage: resolveStoreImageUrl(
+      r.customer_image_url ||
+        r.customer_profile_picture_url ||
+        r.customer_profile_picture ||
+        r.customer?.profile_picture_url ||
+        r.user?.profile_picture_url,
+    ),
     date: r.created_at || r.date,
     rating: r.rating,
-    comment: r.comment || r.review || '',
+    comment: r.comment || r.review || "",
     orderId: r.order_id || r.orderId || null,
   };
 }
@@ -578,16 +668,23 @@ function mapReviewsResponse(result) {
 }
 
 export async function getReviews() {
-  const result = await request('/api/reviews', {
-    errorMessage: 'تعذر جلب التقييمات',
+  const result = await request("/api/reviews", {
+    errorMessage: "تعذر جلب التقييمات",
   });
   return mapReviewsResponse(result);
 }
-
+export async function createOrderReview(orderId, { rating, comment }) {
+  const result = await request(`/api/orders/${orderId}/review`, {
+    method: "POST",
+    body: { rating, comment: comment || null },
+    errorMessage: "تعذر إرسال التقييم",
+  });
+  return result.review ? mapReviewFromApi(result.review) : result;
+}
 // تقييمات وسيطة معيّنة (للملف العام اللي بتشوفه الزبونة) — GET /api/stores/{id}/reviews
 export async function getStoreReviews(storeId) {
   const result = await request(`/api/stores/${storeId}/reviews`, {
-    errorMessage: 'تعذر جلب التقييمات',
+    errorMessage: "تعذر جلب التقييمات",
   });
   return mapReviewsResponse(result);
 }
@@ -596,7 +693,7 @@ export async function getStoreReviews(storeId) {
 // الرد: { store: {...}, services: [...] } — الخدمات جاية جوا نفس الرد، ما في مسار منفصل إلها
 export async function getStoreProfile(storeId) {
   const result = await request(`/api/stores/${storeId}`, {
-    errorMessage: 'تعذر جلب بيانات الوسيطة',
+    errorMessage: "تعذر جلب بيانات الوسيطة",
   });
   const store = result.store || result;
   const services = Array.isArray(result.services)
@@ -618,9 +715,16 @@ function mapStoreFromApi(s) {
     id: s.id,
     // اسم المتجر اللي أنشأته الوسيطة (بيظهر ببطاقة الاستكشاف)، وإذا ما انرجع بنرجع لاسم صاحبة المتجر
     name:
-      s.name || s.store_name || owner.full_name || owner.name || s.full_name || s.owner_name || "وسيطة",
+      s.name ||
+      s.store_name ||
+      owner.full_name ||
+      owner.name ||
+      s.full_name ||
+      s.owner_name ||
+      "وسيطة",
     // اسم الوسيطة نفسها (صاحبة المتجر) — بنستخدمه بالبحث بس
-    ownerName: owner.full_name || owner.name || s.full_name || s.owner_name || "",
+    ownerName:
+      owner.full_name || owner.name || s.full_name || s.owner_name || "",
     // نبذة عني يلي كتبتها الوسيطة وقت إنشاء المتجر (أو عدّلتها لاحقًا من ملفها الشخصي)
     bio: s.bio || "",
     city: s.city || "",
@@ -641,7 +745,11 @@ function mapStoreFromApi(s) {
 // رابط صورة المتجر ممكن يجي كمسار نسبي من الباك اند، فمنتأكد إنه رابط كامل
 function resolveStoreImageUrl(path) {
   if (!path) return null;
-  if (/^https?:\/\//i.test(path) || path.startsWith("blob:") || path.startsWith("data:")) {
+  if (
+    /^https?:\/\//i.test(path) ||
+    path.startsWith("blob:") ||
+    path.startsWith("data:")
+  ) {
     return path;
   }
   const clean = path.startsWith("/") ? path.slice(1) : path;
@@ -656,8 +764,8 @@ function resolveStoreImageUrl(path) {
 // متاجر/وسيطات (بنفس شكل بيانات getMyStore تقريبًا). إذا كان اسم المسار
 // مختلف عند الباك اند، بس غيّري السطر يلي فيه '/api/stores' تحت.
 export async function getStores() {
-  const result = await request('/api/stores', {
-    errorMessage: 'تعذر جلب قائمة الوسيطات',
+  const result = await request("/api/stores", {
+    errorMessage: "تعذر جلب قائمة الوسيطات",
   });
 
   const list = result.stores || result.data || result;
@@ -666,7 +774,7 @@ export async function getStores() {
 
 // ===== القطع الراكدة (stock-items) =====
 // الفئة بالباك اند بالإنجليزي (shoes / clothes)، وبالواجهة بالعربي (أحذية / ملابس)
-const CATEGORY_TO_API = { "ملابس": "clothes", "أحذية": "shoes" };
+const CATEGORY_TO_API = { ملابس: "clothes", أحذية: "shoes" };
 const CATEGORY_FROM_API = { clothes: "ملابس", shoes: "أحذية" };
 
 function categoryFromApi(value) {
@@ -687,20 +795,48 @@ function normalizeStockStatus(value) {
   return "unlisted"; // احتياط بس عشان الواجهة ما تنهار
 }
 
+// الباك اند ممكن يرجّع القطعة مباشرة، أو داخل stock_item، أو داخل data (أو data.stock_item)
+// فمنفك الغلاف بأي شكل عشان ما تضيع بيانات القطعة (الاسم/السعر/الصورة)
+function unwrapStockItem(result) {
+  if (!result || typeof result !== "object") return {};
+  const inner = result.stock_item || result.item || result.data || result;
+  if (inner && typeof inner === "object" && inner.stock_item) {
+    return inner.stock_item;
+  }
+  return inner;
+}
+
 function mapStockItemFromApi(o) {
+  o = o || {};
   const category = categoryFromApi(o.category);
+  const rawImage = o.image_url || o.image || o.image_path || o.photo || null;
+  const rawPrice = o.price ?? o.selling_price ?? o.amount ?? 0;
   return {
     id: o.id,
-    name: o.name,
+    name: o.name || o.title || "",
     category,
     icon: category === "أحذية" ? "👟" : "👗",
-    price: Number(o.price ?? 0),
+    price: Number(rawPrice) || 0,
     color: o.color || "",
     size: o.size || "",
-    image: o.image_url || o.image || null,
+    image: rawImage ? resolveStockImage(rawImage) : null,
     status: normalizeStockStatus(o.status),
     createdAt: o.created_at || o.date || "",
   };
+}
+
+// مسار الصورة ممكن يجي نسبي (stock-items/xxx.jpg) — منحوله لرابط كامل عشان يظهر
+function resolveStockImage(path) {
+  if (
+    /^https?:\/\//i.test(path) ||
+    path.startsWith("blob:") ||
+    path.startsWith("data:")
+  ) {
+    return path;
+  }
+  const clean = path.startsWith("/") ? path.slice(1) : path;
+  if (clean.startsWith("storage/")) return `${BASE_URL}/${clean}`;
+  return `${BASE_URL}/storage/${clean}`;
 }
 
 // قائمة القطع الراكدة عند الوسيطة الحالية (فلاتر اختيارية: search, status, category, sort)
@@ -708,7 +844,8 @@ export async function getStockItems(filters = {}) {
   const params = new URLSearchParams();
   if (filters.search) params.append("search", filters.search);
   if (filters.status) params.append("status", filters.status);
-  if (filters.category) params.append("category", categoryToApi(filters.category));
+  if (filters.category)
+    params.append("category", categoryToApi(filters.category));
   if (filters.sort) params.append("sort", filters.sort);
 
   const result = await request(`/api/stock-items?${params.toString()}`, {
@@ -720,7 +857,14 @@ export async function getStockItems(filters = {}) {
 
 // إضافة قطعة جديدة
 // إضافة قطعة جديدة (مع مقاس/لون/صورة اختياريين — لازم يتأكد الباك اند إنه بيقبلهم)
-export async function createStockItem({ name, category, price, color, size, image }) {
+export async function createStockItem({
+  name,
+  category,
+  price,
+  color,
+  size,
+  image,
+}) {
   const formData = new FormData();
   formData.append("name", name);
   formData.append("category", categoryToApi(category));
@@ -735,16 +879,20 @@ export async function createStockItem({ name, category, price, color, size, imag
     isFormData: true,
     errorMessage: "تعذر إضافة القطعة",
   });
-  return mapStockItemFromApi(result.stock_item || result);
+  return mapStockItemFromApi(unwrapStockItem(result));
 }
 
 // تعديل العرض (الاسم / الفئة / السعر / المقاس / اللون / الصورة)
-export async function updateStockItem(id, { name, category, price, color, size, image }) {
+export async function updateStockItem(
+  id,
+  { name, category, price, color, size, image },
+) {
   const formData = new FormData();
   // Laravel بيحتاج POST + _method=PATCH لما بيكون فيه ملف (multipart/form-data)
   formData.append("_method", "PATCH");
   if (name !== undefined) formData.append("name", name);
-  if (category !== undefined) formData.append("category", categoryToApi(category));
+  if (category !== undefined)
+    formData.append("category", categoryToApi(category));
   if (price !== undefined) formData.append("price", price);
   if (color !== undefined) formData.append("color", color);
   if (size !== undefined) formData.append("size", size);
@@ -756,7 +904,7 @@ export async function updateStockItem(id, { name, category, price, color, size, 
     isFormData: true,
     errorMessage: "تعذر تعديل القطعة",
   });
-  return mapStockItemFromApi(result.stock_item || result);
+  return mapStockItemFromApi(unwrapStockItem(result));
 }
 
 // إلغاء العرض — القطعة بترجع "غير معروضة" بدون ما تنحذف (بيرفض 422 لو القطعة مش listed)
@@ -765,7 +913,7 @@ export async function unlistStockItem(id) {
     method: "PATCH",
     errorMessage: "تعذر إلغاء العرض",
   });
-  return mapStockItemFromApi(result.stock_item || result);
+  return mapStockItemFromApi(unwrapStockItem(result));
 }
 
 // عرض للبيع
@@ -774,7 +922,7 @@ export async function listStockItem(id) {
     method: "PATCH",
     errorMessage: "تعذر عرض القطعة للبيع",
   });
-  return mapStockItemFromApi(result.stock_item || result);
+  return mapStockItemFromApi(unwrapStockItem(result));
 }
 
 // إلغاء الحجز (من الوسيطة) — القطعة بترجع معروضة للبيع
@@ -783,7 +931,7 @@ export async function cancelStockReservation(id) {
     method: "PATCH",
     errorMessage: "تعذر إلغاء الحجز",
   });
-  return mapStockItemFromApi(result.stock_item || result);
+  return mapStockItemFromApi(unwrapStockItem(result));
 }
 
 // تأكيد البيع
@@ -792,7 +940,7 @@ export async function confirmStockSale(id) {
     method: "PATCH",
     errorMessage: "تعذر تأكيد البيع",
   });
-  return mapStockItemFromApi(result.stock_item || result);
+  return mapStockItemFromApi(unwrapStockItem(result));
 }
 
 // حذف قطعة
@@ -818,7 +966,7 @@ export async function reserveStockItem(id) {
     method: "PATCH",
     errorMessage: "تعذر حجز القطعة، يمكن حجزها قبل قليل",
   });
-  return mapStockItemFromApi(result.stock_item || result);
+  return mapStockItemFromApi(unwrapStockItem(result));
 }
 
 export { BASE_URL };

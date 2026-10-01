@@ -3,9 +3,7 @@ import { Link } from "react-router-dom";
 import { getReviews, getOrderStats, getMyStore, BASE_URL } from "../api";
 import DashboardLayout from "../components/DashboardLayout";
 import { formatDate } from "../utils/dates";
-
-// رابط صورة المتجر يجي أحيانًا من الباك اند كمسار نسبي (بدون دومين) —
-// هاي الدالة بتتأكد إنه رابط كامل قبل ما نعرضه، وإلا بترجع null
+import ReviewAvatar from "../components/ReviewAvatar";
 function resolveImageUrl(path) {
   if (!path) return null;
   if (/^https?:\/\//i.test(path) || path.startsWith("blob:") || path.startsWith("data:")) {
@@ -156,8 +154,7 @@ export default function MediatorReviews() {
                   <div className="review-author-name">{review.customer}</div>
                   <StarRating rating={review.rating} />
                 </div>
-                <div className="review-avatar">{review.customer.charAt(0)}</div>
-              </div>
+<ReviewAvatar name={review.customer} image={review.customerImage} />              </div>
             </div>
 
             <p className="review-comment">{review.comment}</p>
