@@ -5325,6 +5325,7 @@ footer .copyright {
   line-height: 1;
   color: #e11d48;
 }
+
 /* ============ المفضلة (قلب بطاقة الوسيطة + زر المفضلة بالشريط العلوي) ============ */
 .explore-card-heart.is-active{
   color:#e11d48;
@@ -5360,6 +5361,25 @@ footer .copyright {
   background:#fff;
 }
 .service-select-label select:focus{ outline:none; border-color:var(--blue); }
+
+
+.new-order-card input[type="text"],
+.new-order-card input[type="file"] {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 12px 16px;
+  font-family: 'El Messiri', sans-serif;
+  font-size: 14px;
+  width: 100%;
+  margin-bottom: 4px;
+}
+.new-order-card input:focus {
+  outline: none;
+  border-color: var(--blue);
+}
+.new-order-card .fetch-products-btn {
+  width: 100%;
+  margin-top: 16px;}
 /* ===== شاشة تقييم الوسيطة (OrderReview) ===== */
 .review-page-card {
   background: #fff;

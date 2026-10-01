@@ -1,19 +1,7 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import DashboardLayout from "../components/DashboardLayout";
 import { getStores, getStoreProfile, createOrder } from "../api";
-
-// توحيد النص العربي للبحث: بنشيل التشكيل وبنوحّد (أ إ آ ← ا) و(ة ← ه) و(ى ← ي)
-// عشان البحث ما يتأثر باختلاف الكتابة
-function normalizeSearchText(value) {
-  return String(value || "")
-    .toLowerCase()
-    .replace(/[\u064B-\u065F\u0670]/g, "")
-    .replace(/[أإآ]/g, "ا")
-    .replace(/ة/g, "ه")
-    .replace(/ى/g, "ي")
-    .trim();
-}
 
 export default function NewOrder() {
   const navigate = useNavigate();
@@ -26,13 +14,30 @@ export default function NewOrder() {
   const [step, setStep] = useState("products"); // "products" | "mediator" | "review"
 
   // ===== مرحلة ١: إضافة المنتجات =====
-  const [activeTab, setActiveTab] = useState("links"); // "cart" | "links"
-  const [cartLink, setCartLink] = useState("");
-  const [linksText, setLinksText] = useState("");
   const [error, setError] = useState("");
   const [toast, setToast] = useState("");
   const [products, setProducts] = useState([]);
   const [openNotesId, setOpenNotesId] = useState(null);
+
+  const emptyForm = { name: "", url: "", color: "", size: "", image: null, imagePreview: null, qty: 1 };
+  const [form, setForm] = useState(emptyForm);
+
+  const handleFormImage = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    setForm((f) => ({ ...f, image: file, imagePreview: URL.createObjectURL(file) }));
+  };
+
+  const addProduct = () => {
+    if (!form.name.trim() || !form.url.trim()) {
+      setError("يرجى إدخال اسم المنتج ورابطه.");
+      return;
+    }
+    setError("");
+    setProducts((prev) => [...prev, { id: Date.now() + Math.random(), notes: "", ...form }]);
+    setForm(emptyForm);
+    showToast("تمت إضافة المنتج إلى الطلب");
+  };
 
   // ===== مرحلة ٢: اختيار الوسيطة =====
   // الوسيطات الحقيقية (نفس مصدر صفحة استكشاف الوسيطات)
@@ -53,26 +58,6 @@ export default function NewOrder() {
     loadMediators();
   }, []);
 
-  // البحث + الترتيب الديناميكي: المستقبلة للطلبات أول شي، وبعدها الأكثر طلبات مكتملة،
-  // وبالتعادل بالاسم. الأرقام جاية حيّة من الباك اند، فالترتيب بيتغيّر لحاله مع كل تحديث
-  const [mediatorSearch, setMediatorSearch] = useState("");
-  const rankedMediators = useMemo(() => {
-    const q = normalizeSearchText(mediatorSearch);
-    const list = q
-      ? mediators.filter((m) =>
-          [m.name, m.ownerName, m.city].some((v) => normalizeSearchText(v).includes(q))
-        )
-      : [...mediators];
-
-    return list.sort((a, b) => {
-      if (a.acceptingOrders !== b.acceptingOrders) return a.acceptingOrders ? -1 : 1;
-      if ((b.completedOrders || 0) !== (a.completedOrders || 0)) {
-        return (b.completedOrders || 0) - (a.completedOrders || 0);
-      }
-      return String(a.name || "").localeCompare(String(b.name || ""), "ar");
-    });
-  }, [mediators, mediatorSearch]);
-
   const [selectedMediatorId, setSelectedMediatorId] = useState(preselectedId);
   // بنقبل بس وسيطة مستقبلة للطلبات
   const selectedMediator = mediators.find((m) => m.id === selectedMediatorId && m.acceptingOrders);
@@ -81,21 +66,21 @@ export default function NewOrder() {
   const hasChosenMediator = preselectedId !== null && selectedMediator?.id === preselectedId;
 
   // خدمات الوسيطة المختارة (جاية من بروفايل المتجر) — بنستخدمها لعرض الخدمات وخيار التوصيل
-  const [profile, setProfile] = useState({ services: [], loading: false });
+  const [profile, setProfile] = useState({ services: [], store: null, loading: false });
   useEffect(() => {
     if (selectedMediatorId === null) return undefined;
     let cancelled = false;
-    setProfile({ services: [], loading: true });
+    setProfile({ services: [], store: null, loading: true });
     getStoreProfile(selectedMediatorId)
-      .then(({ services }) => {
+      .then(({ store, services }) => {
         if (cancelled) return;
         const available = services.filter((sv) => sv.available);
-        setProfile({ services: available, loading: false });
+        setProfile({ services: available, store, loading: false });
         // ما منخيّر الزبونة بنوع الخدمة — منستخدم أول خدمة متاحة عند الوسيطة تلقائيًا
         setSelectedServiceId(available.length > 0 ? String(available[0].id) : "");
       })
       .catch(() => {
-        if (!cancelled) setProfile({ services: [], loading: false });
+        if (!cancelled) setProfile({ services: [], store: null, loading: false });
       });
     return () => {
       cancelled = true;
@@ -115,7 +100,6 @@ export default function NewOrder() {
   // منمنع تكرار نفس الخطأ بمنعنا زر الإرسال طول ما الزبونة مختارة "نقطة استلام"
   const [pickupUnavailable, setPickupUnavailable] = useState(false);
 
-  const isValidSheinLink = (url) => /^https?:\/\/.*shein\.com/i.test(url.trim());
 
   // ترجمة رسائل أخطاء معروفة من الباك اند (بتيجي بالإنجليزي أحيانًا) لعربي مفهوم للزبونة
   const translateOrderError = (message) => {
@@ -126,56 +110,12 @@ export default function NewOrder() {
     return message;
   };
 
-  const switchTab = (tab) => {
-    setActiveTab(tab);
-    setError("");
-  };
 
   const showToast = (msg) => {
     setToast(msg);
     setTimeout(() => setToast(""), 2500);
   };
 
-  const addMockProduct = (url, sourceLabel) => {
-    const newProduct = {
-      id: Date.now() + Math.random(),
-      title: `منتج من ${sourceLabel}`,
-      url,
-      size: "M",
-      color: "غير محدد",
-      price: Math.floor(Math.random() * (180 - 30 + 1)) + 30, // سعر تقديري وهمي — لسه بدون جلب حقيقي من SHEIN
-      qty: 1,
-      notes: "",
-    };
-    setProducts((prev) => [...prev, newProduct]);
-  };
-
-  const handleImportCart = () => {
-    if (!isValidSheinLink(cartLink)) {
-      setError("يرجى إدخال رابط سلة صحيح من SHEIN");
-      return;
-    }
-    setError("");
-    addMockProduct(cartLink.trim(), "السلة");
-    showToast("تمت إضافة المنتجات إلى الطلب");
-    setCartLink("");
-  };
-
-  const handleFetchLinks = () => {
-    const links = linksText
-      .split("\n")
-      .map((l) => l.trim())
-      .filter(Boolean);
-
-    if (links.length === 0 || !links.every(isValidSheinLink)) {
-      setError("يرجى إدخال روابط صحيحة من SHEIN");
-      return;
-    }
-    setError("");
-    links.forEach((url) => addMockProduct(url, "SHEIN"));
-    showToast(`تمت إضافة ${links.length} منتجات إلى الطلب`);
-    setLinksText("");
-  };
 
   const updateQty = (id, delta) => {
     setProducts((prev) =>
@@ -189,22 +129,25 @@ export default function NewOrder() {
 
   const totalItems = products.length;
   const totalPieces = products.reduce((sum, p) => sum + p.qty, 0);
-  const totalValue = products.reduce((sum, p) => sum + p.price * p.qty, 0);
 
-  // الزبونة مخيّرة دايمًا بين توصيل للمنزل أو استلام من نقطة معيّنة — رسوم التوصيل تحددها الوسيطة لاحقًا
-  const deliveryFee = 0;
+  // ===== خيارات التوصيل الحقيقية للوسيطة المختارة =====
+  // رسوم التوصيل (null = الوسيطة ما حددتها)
+  const deliveryFee = profile.store?.deliveryFee ?? selectedMediator?.deliveryFee ?? null;
+  const homeFeeLabel = deliveryFee === null ? null : deliveryFee > 0 ? `${deliveryFee} ₪` : "مجاني";
+  // نقطة الاستلام: بتتوفر بس لو الوسيطة حددت pickup_location (لو الباك ما رجّع المعلومة منفترض متاحة والباك بيرفض لو لأ)
+  const pickupLocation = profile.store?.pickupLocation || "";
+  const pickupAvailable = selectedMediator?.pickupAvailable ?? profile.store?.pickupAvailable ?? true;
+
+  // لو الوسيطة ما عندها نقطة استلام، منحوّل الاختيار تلقائيًا للتوصيل للمنزل
+  useEffect(() => {
+    if (!pickupAvailable && deliveryMethod === "pickup") setDeliveryMethod("home");
+  }, [pickupAvailable, deliveryMethod]);
 
   // العمولة الحقيقية للوسيطة (ممكن تكون فاضية إذا ما حددتها)
-  const commissionRate =
-    selectedMediator && selectedMediator.commission !== null && selectedMediator.commission !== ""
-      ? parseFloat(selectedMediator.commission) || 0
-      : null;
-  const commissionValue = commissionRate !== null ? Math.round((totalValue * commissionRate) / 100) : 0;
   const commissionText = (m) =>
     m.commission !== null && m.commission !== "" && Number.isFinite(parseFloat(m.commission))
       ? `العمولة ${parseFloat(m.commission)}%`
       : null;
-  const estimatedTotal = totalValue + commissionValue + deliveryFee;
 
   // إرسال الطلب النهائي إلى الباك اند — POST /api/orders
   const handleFinalSubmit = async () => {
@@ -223,28 +166,25 @@ export default function NewOrder() {
     setSubmitting(true);
     setSubmitError("");
     try {
-      // ملاحظة: العنوان صار يترسل كحقل مستقل (address) للباك اند لأنه هو
-      // إلزامي وقت home_delivery — بس منسيبه كمان جوا الملاحظة حتى يبان
-      // بوضوح للوسيطة مع رقم التواصل (يلي ما إله حقل مخصص لهلق)
-      const deliveryNote =
-        deliveryMethod === "home"
-          ? `طريقة الاستلام: توصيل إلى المنزل\nرقم التواصل: ${homePhone.trim()}`
-          : `طريقة الاستلام: استلام من نقطة استلام (${selectedMediator.city || "حسب مدينة الوسيطة"})`;
-      const customerNote = [deliveryNote, notesToMediator.trim()].filter(Boolean).join("\n\n");
+      // العنوان ورقم التواصل وطريقة الاستلام بتنبعت كحقول مستقلة للباك اند
+      // (address, contact_phone, delivery_method) — الملاحظة بس كلام الزبونة
+      const customerNote = notesToMediator.trim();
 
       await createOrder({
         storeId: selectedMediator.id,
         deliveryMethod: deliveryMethod === "home" ? "home_delivery" : "pickup",
+        // إلزامي من الباك اند مع home_delivery — بدونه الطلب بيرجع 422
         address: deliveryMethod === "home" ? homeAddress.trim() : undefined,
+        contactPhone: deliveryMethod === "home" ? homePhone.trim() : undefined,
         customerNote,
-        estimatedAmount: estimatedTotal,
         items: products.map((p) => ({
           serviceListingId: selectedServiceId,
           quantity: p.qty,
-          productName: p.title,
+          productName: p.name,
           productUrl: p.url,
-          color: p.color,
-          size: p.size,
+          productImage: p.image || undefined,
+          color: p.color || undefined,
+          size: p.size || undefined,
           itemNote: p.notes || undefined,
         })),
       });
@@ -262,481 +202,429 @@ export default function NewOrder() {
   const pageTitle =
     step === "products" ? "طلب جديد" : step === "mediator" ? "اختيار الوسيطة" : "مراجعة الطلب";
 
-    return (
+  return (
     <DashboardLayout role="customer">
 
-        <div className="dashboard-welcome">
-          <h1>{pageTitle}</h1>
-          {step === "products" && (
-            <p>ألصقي رابط منتج واحد أو عدة روابط من SHEIN لبدء طلب جديد.</p>
-          )}
-        </div>
-
-        {/* ============ المرحلة ١: إضافة المنتجات ============ */}
+      <div className="dashboard-welcome">
+        <h1>{pageTitle}</h1>
         {step === "products" && (
-          <>
-            <div className="new-order-card">
-              <div className="new-order-tabs">
-                <button
-                  type="button"
-                  className={`new-order-tab ${activeTab === "cart" ? "active" : ""}`}
-                  onClick={() => switchTab("cart")}
-                >
-                  🛍 سلة
-                </button>
-                <button
-                  type="button"
-                  className={`new-order-tab ${activeTab === "links" ? "active" : ""}`}
-                  onClick={() => switchTab("links")}
-                >
-                  ▦ الروابط
-                </button>
+          <p>أضيفي منتجاتك من SHEIN واحدًا تلو الآخر: اسم المنتج، رابطه، ولونه ومقاسه إذا حبيتي.</p>
+        )}
+      </div>
+
+      {/* ============ المرحلة ١: إضافة المنتجات ============ */}
+      {step === "products" && (
+        <>
+          <div className="new-order-card">
+            <label className="new-order-label">اسم المنتج *</label>
+            <input
+              type="text"
+              placeholder="مثال: فستان أسود قصير"
+              value={form.name}
+              onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
+              className={error ? "input-error" : ""}
+            />
+
+            <label className="new-order-label" style={{ marginTop: "14px" }}>رابط المنتج *</label>
+            <input
+              type="text"
+              placeholder="https://www.shein.com/..."
+              value={form.url}
+              onChange={(e) => setForm((f) => ({ ...f, url: e.target.value }))}
+            />
+
+            <div className="form-row" style={{ marginTop: "14px" }}>
+              <div>
+                <label className="new-order-label">اللون</label>
+                <input
+                  type="text"
+                  placeholder="مثال: أسود"
+                  value={form.color}
+                  onChange={(e) => setForm((f) => ({ ...f, color: e.target.value }))}
+                />
               </div>
-
-              {activeTab === "cart" && (
-                <div className="new-order-panel">
-                  <label className="new-order-label">رابط سلة SHEIN</label>
-                  <div className="cart-link-row">
-                    <button type="button" className="btn btn-primary" onClick={handleImportCart}>
-                      استيراد السلة →
-                    </button>
-                    <input
-                      type="text"
-                      placeholder="https://www.shein.com/cart/..."
-                      value={cartLink}
-                      onChange={(e) => setCartLink(e.target.value)}
-                      className={error ? "input-error" : ""}
-                    />
-                  </div>
-                  <p className="new-order-hint">سيتم إضافة المنتجات المتاحة من السلة إلى طلبك.</p>
-                </div>
-              )}
-
-              {activeTab === "links" && (
-                <div className="new-order-panel">
-                  <label className="new-order-label">روابط المنتجات</label>
-                  <textarea
-                    rows={5}
-                    placeholder="https://www.shein.com/..."
-                    value={linksText}
-                    onChange={(e) => setLinksText(e.target.value)}
-                    className={error ? "input-error" : ""}
-                  ></textarea>
-                  <p className="new-order-hint">
-                    يمكنك إضافة أكثر من منتج من نفس الطلب — ألصقي كل رابط بسطر لحاله.
-                  </p>
-                  <button
-                    type="button"
-                    className="btn btn-primary fetch-products-btn"
-                    onClick={handleFetchLinks}
-                  >
-                    جلب المنتجات
-                  </button>
-                </div>
-              )}
-
-              {error && <p className="new-order-error">⚠ {error}</p>}
-
-              <div className="new-order-store-badge">
-                <span>المتجر المدعوم</span>
-                <span className="shein-badge">● SHEIN</span>
+              <div>
+                <label className="new-order-label">المقاس</label>
+                <input
+                  type="text"
+                  placeholder="مثال: M"
+                  value={form.size}
+                  onChange={(e) => setForm((f) => ({ ...f, size: e.target.value }))}
+                />
               </div>
             </div>
 
-            {products.length > 0 ? (
-              <>
-                <div className="added-products-header">
-                  <h2>المنتجات المضافة ({totalItems})</h2>
-                  <button type="button" className="clear-all-link" onClick={clearAll}>
-                    مسح الكل
-                  </button>
-                </div>
-
-                {products.map((p) => (
-                  <div className="product-line-card" key={p.id}>
-                    <div className="product-line-image">🖼</div>
-                    <div className="product-line-info">
-                      <div className="product-line-title">{p.title}</div>
-                      <div className="product-line-attrs">
-                        <span>المقاس: {p.size}</span>
-                        <span>اللون: {p.color}</span>
-                        <span>{p.price} ₪</span>
-                      </div>
-                      {openNotesId === p.id ? (
-                        <input
-                          type="text"
-                          className="product-line-notes-input"
-                          placeholder="اكتبي ملاحظاتك..."
-                          value={p.notes}
-                          onChange={(e) => updateNotes(p.id, e.target.value)}
-                          onBlur={() => setOpenNotesId(null)}
-                          autoFocus
-                        />
-                      ) : (
-                        <button
-                          type="button"
-                          className="product-line-notes-btn"
-                          onClick={() => setOpenNotesId(p.id)}
-                        >
-                          ✎ {p.notes ? p.notes : "إضافة ملاحظات"}
-                        </button>
-                      )}
-                      <div className="product-line-qty">
-                        <button type="button" onClick={() => updateQty(p.id, 1)}>+</button>
-                        <span>{p.qty}</span>
-                        <button type="button" onClick={() => updateQty(p.id, -1)}>-</button>
-                        <span className="qty-label">الكمية</span>
-                      </div>
-                    </div>
-                    <button
-                      type="button"
-                      className="product-line-delete"
-                      onClick={() => removeProduct(p.id)}
-                      aria-label="حذف"
-                    >
-                      🗑
-                    </button>
-                  </div>
-                ))}
-
-                <div className="order-summary-bar">
-                  <div className="order-summary-note">الأسعار تقديرية ولا تشمل رسوم الخدمة</div>
-                  <div className="order-summary-stats">
-                    <div>
-                      <div className="summary-value">{totalItems}</div>
-                      <div className="summary-label">عدد المنتجات</div>
-                    </div>
-                    <div>
-                      <div className="summary-value">{totalPieces}</div>
-                      <div className="summary-label">إجمالي القطع</div>
-                    </div>
-                    <div>
-                      <div className="summary-value">{totalValue} ₪</div>
-                      <div className="summary-label">القيمة التقديرية</div>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="new-order-final-actions">
-                  <button
-                    type="button"
-                    className="btn btn-primary"
-                    disabled={preselectedId !== null && loadingMediators}
-                    onClick={() => setStep(hasChosenMediator ? "review" : "mediator")}
-                  >
-                    {preselectedId !== null && loadingMediators ? "جاري التحميل..." : "متابعة الطلب →"}
-                  </button>
-                  <Link to="/my-orders" className="cancel-link">
-                    إلغاء
-                  </Link>
-                </div>
-              </>
-            ) : (
-              <div className="new-order-empty-state">
-                <div className="empty-icon">🛍</div>
-                <h3>ابدئي بإضافة منتجاتك</h3>
-                <p>ألصقي رابط منتج واحد أو عدة روابط من SHEIN لبدء إنشاء طلبك.</p>
-              </div>
+            <label className="new-order-label" style={{ marginTop: "14px" }}>صورة المنتج (اختياري)</label>
+            <input type="file" accept="image/*" onChange={handleFormImage} />
+            {form.imagePreview && (
+              <img src={form.imagePreview} alt="معاينة" style={{ width: "60px", height: "60px", borderRadius: "8px", marginTop: "8px", objectFit: "cover" }} />
             )}
-          </>
-        )}
 
-        {/* ============ المرحلة ٢: اختيار الوسيطة (بتنعرض بس إذا ما كانت الوسيطة مختارة مسبقًا) ============ */}
-        {step === "mediator" && (
-          <>
-            {loadingMediators && <p className="explore-loading">جاري تحميل الوسيطات...</p>}
+            {error && <p className="new-order-error">⚠ {error}</p>}
 
-            {!loadingMediators && mediatorsError && (
-              <div className="explore-empty-state">
-                <div className="empty-icon">⚠️</div>
-                <h3>تعذر تحميل الوسيطات</h3>
-                <p>{mediatorsError}</p>
-                <button type="button" className="btn btn-outline" onClick={loadMediators}>
-                  إعادة المحاولة
+            <button type="button" className="btn btn-primary fetch-products-btn" onClick={addProduct}>
+              + إضافة المنتج للطلب
+            </button>
+
+            <div className="new-order-store-badge">
+              <span>المتجر المدعوم</span>
+              <span className="shein-badge">● SHEIN</span>
+            </div>
+          </div>
+
+          {products.length > 0 ? (
+            <>
+              <div className="added-products-header">
+                <h2>المنتجات المضافة ({totalItems})</h2>
+                <button type="button" className="clear-all-link" onClick={clearAll}>
+                  مسح الكل
                 </button>
               </div>
-            )}
 
-            {!loadingMediators && !mediatorsError && mediators.length === 0 && (
-              <div className="explore-empty-state">
-                <div className="empty-icon">🔍</div>
-                <h3>ما في وسيطات حاليًا</h3>
-                <p>جربي مرة ثانية بعد شوي.</p>
-              </div>
-            )}
-
-            {!loadingMediators && !mediatorsError && mediators.length > 0 && (
-              <>
-                <form className="dashboard-search" onSubmit={(e) => e.preventDefault()}>
-                  <input
-                    type="text"
-                    placeholder="ابحثي عن وسيطة بالاسم أو المدينة..."
-                    value={mediatorSearch}
-                    onChange={(e) => setMediatorSearch(e.target.value)}
-                  />
-                </form>
-                <div className="mediator-pick-count">{rankedMediators.length} وسيطة</div>
-
-                {rankedMediators.length === 0 ? (
-                  <div className="explore-empty-state">
-                    <div className="empty-icon">🔍</div>
-                    <h3>ما لقينا وسيطة بهالاسم</h3>
-                    <p>جربي كتابة اسم تاني أو جزء منه.</p>
-                    <button
-                      type="button"
-                      className="btn btn-outline"
-                      onClick={() => setMediatorSearch("")}
-                    >
-                      مسح البحث ✕
-                    </button>
+              {products.map((p) => (
+                <div className="product-line-card" key={p.id}>
+                  <div className="product-line-image">
+                    {p.imagePreview ? <img src={p.imagePreview} alt={p.name} style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: "10px" }} /> : "🖼"}
                   </div>
-                ) : (
-              <div className="mediator-pick-grid">
-                {rankedMediators.map((m) => (
-                  <div className="mediator-pick-card" key={m.id}>
-                    <div className="mediator-pick-top">
-                      <span className={`mediator-pick-tag ${m.acceptingOrders ? "" : "off"}`}>
-                        {m.acceptingOrders ? "● تستقبل طلبات" : "● غير متاحة"}
-                      </span>
-                      <div className="mediator-pick-avatar">
-                        {m.image ? <img src={m.image} alt={m.name} /> : (m.name || "و").charAt(0)}
-                      </div>
+                  <div className="product-line-info">
+                    <div className="product-line-title">{p.name}</div>
+                    <div className="product-line-attrs">
+                      {p.size && <span>المقاس: {p.size}</span>}
+                      {p.color && <span>اللون: {p.color}</span>}
                     </div>
-                    <div className="mediator-pick-name">{m.name}</div>
-                    {m.city && <div className="mediator-pick-loc">📍 {m.city}</div>}
-                    <div className="mediator-pick-stats">
-                      <span>{m.completedOrders} طلب مكتمل</span>
-                      {commissionText(m) && <span>{commissionText(m)}</span>}
-                    </div>
-                    <button
-                      type="button"
-                      className={`btn ${selectedMediatorId === m.id ? "btn-primary" : "btn-outline"} mediator-pick-btn`}
-                      disabled={!m.acceptingOrders}
-                      onClick={() => setSelectedMediatorId(m.id)}
-                    >
-                      {!m.acceptingOrders
-                        ? "غير متاحة الآن"
-                        : selectedMediatorId === m.id
-                          ? "✓ تم الاختيار"
-                          : "اختيار"}
-                    </button>
-                  </div>
-                ))}
-              </div>
-                )}
-              </>
-            )}
-
-            <div className="mediator-pick-bar">
-              {selectedMediator ? (
-                <div className="mediator-pick-bar-selected">
-                  <div className="mediator-pick-avatar">
-                    {selectedMediator.image ? (
-                      <img src={selectedMediator.image} alt={selectedMediator.name} />
-                    ) : (
-                      (selectedMediator.name || "و").charAt(0)
+                    {p.url && (
+                      <a href={p.url} target="_blank" rel="noreferrer" className="order-item-link" style={{ display: "block", marginBottom: "8px" }}>
+                        🔗 رابط المنتج
+                      </a>
                     )}
+                    {openNotesId === p.id ? (
+                      <input
+                        type="text"
+                        className="product-line-notes-input"
+                        placeholder="اكتبي ملاحظاتك..."
+                        value={p.notes}
+                        onChange={(e) => updateNotes(p.id, e.target.value)}
+                        onBlur={() => setOpenNotesId(null)}
+                        autoFocus
+                      />
+                    ) : (
+                      <button
+                        type="button"
+                        className="product-line-notes-btn"
+                        onClick={() => setOpenNotesId(p.id)}
+                      >
+                        ✎ {p.notes ? p.notes : "إضافة ملاحظات"}
+                      </button>
+                    )}
+                    <div className="product-line-qty">
+                      <button type="button" onClick={() => updateQty(p.id, 1)}>+</button>
+                      <span>{p.qty}</span>
+                      <button type="button" onClick={() => updateQty(p.id, -1)}>-</button>
+                      <span className="qty-label">الكمية</span>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    className="product-line-delete"
+                    onClick={() => removeProduct(p.id)}
+                    aria-label="حذف"
+                  >
+                    🗑
+                  </button>
+                </div>
+              ))}
+
+              <div className="order-summary-bar">
+                <div className="order-summary-note">الأسعار تقديرية ولا تشمل رسوم الخدمة</div>
+                <div className="order-summary-stats">
+                  <div>
+                    <div className="summary-value">{totalItems}</div>
+                    <div className="summary-label">عدد المنتجات</div>
                   </div>
                   <div>
-                    <div className="mediator-pick-bar-name">{selectedMediator.name}</div>
-                    {commissionText(selectedMediator) && (
-                      <div className="mediator-pick-bar-meta">{commissionText(selectedMediator)}</div>
-                    )}
+                    <div className="summary-value">{totalPieces}</div>
+                    <div className="summary-label">إجمالي القطع</div>
                   </div>
                 </div>
-              ) : (
-                <span className="mediator-pick-bar-hint">اختاري وسيطة للمتابعة</span>
-              )}
-              <div className="mediator-pick-bar-actions">
+              </div>
+
+              <div className="new-order-final-actions">
                 <button
                   type="button"
                   className="btn btn-primary"
-                  disabled={!selectedMediator}
-                  onClick={() => setStep("review")}
+                  disabled={preselectedId !== null && loadingMediators}
+                  onClick={() => setStep(hasChosenMediator ? "review" : "mediator")}
                 >
-                  متابعة إلى مراجعة الطلب →
+                  {preselectedId !== null && loadingMediators ? "جاري التحميل..." : "متابعة الطلب →"}
                 </button>
-                <button type="button" className="btn btn-outline" onClick={() => setStep("products")}>
-                  العودة للمنتجات
-                </button>
+                <Link to="/my-orders" className="cancel-link">
+                  إلغاء
+                </Link>
               </div>
+            </>
+          ) : (
+            <div className="new-order-empty-state">
+              <div className="empty-icon">🛍</div>
+              <h3>ابدئي بإضافة منتجاتك</h3>
+              <p>ألصقي رابط منتج واحد أو عدة روابط من SHEIN لبدء إنشاء طلبك.</p>
             </div>
-          </>
-        )}
+          )}
+        </>
+      )}
 
-        {/* ============ المرحلة ٣: مراجعة الطلب وإرساله ============ */}
-        {step === "review" && selectedMediator && (
-          <div className="review-order-layout">
-            <div className="review-order-summary">
-              <div className="review-row">
-                <span>عدد المنتجات</span>
-                <span>{totalItems} منتج ({totalPieces} قطعة)</span>
-              </div>
-              <div className="review-row">
-                <span>قيمة المنتجات</span>
-                <span>{totalValue} ₪</span>
-              </div>
-              <div className="review-row">
-                <span>عمولة الوسيطة{commissionRate !== null ? ` (${commissionRate}%)` : ""}</span>
-                <span>{commissionValue} ₪</span>
-              </div>
-              <div className="review-row">
-                <span>رسوم التوصيل</span>
-                <span>{deliveryMethod === "home" ? "تحددها الوسيطة" : "مجاني"}</span>
-              </div>
-              <div className="review-row review-total">
-                <span>الإجمالي التقديري</span>
-                <span>{estimatedTotal} ₪</span>
-              </div>
-              <p className="review-disclaimer">
-                ⚠ المبلغ تقديري وقد يتغير حسب السعر النهائي للمنتجات.
-              </p>
+      {/* ============ المرحلة ٢: اختيار الوسيطة (بتنعرض بس إذا ما كانت الوسيطة مختارة مسبقًا) ============ */}
+      {step === "mediator" && (
+        <>
+          {loadingMediators && <p className="explore-loading">جاري تحميل الوسيطات...</p>}
 
-              {submitError && <div className="stagnant-form-error">{submitError}</div>}
-
-              <button
-                type="button"
-                className="btn btn-primary review-submit-btn"
-                onClick={handleFinalSubmit}
-                disabled={submitting || (pickupUnavailable && deliveryMethod === "pickup")}
-              >
-                {submitting ? "جاري الإرسال..." : `إرسال الطلب إلى ${selectedMediator.name} →`}
+          {!loadingMediators && mediatorsError && (
+            <div className="explore-empty-state">
+              <div className="empty-icon">⚠️</div>
+              <h3>تعذر تحميل الوسيطات</h3>
+              <p>{mediatorsError}</p>
+              <button type="button" className="btn btn-outline" onClick={loadMediators}>
+                إعادة المحاولة
               </button>
-              <button
-                type="button"
-                className="btn btn-outline review-back-btn"
-                onClick={() => setStep(hasChosenMediator ? "products" : "mediator")}
-              >
-                العودة
-              </button>
-              <p className="review-payment-note">
-                🔒 لن يتم خصم أي مبلغ الآن، الدفع يتم بعد تأكيد الوسيطة استلام طلبك.
-              </p>
             </div>
+          )}
 
-            <div className="review-order-side">
-              <div className="review-side-card">
-                <div className="review-side-header">
-                  <span>الوسيطة</span>
-                  {!hasChosenMediator && (
-                    <button type="button" className="change-mediator-link" onClick={() => setStep("mediator")}>
-                      تغيير الوسيطة
-                    </button>
-                  )}
-                </div>
-                <div className="review-mediator-row">
-                  <div className="mediator-pick-avatar">
-                    {selectedMediator.image ? (
-                      <img src={selectedMediator.image} alt={selectedMediator.name} />
-                    ) : (
-                      (selectedMediator.name || "و").charAt(0)
-                    )}
-                  </div>
-                  <div>
-                    <div className="mediator-pick-bar-name">{selectedMediator.name}</div>
-                    <div className="mediator-pick-bar-meta">
-                      {[selectedMediator.city && `📍 ${selectedMediator.city}`, commissionText(selectedMediator)]
-                        .filter(Boolean)
-                        .join(" · ")}
-                    </div>
-                  </div>
-                </div>
+          {!loadingMediators && !mediatorsError && mediators.length === 0 && (
+            <div className="explore-empty-state">
+              <div className="empty-icon">🔍</div>
+              <h3>ما في وسيطات حاليًا</h3>
+              <p>جربي مرة ثانية بعد شوي.</p>
+            </div>
+          )}
 
-                {/* الخدمات هون للمعرفة بس — ما في اختيار من الزبونة، وبيتحدد أول خدمة متاحة تلقائيًا بالخلفية */}
-                <div className="mediator-services-info">
-                  <span>خدمات الوسيطة</span>
-                  {profile.loading ? (
-                    <span>جاري تحميل الخدمات...</span>
-                  ) : profile.services.length === 0 ? (
-                    <span className="stagnant-form-error">هاي الوسيطة ما ضافت أي خدمة، ما بتقدري تطلبي منها حاليًا.</span>
-                  ) : (
-                    <div className="mediator-services-chips">
-                      {profile.services.map((sv) => (
-                        <span key={sv.id} className="mediator-service-chip">
-                          {sv.name}
-                        </span>
-                      ))}
-                    </div>
+          {!loadingMediators && !mediatorsError && mediators.length > 0 && (
+            <div className="mediator-pick-grid">
+              {mediators.map((m) => (
+                <div className="mediator-pick-card" key={m.id}>
+                  <div className="mediator-pick-top">
+                    <span className={`mediator-pick-tag ${m.acceptingOrders ? "" : "off"}`}>
+                      {m.acceptingOrders ? "● تستقبل طلبات" : "● غير متاحة"}
+                    </span>
+                    <div className="mediator-pick-avatar">{(m.name || "و").charAt(0)}</div>
+                  </div>
+                  <div className="mediator-pick-name">{m.name}</div>
+                  {m.city && <div className="mediator-pick-loc">📍 {m.city}</div>}
+                  <div className="mediator-pick-stats">
+                    <span>{m.completedOrders} طلب مكتمل</span>
+                    {commissionText(m) && <span>{commissionText(m)}</span>}
+                  </div>
+                  <button
+                    type="button"
+                    className={`btn ${selectedMediatorId === m.id ? "btn-primary" : "btn-outline"} mediator-pick-btn`}
+                    disabled={!m.acceptingOrders}
+                    onClick={() => setSelectedMediatorId(m.id)}
+                  >
+                    {!m.acceptingOrders
+                      ? "غير متاحة الآن"
+                      : selectedMediatorId === m.id
+                        ? "✓ تم الاختيار"
+                        : "اختيار"}
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+
+          <div className="mediator-pick-bar">
+            {selectedMediator ? (
+              <div className="mediator-pick-bar-selected">
+                <div className="mediator-pick-avatar">{(selectedMediator.name || "و").charAt(0)}</div>
+                <div>
+                  <div className="mediator-pick-bar-name">{selectedMediator.name}</div>
+                  {commissionText(selectedMediator) && (
+                    <div className="mediator-pick-bar-meta">{commissionText(selectedMediator)}</div>
                   )}
                 </div>
               </div>
-
-              <div className="review-side-card">
-                <div className="review-side-header">
-                  <span>طريقة استلام الطلب</span>
-                </div>
-                <label className="delivery-option">
-                  <span>التوصيل إلى المنزل</span>
-                  <input
-                    type="radio"
-                    name="delivery"
-                    checked={deliveryMethod === "home"}
-                    onChange={() => {
-                      setDeliveryMethod("home");
-                      setSubmitError("");
-                    }}
-                  />
-                </label>
-
-                {deliveryMethod === "home" && (
-                  <div className="delivery-home-fields">
-                    <label>
-                      <span>العنوان</span>
-                      <input
-                        type="text"
-                        placeholder="المدينة، الحي، أقرب معلم..."
-                        value={homeAddress}
-                        onChange={(e) => setHomeAddress(e.target.value)}
-                      />
-                    </label>
-                    <label>
-                      <span>رقم للتواصل</span>
-                      <input
-                        type="tel"
-                        placeholder="05xxxxxxxx"
-                        value={homePhone}
-                        onChange={(e) => setHomePhone(e.target.value)}
-                      />
-                    </label>
-                  </div>
-                )}
-
-                <label className="delivery-option">
-                  <span className="delivery-fee-tag free">مجاني</span>
-                  <span>الاستلام من نقطة استلام</span>
-                  <input
-                    type="radio"
-                    name="delivery"
-                    checked={deliveryMethod === "pickup"}
-                    onChange={() => setDeliveryMethod("pickup")}
-                  />
-                </label>
-
-                {deliveryMethod === "pickup" && (
-                  <p className="delivery-pickup-note">
-                    📍 نقطة الاستلام حسب مدينة الوسيطة:{" "}
-                    {selectedMediator.city || "غير محددة، تواصلي مع الوسيطة"}
-                  </p>
-                )}
-              </div>
-
-              <div className="review-side-card">
-                <div className="review-side-header">
-                  <span>ملاحظات للوسيطة</span>
-                </div>
-                <textarea
-                  rows={4}
-                  placeholder="أضيفي أي ملاحظات مهمة حول الطلب"
-                  value={notesToMediator}
-                  onChange={(e) => setNotesToMediator(e.target.value)}
-                ></textarea>
-                <p className="review-notes-hint">اختياري — ستصل ملاحظاتك إلى الوسيطة مع الطلب.</p>
-              </div>
+            ) : (
+              <span className="mediator-pick-bar-hint">اختاري وسيطة للمتابعة</span>
+            )}
+            <div className="mediator-pick-bar-actions">
+              <button
+                type="button"
+                className="btn btn-primary"
+                disabled={!selectedMediator}
+                onClick={() => setStep("review")}
+              >
+                متابعة إلى مراجعة الطلب →
+              </button>
+              <button type="button" className="btn btn-outline" onClick={() => setStep("products")}>
+                العودة للمنتجات
+              </button>
             </div>
           </div>
-        )}
+        </>
+      )}
 
-        {toast && <div className="new-order-toast">✓ {toast}</div>}
-          </DashboardLayout>
+      {/* ============ المرحلة ٣: مراجعة الطلب وإرساله ============ */}
+      {step === "review" && selectedMediator && (
+        <div className="review-order-layout">
+          <div className="review-order-summary">
+            <div className="review-row">
+              <span>عدد المنتجات</span>
+              <span>{totalItems} منتج ({totalPieces} قطعة)</span>
+            </div>
+            {deliveryMethod === "home" && homeFeeLabel && (
+              <div className="review-row">
+                <span>رسوم التوصيل</span>
+                <span>{homeFeeLabel}</span>
+              </div>
+            )}
+            <p className="review-disclaimer">
+              ⚠ السعر بيتحدد من الوسيطة بعد ما توافق على طلبك، وبيوصلك إشعار فيه.
+            </p>
+
+            {submitError && <div className="stagnant-form-error">{submitError}</div>}
+
+            <button
+              type="button"
+              className="btn btn-primary review-submit-btn"
+              onClick={handleFinalSubmit}
+              disabled={submitting || (pickupUnavailable && deliveryMethod === "pickup")}
+            >
+              {submitting ? "جاري الإرسال..." : `إرسال الطلب إلى ${selectedMediator.name} →`}
+            </button>
+            <button
+              type="button"
+              className="btn btn-outline review-back-btn"
+              onClick={() => setStep(hasChosenMediator ? "products" : "mediator")}
+            >
+              العودة
+            </button>
+            <p className="review-payment-note">
+              🔒 لن يتم خصم أي مبلغ الآن، الدفع يتم بعد تأكيد الوسيطة استلام طلبك.
+            </p>
+          </div>
+
+          <div className="review-order-side">
+            <div className="review-side-card">
+              <div className="review-side-header">
+                <span>الوسيطة</span>
+                {!hasChosenMediator && (
+                  <button type="button" className="change-mediator-link" onClick={() => setStep("mediator")}>
+                    تغيير الوسيطة
+                  </button>
+                )}
+              </div>
+              <div className="review-mediator-row">
+                <div className="mediator-pick-avatar">{(selectedMediator.name || "و").charAt(0)}</div>
+                <div>
+                  <div className="mediator-pick-bar-name">{selectedMediator.name}</div>
+                  <div className="mediator-pick-bar-meta">
+                    {[selectedMediator.city && `📍 ${selectedMediator.city}`, commissionText(selectedMediator)]
+                      .filter(Boolean)
+                      .join(" · ")}
+                  </div>
+                </div>
+              </div>
+
+              {/* الخدمات هون للمعرفة بس — ما في اختيار من الزبونة، وبيتحدد أول خدمة متاحة تلقائيًا بالخلفية */}
+              <div className="mediator-services-info">
+                <span>خدمات الوسيطة</span>
+                {profile.loading ? (
+                  <span>جاري تحميل الخدمات...</span>
+                ) : profile.services.length === 0 ? (
+                  <span className="stagnant-form-error">هاي الوسيطة ما ضافت أي خدمة، ما بتقدري تطلبي منها حاليًا.</span>
+                ) : (
+                  <div className="mediator-services-chips">
+                    {profile.services.map((sv) => (
+                      <span key={sv.id} className="mediator-service-chip">
+                        {sv.name}
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className="review-side-card">
+              <div className="review-side-header">
+                <span>طريقة استلام الطلب</span>
+              </div>
+              <label className="delivery-option">
+                {homeFeeLabel && (
+                  <span className={`delivery-fee-tag ${deliveryFee === 0 ? "free" : ""}`}>{homeFeeLabel}</span>
+                )}
+                <span>التوصيل إلى المنزل</span>
+                <input
+                  type="radio"
+                  name="delivery"
+                  checked={deliveryMethod === "home"}
+                  onChange={() => {
+                    setDeliveryMethod("home");
+                    setSubmitError("");
+                  }}
+                />
+              </label>
+
+              {deliveryMethod === "home" && (
+                <div className="delivery-home-fields">
+                  <label>
+                    <span>العنوان</span>
+                    <input
+                      type="text"
+                      placeholder="المدينة، الحي، أقرب معلم..."
+                      value={homeAddress}
+                      onChange={(e) => setHomeAddress(e.target.value)}
+                    />
+                  </label>
+                  <label>
+                    <span>رقم للتواصل</span>
+                    <input
+                      type="tel"
+                      placeholder="05xxxxxxxx"
+                      value={homePhone}
+                      onChange={(e) => setHomePhone(e.target.value)}
+                    />
+                  </label>
+                </div>
+              )}
+
+              <label className="delivery-option" style={!pickupAvailable ? { opacity: 0.55 } : undefined}>
+                <span className="delivery-fee-tag free">مجاني</span>
+                <span>الاستلام من نقطة استلام</span>
+                <input
+                  type="radio"
+                  name="delivery"
+                  checked={deliveryMethod === "pickup"}
+                  disabled={!pickupAvailable}
+                  onChange={() => setDeliveryMethod("pickup")}
+                />
+              </label>
+
+              {!pickupAvailable && (
+                <p className="delivery-pickup-note">هاي الوسيطة ما حدّدت نقطة استلام بعد.</p>
+              )}
+
+              {pickupAvailable && deliveryMethod === "pickup" && (
+                <p className="delivery-pickup-note">
+                  📍 نقطة الاستلام:{" "}
+                  {pickupLocation || selectedMediator.city || "غير محددة، تواصلي مع الوسيطة"}
+                </p>
+              )}
+            </div>
+
+            <div className="review-side-card">
+              <div className="review-side-header">
+                <span>ملاحظات للوسيطة</span>
+              </div>
+              <textarea
+                rows={4}
+                placeholder="أضيفي أي ملاحظات مهمة حول الطلب"
+                value={notesToMediator}
+                onChange={(e) => setNotesToMediator(e.target.value)}
+              ></textarea>
+              <p className="review-notes-hint">اختياري — ستصل ملاحظاتك إلى الوسيطة مع الطلب.</p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {toast && <div className="new-order-toast">✓ {toast}</div>}
+    </DashboardLayout>
   );
 }
