@@ -50,7 +50,8 @@ export default function CustomerOrderDetails() {
     };
 
     const currentStepIndex = order ? STATUS_STEPS.findIndex((s) => s.key === order.status) : -1;
-    const isCancelled = order?.status === "cancelled";
+    const isRejected = order?.status === "rejected";
+    const isCancelled = order?.status === "cancelled" || isRejected;
     const isHomeDelivery = order?.deliveryType === "home_delivery";
 
     return (
@@ -80,7 +81,7 @@ export default function CustomerOrderDetails() {
 
                         {isCancelled ? (
                             <div className="order-reject-banner" style={{ marginTop: "16px" }}>
-                                هذا الطلب ملغى{order.rejectionReason ? `: ${order.rejectionReason}` : ""}
+                                هذا الطلب {isRejected ? "مرفوض" : "ملغى"}{order.rejectionReason ? `: ${order.rejectionReason}` : ""}
                             </div>
                         ) : (
                             <div className="order-timeline" style={{ marginTop: "20px" }}>
@@ -177,6 +178,12 @@ export default function CustomerOrderDetails() {
                             </div>
                         ))}
 
+                        {order.totals && order.totals.deliveryFee > 0 && (
+                            <div style={{ display: "flex", justifyContent: "space-between", marginTop: "14px" }}>
+                                <span>رسوم التوصيل</span>
+                                <span>{order.totals.deliveryFee} ₪</span>
+                            </div>
+                        )}
                         <div
                             style={{
                                 display: "flex",

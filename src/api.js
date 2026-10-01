@@ -334,9 +334,12 @@ export async function acceptOrder(id, items) {
 }
 
 // رفض طلب
-export async function rejectOrder(id) {
+// الباك اند صار يقبل rejection_reason كحقل اختياري بالـ body
+export async function rejectOrder(id, reason) {
+  const trimmed = (reason || "").trim();
   const result = await request(`/api/orders/${id}/reject`, {
     method: "PATCH",
+    body: trimmed ? { rejection_reason: trimmed } : undefined,
     errorMessage: "تعذر رفض الطلب",
   });
   return mapOrderFromApi(result.order || result);
@@ -344,8 +347,14 @@ export async function rejectOrder(id) {
 
 function mapOrderItemFromApi(item) {
   // الباك اند بيخزّن صورة المنتج كمسار نسبي (image_path) — منحوله لرابط كامل عشان تظهر
+  // أسماء الحقول الحقيقية من الباك اند: product_image_url (رابط كامل) و product_image_path
   const rawImage =
-    item.image_url || item.image_path || item.product_image || item.image;
+    item.product_image_url ||
+    item.product_image_path ||
+    item.image_url ||
+    item.image_path ||
+    item.product_image ||
+    item.image;
   return {
     id: item.id,
     name: item.product_name || item.name,
@@ -492,6 +501,21 @@ function mapOrderFromApi(o) {
     contactPhone: pickContactPhone(o),
     customerNote: extractUserNote(o.customer_note),
     totalPrice: sumItemPrices(items),
+    totals: mapTotals(o),
+    rejectionReason: o.rejection_reason || null,
+  };
+}
+
+// الإجماليات من الباك اند (totals): total_amount = items_total + delivery_fee
+// service_fee دايمًا 0 (رسوم الخدمة مدمجة أصلًا بـ unit_price لكل منتج)، فما بنعرضه.
+function mapTotals(o) {
+  const t = o.totals;
+  if (!t) return null;
+  const num = (v) => (v === null || v === undefined ? null : Number(v));
+  return {
+    itemsTotal: num(t.items_total),
+    deliveryFee: num(t.delivery_fee) ?? 0,
+    totalAmount: num(t.total_amount),
   };
 }
 
@@ -540,6 +564,7 @@ function mapMyOrderFromApi(o) {
     statusUpdatedAt: o.status_updated_at || o.updated_at || o.created_at || "",
     statusTimes: buildStatusTimes(o),
     reviewed: !!o.reviewed,
+    rejectionReason: o.rejection_reason || null,
     rawStatus: o.status,
     type: isCancelled ? "cancelled" : isCompleted ? "completed" : "active",
     statusLabel: isCancelled
@@ -554,17 +579,19 @@ function mapMyOrderFromApi(o) {
 }
 
 export async function getMyOrders() {
-  const result = await request("/api/my-orders", {
-    errorMessage: "تعذر جلب طلباتك",
-  });
-  const list = result.orders || [];
+  const { firstResult, rawOrders, total } = await fetchAllOrderPages(
+    "/api/my-orders",
+    new URLSearchParams(),
+    "تعذر جلب طلباتك",
+  );
   return {
-    stats: result.stats || {
+    stats: firstResult?.stats || {
       active: 0,
       completed: 0,
       cancelled_or_rejected: 0,
     },
-    orders: list.map(mapMyOrderFromApi),
+    total, // العدد الكلي الحقيقي (pagination.total)
+    orders: rawOrders.map(mapMyOrderFromApi),
   };
 }
 
@@ -577,7 +604,8 @@ function mapMyOrderDetailFromApi(o) {
     date: o.date || o.created_at || "",
     statusUpdatedAt: o.status_updated_at || o.updated_at || o.created_at,
     status: o.status,
-    price: totalPrice,
+    // الإجمالي النهائي من الباك اند (منتجات + توصيل) وإلا مجموع المنتجات
+    price: mapTotals(o)?.totalAmount ?? totalPrice,
     rejectionReason: o.rejection_reason || o.cancellation_reason || null,
     deliveryMethod: o.delivery_method === "home_delivery" ? "توصيل إلى المنزل" : "استلام من نقطة",
     deliveryType: o.delivery_method || null,
@@ -585,6 +613,7 @@ function mapMyOrderDetailFromApi(o) {
     contactPhone: pickContactPhone(o),
     customerNote: extractUserNote(o.customer_note),
     items,
+    totals: mapTotals(o),
   };
 }
 
@@ -592,7 +621,7 @@ export async function getMyOrderDetail(id) {
   const result = await request(`/api/orders/${id}`, {
     errorMessage: 'تعذر جلب تفاصيل الطلب',
   });
-  return mapMyOrderDetailFromApi(result.order || result);
+  return mapMyOrderDetailFromApi(mergeOrderDetailResponse(result));
 }
 
 // إنشاء طلب جديد (الزبونة) — POST /api/orders، multipart/form-data عشان صور المنتجات
@@ -641,25 +670,77 @@ export async function createOrder({
   return result.order || result;
 }
 
+// ===== الـ Pagination (تغيير من الباك اند) =====
+// GET /orders و GET /my-orders صاروا يرجّعوا 15 طلب بس بالمرة، مع مفتاح
+// pagination: { current_page, last_page, per_page, total }.
+// صفحاتنا (فلترة، عدّادات، تبويبات) لسا شغالة على القائمة كاملة بالفرونت،
+// فبنجيب كل الصفحات (100 بالمرة، أقصى حد مسموح) وبنجمعهم. والعدد الكلي
+// الحقيقي من pagination.total مش من orders.length.
+const ORDERS_PER_PAGE = 100;
+const MAX_ORDER_PAGES = 50; // حماية من حلقة لا نهائية
+
+async function fetchAllOrderPages(endpoint, baseParams, errorMessage) {
+  let page = 1;
+  let all = [];
+  let firstResult = null;
+  let total = null;
+
+  while (page <= MAX_ORDER_PAGES) {
+    const params = new URLSearchParams(baseParams);
+    params.set("per_page", ORDERS_PER_PAGE);
+    params.set("page", page);
+
+    const result = await request(`${endpoint}?${params.toString()}`, {
+      errorMessage,
+    });
+    if (!firstResult) firstResult = result;
+
+    const list = result.orders || result.data || [];
+    all = all.concat(Array.isArray(list) ? list : []);
+
+    const pagination = result.pagination;
+    if (pagination && pagination.total != null) total = pagination.total;
+
+    // ما في pagination بالرد (باك اند قديم) أو وصلنا آخر صفحة => نوقف
+    if (!pagination || page >= (pagination.last_page || 1)) break;
+    page += 1;
+  }
+
+  return { firstResult, rawOrders: all, total: total ?? all.length };
+}
+
 export async function getOrders(filters = {}) {
   const params = new URLSearchParams();
   if (filters.status) params.append("status", filters.status);
   if (filters.date) params.append("date", filters.date);
   if (filters.search) params.append("search", filters.search);
 
-  const result = await request(`/api/orders?${params.toString()}`, {
-    errorMessage: "تعذر جلب الطلبات",
-  });
+  const { rawOrders } = await fetchAllOrderPages(
+    "/api/orders",
+    params,
+    "تعذر جلب الطلبات",
+  );
+  return rawOrders.map(mapOrderFromApi);
+}
 
-  const list = result.orders || result.data || result;
-  return Array.isArray(list) ? list.map(mapOrderFromApi) : [];
+// GET /orders/{id} بيرجّع: { order, status_times, status_history, totals }
+// يعني status_times / status_history / totals على مستوى الرد (مش جوا order)،
+// فبندمجهم مع order قبل ما نمرره للـ mapper.
+function mergeOrderDetailResponse(result) {
+  const order = result.order || result;
+  return {
+    ...order,
+    status_times: result.status_times ?? order.status_times,
+    status_history: result.status_history ?? order.status_history,
+    totals: result.totals ?? order.totals,
+  };
 }
 
 export async function getOrderDetails(id) {
   const result = await request(`/api/orders/${id}`, {
     errorMessage: "تعذر جلب تفاصيل الطلب",
   });
-  return mapOrderFromApi(result.order || result);
+  return mapOrderFromApi(mergeOrderDetailResponse(result));
 }
 
 // تحديث حالة الطلب (مسار الطلب) — endpoint PATCH /api/orders/{id}/status

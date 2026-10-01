@@ -62,6 +62,10 @@ export default function MediatorOrders() {
   const [acceptSubmitting, setAcceptSubmitting] = useState(false);
   const [acceptModalError, setAcceptModalError] = useState("");
 
+  // نافذة سبب الرفض: بنفتحها لما الوسيطة تضغط "رفض"، والسبب اختياري
+  const [rejectTargetId, setRejectTargetId] = useState(null);
+  const [rejectReason, setRejectReason] = useState("");
+
   const [activeTab, setActiveTab] = useState("all");
   const [dateFilter, setDateFilter] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
@@ -152,12 +156,28 @@ export default function MediatorOrders() {
     }
   };
 
-  const handleReject = async (orderId) => {
+  // الضغطة على "رفض" بس بتفتح النافذة، الرفض الفعلي بصير بـ confirmReject
+  const openRejectModal = (orderId) => {
+    setActionError("");
+    setRejectReason("");
+    setRejectTargetId(orderId);
+  };
+
+  const closeRejectModal = () => {
+    setRejectTargetId(null);
+    setRejectReason("");
+  };
+
+  const confirmReject = async () => {
+    const orderId = rejectTargetId;
+    if (orderId === null) return;
     setActionError("");
     setActionOrderId(orderId);
     try {
-      const updated = await rejectOrder(orderId);
+      // السبب اختياري: لو فاضي الباك اند بيخزّن null
+      const updated = await rejectOrder(orderId, rejectReason);
       setOrders((prev) => prev.map((o) => (o.id === orderId ? applyStatusUpdate(o, updated) : o)));
+      closeRejectModal();
     } catch (err) {
       setActionError(err.message);
     } finally {
@@ -356,7 +376,7 @@ export default function MediatorOrders() {
                         <td>{order.customer}</td>
                         <td>{formatDateTime(order.date)}</td>
                         <td>{formatProductsCount(order)}</td>
-                        <td>{order.amount} ر.س</td>
+                        <td>{order.amount} ₪</td>
                         <td>
                           <span
                             className={`status-badge ${STATUS_META[order.status]?.className || ""}`}
@@ -384,7 +404,7 @@ export default function MediatorOrders() {
                               </button>
                               <button
                                 className="text-action-btn reject"
-                                onClick={() => handleReject(order.id)}
+                                onClick={() => openRejectModal(order.id)}
                                 disabled={actionOrderId === order.id}
                               >
                                 رفض
@@ -485,6 +505,49 @@ export default function MediatorOrders() {
                     disabled={acceptSubmitting}
                   >
                     {acceptSubmitting ? "جاري التأكيد..." : "تأكيد القبول"}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ===== نافذة سبب الرفض (اختياري) ===== */}
+        {rejectTargetId !== null && (
+          <div className="modal-overlay" onClick={closeRejectModal}>
+            <div className="modal-card" onClick={(e) => e.stopPropagation()}>
+              <div className="modal-header">
+                <span>رفض الطلب #{rejectTargetId}</span>
+                <button className="modal-close-btn" onClick={closeRejectModal}>
+                  ✕
+                </button>
+              </div>
+              <div className="modal-body">
+                <p className="service-description">
+                  تقدري تكتبي سبب الرفض وبيوصل للزبونة (اختياري).
+                </p>
+                <textarea
+                  className="accept-price-input"
+                  style={{ width: "100%", minHeight: "90px" }}
+                  placeholder="مثال: المنتج غير متوفر حاليًا"
+                  value={rejectReason}
+                  onChange={(e) => setRejectReason(e.target.value)}
+                />
+                {actionError && <p className="form-error">{actionError}</p>}
+                <div className="modal-actions confirm-actions">
+                  <button
+                    className="btn btn-outline"
+                    onClick={closeRejectModal}
+                    disabled={actionOrderId === rejectTargetId}
+                  >
+                    رجوع
+                  </button>
+                  <button
+                    className="btn btn-primary"
+                    onClick={confirmReject}
+                    disabled={actionOrderId === rejectTargetId}
+                  >
+                    {actionOrderId === rejectTargetId ? "جاري الرفض..." : "تأكيد الرفض"}
                   </button>
                 </div>
               </div>
