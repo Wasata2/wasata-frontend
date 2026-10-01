@@ -1,7 +1,36 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import DashboardLayout from "../components/DashboardLayout";
 import { getStores, getStoreProfile, createOrder } from "../api";
+
+// صورة الوسيطة (صورة المتجر) — وإذا ما في صورة أو فشل تحميلها بنعرض أول حرف من الاسم
+function MediatorAvatar({ mediator }) {
+  const [failed, setFailed] = useState(false);
+  useEffect(() => {
+    setFailed(false);
+  }, [mediator.image]);
+
+  return (
+    <div className="mediator-pick-avatar">
+      {mediator.image && !failed ? (
+        <img src={mediator.image} alt={mediator.name} onError={() => setFailed(true)} />
+      ) : (
+        (mediator.name || "و").charAt(0)
+      )}
+    </div>
+  );
+}
+
+// توحيد النص العربي للبحث: بدون تشكيل، وأ/إ/آ = ا، ة = ه، ى = ي
+function normalizeSearch(text) {
+  return String(text || "")
+    .toLowerCase()
+    .replace(/[\u064B-\u0652\u0640]/g, "")
+    .replace(/[أإآ]/g, "ا")
+    .replace(/ة/g, "ه")
+    .replace(/ى/g, "ي")
+    .trim();
+}
 
 export default function NewOrder() {
   const navigate = useNavigate();
@@ -57,6 +86,25 @@ export default function NewOrder() {
   useEffect(() => {
     loadMediators();
   }, []);
+
+  // البحث + الترتيب: المتاحة (تستقبل طلبات) أولًا، بعدها الأكثر إكمالًا للطلبات، وبعدها حسب الاسم
+  const [mediatorSearch, setMediatorSearch] = useState("");
+
+  const rankedMediators = useMemo(() => {
+    const q = normalizeSearch(mediatorSearch);
+    const list = q
+      ? mediators.filter((m) =>
+          [m.name, m.ownerName, m.city].some((v) => normalizeSearch(v).includes(q))
+        )
+      : [...mediators];
+
+    return list.sort((a, b) => {
+      if (a.acceptingOrders !== b.acceptingOrders) return a.acceptingOrders ? -1 : 1;
+      const diff = (Number(b.completedOrders) || 0) - (Number(a.completedOrders) || 0);
+      if (diff !== 0) return diff;
+      return String(a.name || "").localeCompare(String(b.name || ""), "ar");
+    });
+  }, [mediators, mediatorSearch]);
 
   const [selectedMediatorId, setSelectedMediatorId] = useState(preselectedId);
   // بنقبل بس وسيطة مستقبلة للطلبات
@@ -397,14 +445,32 @@ export default function NewOrder() {
           )}
 
           {!loadingMediators && !mediatorsError && mediators.length > 0 && (
+            <input
+              type="text"
+              className="mediator-pick-search"
+              placeholder="ابحثي باسم الوسيطة أو المدينة..."
+              value={mediatorSearch}
+              onChange={(e) => setMediatorSearch(e.target.value)}
+            />
+          )}
+
+          {!loadingMediators && !mediatorsError && mediators.length > 0 && rankedMediators.length === 0 && (
+            <div className="explore-empty-state">
+              <div className="empty-icon">🔍</div>
+              <h3>ما في وسيطات مطابقة</h3>
+              <p>جربي اسم أو مدينة تانية.</p>
+            </div>
+          )}
+
+          {!loadingMediators && !mediatorsError && rankedMediators.length > 0 && (
             <div className="mediator-pick-grid">
-              {mediators.map((m) => (
+              {rankedMediators.map((m) => (
                 <div className="mediator-pick-card" key={m.id}>
                   <div className="mediator-pick-top">
                     <span className={`mediator-pick-tag ${m.acceptingOrders ? "" : "off"}`}>
                       {m.acceptingOrders ? "● تستقبل طلبات" : "● غير متاحة"}
                     </span>
-                    <div className="mediator-pick-avatar">{(m.name || "و").charAt(0)}</div>
+                    <MediatorAvatar mediator={m} />
                   </div>
                   <div className="mediator-pick-name">{m.name}</div>
                   {m.city && <div className="mediator-pick-loc">📍 {m.city}</div>}
@@ -432,7 +498,7 @@ export default function NewOrder() {
           <div className="mediator-pick-bar">
             {selectedMediator ? (
               <div className="mediator-pick-bar-selected">
-                <div className="mediator-pick-avatar">{(selectedMediator.name || "و").charAt(0)}</div>
+                <MediatorAvatar mediator={selectedMediator} />
                 <div>
                   <div className="mediator-pick-bar-name">{selectedMediator.name}</div>
                   {commissionText(selectedMediator) && (
@@ -511,7 +577,7 @@ export default function NewOrder() {
                 )}
               </div>
               <div className="review-mediator-row">
-                <div className="mediator-pick-avatar">{(selectedMediator.name || "و").charAt(0)}</div>
+                <MediatorAvatar mediator={selectedMediator} />
                 <div>
                   <div className="mediator-pick-bar-name">{selectedMediator.name}</div>
                   <div className="mediator-pick-bar-meta">
