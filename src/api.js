@@ -778,7 +778,21 @@ function unwrapStockItem(result) {
   }
   return inner;
 }
-
+// قائمة القطع ممكن تيجي بمفتاح items (الشكل المتفق عليه مع الباك اند) أو stock_items أو data،
+// ولو data كانت كائن فيه pagination بنقرا data.items / data.data
+function unwrapStockList(result) {
+  if (Array.isArray(result)) return result;
+  if (!result || typeof result !== "object") return [];
+  const candidates = [
+    result.items,
+    result.stock_items,
+    result.data,
+    result.data?.items,
+    result.data?.stock_items,
+    result.data?.data,
+  ];
+  return candidates.find(Array.isArray) || [];
+}
 function mapStockItemFromApi(o) {
   o = o || {};
   const category = categoryFromApi(o.category);
@@ -824,8 +838,7 @@ export async function getStockItems(filters = {}) {
   const result = await request(`/api/stock-items?${params.toString()}`, {
     errorMessage: "تعذر جلب القطع الراكدة",
   });
-  const list = result.stock_items || result.data || result;
-  return Array.isArray(list) ? list.map(mapStockItemFromApi) : [];
+  const list = unwrapStockList(result);  return Array.isArray(list) ? list.map(mapStockItemFromApi) : [];
 }
 
 // إضافة قطعة جديدة
@@ -929,8 +942,8 @@ export async function getStoreStockItems(storeId) {
   const result = await request(`/api/stores/${storeId}/stock-items`, {
     errorMessage: "تعذر جلب القطع المعروضة",
   });
-  const list = result.stock_items || result.data || result;
-  return Array.isArray(list) ? list.map(mapStockItemFromApi) : [];
+  const list = unwrapStockList(result);
+    return Array.isArray(list) ? list.map(mapStockItemFromApi) : [];
 }
 
 // جهة الزبونة: طلب حجز قطعة

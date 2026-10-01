@@ -176,39 +176,43 @@ export default function MediatorItems() {
               </span>
             </div>
           ) : (
-            <div className="shop-grid">
+                        <div className="shop-list">
               {visibleItems.map((item) => (
-                <div className="shop-card" key={item.id}>
-                  {item.image ? (
-                    <img
-                      src={item.image}
-                      alt={item.name}
-                      className="shop-card-icon"
-                      style={{ objectFit: "cover", width: "100%", height: 120, borderRadius: 8 }}
-                    />
-                  ) : (
-                    <div className={`shop-card-icon ${item.category === "أحذية" ? "cat-shoes" : "cat-clothes"}`}>
-                      {item.icon}
+                <div className="stagnant-item" key={item.id}>
+                  <div className="stagnant-item-row">
+                    {item.image ? (
+                      <img src={item.image} alt={item.name} className="stagnant-item-thumb" />
+                    ) : (
+                      <div className={`stagnant-item-icon ${item.category === "أحذية" ? "cat-shoes" : "cat-clothes"}`}>
+                        {item.icon}
+                      </div>
+                    )}
+
+                    <div className="stagnant-item-info">
+                      <div className="stagnant-item-name">{item.name}</div>
+                      <div className="stagnant-item-meta">
+                        <span>الفئة: {item.category}</span>
+                        {item.size && <span>مقاس: {item.size}</span>}
+                        {item.color && <span>اللون: {item.color}</span>}
+                      </div>
                     </div>
-                  )}
-                  <div className="shop-card-name">{item.name}</div>
-                  <div className="shop-card-meta">
-                    الفئة: {item.category}
-                    {item.size ? ` — مقاس: ${item.size}` : ""}
-                    {item.color ? ` — اللون: ${item.color}` : ""}
+
+                    <div className="stagnant-item-price">{item.price} ₪</div>
+
+                    <div className="stagnant-item-side">
+                      <button
+                        type="button"
+                        className="stagnant-btn primary"
+                        disabled={!canOrder}
+                        onClick={() => {
+                          setMessage("");
+                          setSelectedItem(item);
+                        }}
+                      >
+                        {canOrder ? "اطلبي القطعة" : "غير متاحة الآن"}
+                      </button>
+                    </div>
                   </div>
-                  <div className="shop-card-price">{item.price} ₪</div>
-                  <button
-                    type="button"
-                    className="btn btn-primary shop-card-btn"
-                    disabled={!canOrder}
-                    onClick={() => {
-                      setMessage("");
-                      setSelectedItem(item);
-                    }}
-                  >
-                    {canOrder ? "اطلبي القطعة" : "غير متاحة الآن"}
-                  </button>
                 </div>
               ))}
             </div>

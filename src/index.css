@@ -200,19 +200,6 @@ nav a.active {
   text-align: center;
 }
 
-.badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  background: var(--blue-tint);
-  color: var(--blue);
-  font-size: 13px;
-  font-weight: 700;
-  padding: 6px 14px;
-  border-radius: 20px;
-  margin-bottom: 20px;
-}
-
 .hero h1 {
   font-size: 42px;
   font-weight: 900;
@@ -244,37 +231,6 @@ nav a.active {
   font-size: 15px;
 }
 
-.features-inline {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-  justify-content: center;
-}
-
-.feature-pill {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  background: #fff;
-  border: 1px solid var(--line);
-  padding: 8px 14px;
-  border-radius: 20px;
-  font-size: 13px;
-  font-weight: 500;
-  color: var(--ink);
-}
-
-.feature-pill .check {
-  width: 16px;
-  height: 16px;
-  border-radius: 50%;
-  background: var(--blue-tint);
-  color: var(--blue);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 10px;
-}
 
 
 /* How it works */
@@ -989,10 +945,6 @@ footer .copyright {
 }
 
 @media (max-width:900px) {
-  .hero .container {
-    grid-template-columns: 1fr;
-  }
-
   .steps {
     grid-template-columns: 1fr;
   }
@@ -5671,7 +5623,90 @@ footer .copyright {
 .stagnant-item-row > .stagnant-item-side .stagnant-btn {
   width: 100%;
 }
+/* ============ القسم الرئيسي مع فيديو الخلفية: نص قصير وواضح فوق الفيديو ============ */
+.hero {
+  min-height: 82vh;
+  display: flex;
+  align-items: center;
+  padding: 80px 0;
+}
+.hero .container {
+  width: 100%;
+}
+.hero-overlay {
+  display: none;
+}
+.hero h1 {
+  color: #000;
+  text-shadow: 0 0 14px rgba(255, 255, 255, 0.7);
+}
+.hero p {
+  color: #000;
+  text-shadow: 0 0 12px rgba(255, 255, 255, 0.7);
+}
+/* رجّعت الأزرار لشكلها الأصلي لأنو الأبيض كان مخصص للخلفية الغامقة */
+.hero .btn-primary {
+  background: var(--brand-gradient);
+  color: #fff;
+}
+.hero .btn-primary:hover {
+  filter: brightness(0.92);
+  background: var(--brand-gradient);
+}
+.hero .btn-outline {
+  background: #fff;
+  color: var(--ink);
+  border-color: var(--line);
+}
+.hero .btn-outline:hover {
+  background: #fff;
+  color: var(--blue);
+  border-color: var(--blue);
+}
 
+.hero .hero-ctas {
+  margin-bottom: 0;
+}
+/* زر حذف القطعة جنب "عرض للبيع" — نفس حجم وشكل الأزرار، وبيحمرّ عند المرور */
+.stagnant-item-actions.row {
+  flex-direction: row;
+  width: 100%;}
+
+  .stagnant-item-actions.row {
+  flex-direction: row;
+  flex-wrap: wrap;
+  width: 100%;
+}
+.stagnant-item-row > .stagnant-item-side .stagnant-item-actions.row .stagnant-btn {
+  width: auto;
+  flex: 1;
+}
+.stagnant-btn.outline.delete:hover {
+  border-color: #dc2626;
+  color: #dc2626;
+  background: #fef2f2;
+}
+/* قطع الوسيطة عند الزبونة: بطاقات أفقية (نفس تصميم بطاقات الوسيطة) */
+.shop-list {
+  display: flex;
+  flex-direction: column;
+}
+.stagnant-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+@media (max-width: 600px) {
+  .hero {
+    min-height: 70vh;
+    padding: 60px 0;
+  }
+  .hero h1 {
+    font-size: 30px;
+  }
+  .hero p {
+    font-size: 16px;
+  }
+}
 @media (max-width: 640px) {
   .stagnant-item-row {
     display: grid;

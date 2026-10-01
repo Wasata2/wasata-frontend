@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import {
   getOrderStats,
   getMyStore,
@@ -10,6 +10,7 @@ import {
   unlistStockItem,
   cancelStockReservation,
   confirmStockSale,
+  deleteStockItem,
 } from "../api";
 import DashboardLayout from "../components/DashboardLayout";
 import { formatDate } from "../utils/dates";
@@ -25,12 +26,23 @@ const SORT_OPTIONS = {
   priceDesc: "السعر: الأعلى أولًا",
 };
 
-const EMPTY_FORM = { name: "", category: CATEGORIES[0], price: "", color: "", size: "", image: null };
+const EMPTY_FORM = {
+  name: "",
+  category: CATEGORIES[0],
+  price: "",
+  color: "",
+  size: "",
+  image: null,
+};
 
 // رابط صورة المتجر يجي أحيانًا كمسار نسبي — نفس الدالة المستخدمة ببقية صفحات الوسيطة
 function resolveImageUrl(path) {
   if (!path) return null;
-  if (/^https?:\/\//i.test(path) || path.startsWith("blob:") || path.startsWith("data:")) {
+  if (
+    /^https?:\/\//i.test(path) ||
+    path.startsWith("blob:") ||
+    path.startsWith("data:")
+  ) {
     return path;
   }
   const clean = path.startsWith("/") ? path.slice(1) : path;
@@ -66,7 +78,9 @@ export default function StagnantItems() {
   // بيانات الشريط العلوي (إشعارات + صورة المتجر) — نفس أسلوب بقية صفحات الوسيطة
   const [stats, setStats] = useState(null);
   useEffect(() => {
-    getOrderStats().then(setStats).catch(() => {});
+    getOrderStats()
+      .then(setStats)
+      .catch(() => {});
   }, []);
 
   const [imagePreview, setImagePreview] = useState(null);
@@ -97,7 +111,8 @@ export default function StagnantItems() {
   // أخطاء عمليات سريعة (عرض للبيع / تأكيد البيع / إلغاء حجز / حذف)
   const [actionError, setActionError] = useState("");
 
-  const editingItem = editingId === null ? null : items.find((i) => i.id === editingId);
+  const editingItem =
+    editingId === null ? null : items.find((i) => i.id === editingId);
 
   const hasActiveFilters = searchTerm || categoryFilter || statusFilter;
 
@@ -197,7 +212,9 @@ export default function StagnantItems() {
           size: form.size.trim(),
           image: form.image,
         });
-        setItems((prev) => prev.map((item) => (item.id === editingId ? updated : item)));
+        setItems((prev) =>
+          prev.map((item) => (item.id === editingId ? updated : item)),
+        );
       }
       setShowModal(false);
       // نعيد جلب القائمة من الباك اند عشان تظهر القطعة بكل بياناتها الفعلية (الاسم/السعر/الصورة)
@@ -221,16 +238,33 @@ export default function StagnantItems() {
     }
   };
 
+    // قفل بسيط: أثناء ما طلب "عرض للبيع" شغّال ما منقبل ضغطة تانية (الضغطة المزدوجة كانت بتسبب الخطأ)
+  const listingRef = useRef(false);
   const listForSale = async (id) => {
+    if (listingRef.current) return;
+    listingRef.current = true;
     setActionError("");
     try {
       const updated = await listStockItem(id);
       setItems((prev) => prev.map((item) => (item.id === id ? updated : item)));
     } catch (err) {
       setActionError(err.message || "تعذر عرض القطعة للبيع");
+      refreshItems(); // نزامن القائمة مع حالة الباك اند الفعلية
+    } finally {
+      listingRef.current = false;
     }
   };
-
+  const removeItem = async (item) => {
+    if (!window.confirm(`حذف "${item.name}" نهائيًا؟`)) return;
+    setActionError("");
+    try {
+      await deleteStockItem(item.id);
+      setItems((prev) => prev.filter((i) => i.id !== item.id));
+      setExpandedId((current) => (current === item.id ? null : current));
+    } catch (err) {
+      setActionError(err.message || "تعذر حذف القطعة");
+    }
+  };
   const confirmSale = async (id) => {
     setActionError("");
     try {
@@ -262,14 +296,21 @@ export default function StagnantItems() {
     >
       <div className="dashboard-welcome">
         <h1>القطع الراكدة</h1>
-        <p>أديري القطع المتوفرة لديكِ واعرضي المناسب منها للبيع — القطع المعروضة بتظهر للزبونات.</p>
+        <p>
+          أديري القطع المتوفرة لديكِ واعرضي المناسب منها للبيع — القطع المعروضة
+          بتظهر للزبونات.
+        </p>
       </div>
 
       {/* إجراءات سريعة */}
       <div className="stagnant-card stagnant-actions">
         <h3 className="stagnant-card-title">إجراءات سريعة</h3>
         <div className="stagnant-actions-row">
-          <button type="button" className="stagnant-action-btn" onClick={openAddModal}>
+          <button
+            type="button"
+            className="stagnant-action-btn"
+            onClick={openAddModal}
+          >
             <span aria-hidden="true">＋</span> إضافة قطعة جديدة
           </button>
           <button
@@ -330,7 +371,10 @@ export default function StagnantItems() {
         <div className="stagnant-card stagnant-filter-panel">
           <label>
             <span>الفئة</span>
-            <select value={categoryFilter} onChange={(e) => setCategoryFilter(e.target.value)}>
+            <select
+              value={categoryFilter}
+              onChange={(e) => setCategoryFilter(e.target.value)}
+            >
               <option value="">الكل</option>
               {CATEGORIES.map((c) => (
                 <option key={c} value={c}>
@@ -341,7 +385,10 @@ export default function StagnantItems() {
           </label>
           <label>
             <span>الحالة</span>
-            <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
+            <select
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+            >
               <option value="">الكل</option>
               {Object.entries(STATUS).map(([value, s]) => (
                 <option key={value} value={value}>
@@ -351,7 +398,11 @@ export default function StagnantItems() {
             </select>
           </label>
           {hasActiveFilters && (
-            <button type="button" className="clear-filters-chip" onClick={clearFilters}>
+            <button
+              type="button"
+              className="clear-filters-chip"
+              onClick={clearFilters}
+            >
               مسح الفلاتر ✕
             </button>
           )}
@@ -377,7 +428,11 @@ export default function StagnantItems() {
       ) : visibleItems.length === 0 ? (
         <div className="orders-empty-state">
           <p>لا توجد قطع مطابقة</p>
-          <span>{hasActiveFilters ? "حاولي تعديل البحث أو الفلاتر." : "ابدأي بإضافة قطعة جديدة."}</span>
+          <span>
+            {hasActiveFilters
+              ? "حاولي تعديل البحث أو الفلاتر."
+              : "ابدأي بإضافة قطعة جديدة."}
+          </span>
         </div>
       ) : (
         visibleItems.map((item) => {
@@ -388,9 +443,15 @@ export default function StagnantItems() {
             <div className="stagnant-item" key={item.id}>
               <div className="stagnant-item-row">
                 {item.image ? (
-                  <img src={item.image} alt={item.name} className="stagnant-item-thumb" />
+                  <img
+                    src={item.image}
+                    alt={item.name}
+                    className="stagnant-item-thumb"
+                  />
                 ) : (
-                  <div className={`stagnant-item-icon ${item.category === "أحذية" ? "cat-shoes" : "cat-clothes"}`}>
+                  <div
+                    className={`stagnant-item-icon ${item.category === "أحذية" ? "cat-shoes" : "cat-clothes"}`}
+                  >
                     {item.icon}
                   </div>
                 )}
@@ -402,28 +463,62 @@ export default function StagnantItems() {
                     {item.size && <span>مقاس: {item.size}</span>}
                     {item.color && <span>اللون: {item.color}</span>}
                   </div>
-                  <span className={`stagnant-status ${status.className}`}>{status.label}</span>
+                  <span className={`stagnant-status ${status.className}`}>
+                    {status.label}
+                  </span>
                 </div>
 
                 <div className="stagnant-item-price">{item.price} ₪</div>
 
                 <div className="stagnant-item-side">
                   {item.status === "unlisted" && (
-                    <button type="button" className="stagnant-btn primary" onClick={() => listForSale(item.id)}>
-                      عرض للبيع
-                    </button>
+                    <div className="stagnant-item-actions row">
+                      <button
+                        type="button"
+                        className="stagnant-btn primary"
+                        onClick={() => listForSale(item.id)}
+                      >
+                        عرض للبيع
+                      </button>
+                      <button
+                        type="button"
+                        className="stagnant-btn outline-brand"
+                        onClick={() => openEditModal(item)}
+                      >
+                        تعديل العرض
+                      </button>
+                      <button
+                        type="button"
+                        className="stagnant-btn outline delete"
+                        onClick={() => removeItem(item)}
+                      >
+                        حذف
+                      </button>
+                    </div>
                   )}
                   {item.status === "listed" && (
-                    <button type="button" className="stagnant-btn outline-brand" onClick={() => openEditModal(item)}>
+                    <button
+                      type="button"
+                      className="stagnant-btn outline-brand"
+                      onClick={() => openEditModal(item)}
+                    >
                       تعديل العرض
                     </button>
                   )}
                   {item.status === "reserved" && (
                     <div className="stagnant-item-actions">
-                      <button type="button" className="stagnant-btn primary" onClick={() => confirmSale(item.id)}>
+                      <button
+                        type="button"
+                        className="stagnant-btn primary"
+                        onClick={() => confirmSale(item.id)}
+                      >
                         تأكيد البيع
                       </button>
-                      <button type="button" className="stagnant-btn outline" onClick={() => cancelReservation(item.id)}>
+                      <button
+                        type="button"
+                        className="stagnant-btn outline"
+                        onClick={() => cancelReservation(item.id)}
+                      >
                         إلغاء الحجز
                       </button>
                     </div>
@@ -454,7 +549,11 @@ export default function StagnantItems() {
       {/* نافذة إضافة / تعديل قطعة */}
       {showModal && (
         <div className="stagnant-modal-backdrop" onClick={closeModal}>
-          <form className="stagnant-modal" onClick={(e) => e.stopPropagation()} onSubmit={handleSave}>
+          <form
+            className="stagnant-modal"
+            onClick={(e) => e.stopPropagation()}
+            onSubmit={handleSave}
+          >
             <h3>{editingId === null ? "إضافة قطعة جديدة" : "تعديل القطعة"}</h3>
 
             <label>
@@ -470,7 +569,10 @@ export default function StagnantItems() {
 
             <label>
               <span>الفئة</span>
-              <select value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })}>
+              <select
+                value={form.category}
+                onChange={(e) => setForm({ ...form, category: e.target.value })}
+              >
                 {CATEGORIES.map((c) => (
                   <option key={c} value={c}>
                     {c}
@@ -512,24 +614,45 @@ export default function StagnantItems() {
 
             <label>
               <span>صورة القطعة (اختياري)</span>
-              <input type="file" accept="image/*" onChange={handleImageChange} />
+              <input
+                type="file"
+                accept="image/*"
+                onChange={handleImageChange}
+              />
             </label>
 
             {imagePreviewUrl && (
               <img
                 src={imagePreviewUrl}
                 alt="معاينة القطعة"
-                style={{ width: 90, height: 90, objectFit: "cover", borderRadius: 8, marginTop: 4 }}
+                style={{
+                  width: 90,
+                  height: 90,
+                  objectFit: "cover",
+                  borderRadius: 8,
+                  marginTop: 4,
+                }}
               />
             )}
 
-            {formError && <div className="stagnant-form-error">{formError}</div>}
+            {formError && (
+              <div className="stagnant-form-error">{formError}</div>
+            )}
 
             <div className="stagnant-modal-actions">
-              <button type="submit" className="stagnant-btn primary" disabled={saving}>
+              <button
+                type="submit"
+                className="stagnant-btn primary"
+                disabled={saving}
+              >
                 {saving ? "جاري الحفظ..." : "حفظ"}
               </button>
-              <button type="button" className="stagnant-btn outline" onClick={closeModal} disabled={saving}>
+              <button
+                type="button"
+                className="stagnant-btn outline"
+                onClick={closeModal}
+                disabled={saving}
+              >
                 إلغاء
               </button>
               {editingItem && editingItem.status === "listed" && (

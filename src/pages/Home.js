@@ -20,13 +20,9 @@ export default function Home() {
         <div className="hero-overlay"></div>
         
         <div className="container">
-          <div className="hero-copy">
-            <span className="badge">⏱ منصة تنظيم طلبات ذكي</span>
+                    <div className="hero-copy">
             <h1>وسيطتك المناسبة، وطلبك تحت المتابعة</h1>
-            <p>
-              منصة تجمعك بوسيطتك المناسبة وتساعدك على اختيار الوسيطة المناسبة
-              ومتابعة طلبك بسهولة، نحن نوفر بيئة آمنة وشفافة لجميع معاملاتك.
-            </p>
+            <p>اختاري وسيطتك، وتابعي طلبك خطوة بخطوة.</p>
             <div className="hero-ctas">
               <Link to="/account-type" className="btn btn-primary">
                 ابدئي الآن
@@ -34,17 +30,6 @@ export default function Home() {
               <a href="#how" className="btn btn-outline">
                 كيف تعمل وساطة؟
               </a>
-            </div>
-            <div className="features-inline">
-              <span className="feature-pill">
-                <span className="check">✓</span> اختيار حسب الموقع{" "}
-              </span>
-              <span className="feature-pill">
-                <span className="check">✓</span> متابعة واضحة للطلب
-              </span>
-              <span className="feature-pill">
-                <span className="check">✓</span> وسيطات موثوقات
-              </span>
             </div>
           </div>
         </div>
