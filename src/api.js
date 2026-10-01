@@ -347,8 +347,14 @@ export async function rejectOrder(id, reason) {
 
 function mapOrderItemFromApi(item) {
   // الباك اند بيخزّن صورة المنتج كمسار نسبي (image_path) — منحوله لرابط كامل عشان تظهر
+  // أسماء الحقول الحقيقية من الباك اند: product_image_url (رابط كامل) و product_image_path
   const rawImage =
-    item.image_url || item.image_path || item.product_image || item.image;
+    item.product_image_url ||
+    item.product_image_path ||
+    item.image_url ||
+    item.image_path ||
+    item.product_image ||
+    item.image;
   return {
     id: item.id,
     name: item.product_name || item.name,
