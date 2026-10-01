@@ -20,6 +20,7 @@ import OrderDetails from "./pages/OrderDetails";
 import MediatorNotifications from "./pages/MediatorNotifications";
 import CustomerProfile from "./pages/CustomerProfile";
 import ExploreMediators from "./pages/ExploreMediators";
+import StockOrderDetails from "./pages/StockOrderDetails";
 import StagnantItems from "./pages/StagnantItems";
 import FavoriteMediators from "./pages/FavoriteMediators";
 import MediatorPublicProfile from "./pages/MediatorPublicProfile";
@@ -127,6 +128,14 @@ function App() {
           element={
             <ProtectedRoute allowedRole="customer">
               <CustomerOrderDetails />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/stock-orders/:itemId"
+          element={
+            <ProtectedRoute allowedRole="customer">
+              <StockOrderDetails />
             </ProtectedRoute>
           }
         />

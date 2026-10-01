@@ -5731,6 +5731,21 @@ footer .copyright {
   outline: none;
   border-color: var(--blue);
 }
+/* ===== طلب قطعة راكدة (تسليم فوري) ===== */
+.stock-order-instant-note {
+  margin: 14px 0 0;
+  font-size: 13px;
+  color: var(--gray-light);
+}
+
+.stock-order-total {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid var(--line);
+  font-weight: 800;
+}
 @media (max-width: 600px) {
   .hero {
     min-height: 70vh;

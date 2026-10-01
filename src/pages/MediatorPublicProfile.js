@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Link, useNavigate, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams, useLocation } from "react-router-dom";
 import { getStores, getStoreProfile, getStoreReviews } from "../api";
 import { formatDate, latestByDate } from "../utils/dates";
 import ReviewAvatar from "../components/ReviewAvatar";
@@ -62,6 +62,12 @@ function StarRating({ rating, size }) {
 export default function MediatorPublicProfile() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
+  // عودة للصفحة اللي قبل، وإذا انفتحت الصفحة مباشرة بنرجع لاستكشاف الوسيطات
+  const goBack = () => {
+    if (location.key !== "default") navigate(-1);
+    else navigate("/explore-mediators", { replace: true });
+  };
 
   // ===== بيانات الوسيطة (من قائمة الوسيطات الحقيقية) =====
   const [mediator, setMediator] = useState(null);
@@ -147,7 +153,7 @@ export default function MediatorPublicProfile() {
 
   const topbar = (
     <div className="preview-topbar">
-      <button type="button" className="back-link" onClick={() => navigate(-1)}>
+      <button type="button" className="back-link" onClick={goBack}>
         ‹ عودة
       </button>
       <div className="sidebar-logo">

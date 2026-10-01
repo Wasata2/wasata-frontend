@@ -1,7 +1,8 @@
 import { useState, useEffect, useMemo } from "react";
-import { Link, useNavigate, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams, useLocation } from "react-router-dom";
 import { getStores, getStoreStockItems, reserveStockItem } from "../api";
 import { STAGNANT_CATEGORIES as CATEGORIES } from "../stagnantItemsStore";
+import { getCurrentUserId, saveStockOrder } from "../utils/stockOrders";
 
 // صفحة كاملة: القطع المعروضة للبيع عند وسيطة معيّنة — الزبونة بتقدر تطلب القطعة من هون.
 // القطع والحجز مؤقتًا بالمتصفح (localStorage) لحد ما يجهز مسار للقطع بالباك اند.
@@ -9,6 +10,14 @@ import { STAGNANT_CATEGORIES as CATEGORIES } from "../stagnantItemsStore";
 export default function MediatorItems() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
+
+  // زر عودة: بيرجع للصفحة اللي قبل فعلًا (مش رابط ثابت للملف الشخصي — هيك ما بنضل ندور بين الملف والقطع)
+  // وإذا فتحت الصفحة مباشرة (ما في صفحة قبل) بنرجعها للملف الشخصي للوسيطة
+  const goBack = () => {
+    if (location.key !== "default") navigate(-1);
+    else navigate(`/mediators/${id}`, { replace: true });
+  };
 
   // ===== الوسيطة =====
   const [mediator, setMediator] = useState(null);
@@ -65,8 +74,11 @@ export default function MediatorItems() {
     try {
       // بنحجز القطعة من الباك اند — لو انحجزت قبل (زبونة ثانية) بيرجع خطأ ومنبلّغ الزبونة
       await reserveStockItem(selectedItem.id);
+      // بنسجّل الطلب عند الزبونة ليظهر مع طلباتها النشطة، وبنفتح شاشة تفاصيله
+      saveStockOrder(getCurrentUserId(), { item: selectedItem, mediator });
+      const orderedId = selectedItem.id;
       setSelectedItem(null);
-      navigate("/my-orders");
+      navigate(`/stock-orders/${orderedId}`, { state: { justOrdered: true } });
     } catch (err) {
       getStoreStockItems(id)
         .then(setItems)
@@ -80,9 +92,9 @@ export default function MediatorItems() {
 
   const topbar = (
     <div className="preview-topbar">
-      <Link to={`/mediators/${id}`} className="back-link">
+      <button type="button" className="back-link" onClick={goBack}>
         ‹ عودة
-      </Link>
+      </button>
       <div className="sidebar-logo">
         <img src="/logo.svg" alt="وساطة" className="logo-img" />
         وساطة

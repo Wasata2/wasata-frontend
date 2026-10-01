@@ -4,6 +4,7 @@ import DashboardLayout from "../components/DashboardLayout";
 import { getMyOrders, cancelOrder, CUSTOMER_ORDER_STATUSES } from "../api";
 import { formatDateTime } from "../utils/dates";
 import { getStepTime } from "../utils/orders";
+import { getCurrentUserId, syncStockOrders, toListOrder } from "../utils/stockOrders";
 
 
 // تحويل وقت مخزّن (timestamp) لنص "منذ كذا" — بيتحسب وقت العرض، مش وقت الإنشاء
@@ -38,6 +39,16 @@ export default function MyOrders() {
     loadOrders();
   }, []);
 
+  // طلبات القطع الراكدة (تسليم فوري) — بتنعرض مع باقي الطلبات
+  const [stockOrders, setStockOrders] = useState([]);
+  useEffect(() => {
+    syncStockOrders(getCurrentUserId())
+      .then((list) => setStockOrders(list.map(toListOrder)))
+      .catch(() => {});
+  }, []);
+
+  const allOrders = useMemo(() => [...stockOrders, ...orders], [stockOrders, orders]);
+
     const [cancellingId, setCancellingId] = useState(null);
   const [cancelError, setCancelError] = useState({ id: null, message: "" });
 
@@ -67,7 +78,7 @@ export default function MyOrders() {
 
   const statusOptionsByTab = {
     active: timelineSteps,
-    completed: ["مكتمل"],
+    completed: ["مكتمل", "تم الاستلام"],
     cancelled: ["ملغي", "مرفوض"],
   };
 
@@ -83,9 +94,9 @@ export default function MyOrders() {
   const [searchTerm, setSearchTerm] = useState("");
   const [expandedReasonId, setExpandedReasonId] = useState(null);
 
-  const activeCount = orders.filter((o) => o.type === "active").length;
-  const completedCount = orders.filter((o) => o.type === "completed").length;
-  const cancelledCount = orders.filter((o) => o.type === "cancelled").length;
+  const activeCount = allOrders.filter((o) => o.type === "active").length;
+  const completedCount = allOrders.filter((o) => o.type === "completed").length;
+  const cancelledCount = allOrders.filter((o) => o.type === "cancelled").length;
 
   const hasActiveFilters = dateFilter || statusFilter || searchTerm;
 
@@ -101,7 +112,7 @@ export default function MyOrders() {
   };
 
   const filteredOrders = useMemo(() => {
-    return orders.filter((o) => {
+    return allOrders.filter((o) => {
       if (o.type !== activeTab) return false;
       if (
         statusFilter &&
@@ -112,8 +123,9 @@ export default function MyOrders() {
       if (
         searchTerm &&
         !(
-          o.id.includes(searchTerm.trim()) ||
-          o.store.includes(searchTerm.trim())
+          String(o.id).includes(searchTerm.trim()) ||
+          o.store.includes(searchTerm.trim()) ||
+          (o.itemName || "").includes(searchTerm.trim())
         )
       ) {
         return false;
@@ -121,7 +133,7 @@ export default function MyOrders() {
       // فلتر التاريخ شكلي حاليًا (بيانات وهمية) — هيتفعّل فعليًا لما توصل الطلبات من الـ API
       return true;
     });
-  }, [orders, activeTab, statusFilter, searchTerm]);
+  }, [allOrders, activeTab, statusFilter, searchTerm]);
 
    return (
     <DashboardLayout role="customer">
@@ -250,10 +262,10 @@ export default function MyOrders() {
                       ● {order.statusLabel}
                     </span>
                   </div>
-                  <div className="order-id">طلب #{order.id}</div>
+                  <div className="order-id">{order.isStock ? "طلب قطعة راكدة" : `طلب #${order.id}`}</div>
                   <div className="order-store">🕐 {order.store}</div>
                   <div className="order-list-info">
-                    📦 {order.itemsCount} منتجات &nbsp; 🗓 {formatDateTime(order.date)}
+                    {order.isStock ? `🏷 ${order.itemName}` : `📦 ${order.itemsCount} منتجات`} &nbsp; 🗓 {formatDateTime(order.date)}
                   </div>
                 </div>
                 <div className="order-list-price">{order.price} ₪</div>
@@ -261,7 +273,23 @@ export default function MyOrders() {
 
               <div className="order-list-divider"></div>
 
-              {order.type === "active" && (
+              {order.isStock && (
+                <>
+                  {order.type === "completed" && (
+                    <div className="order-success-banner">✓ تم استلام القطعة</div>
+                  )}
+                  {order.type === "cancelled" && (
+                    <div className="order-reject-banner">الوسيطة ألغت حجز هذه القطعة</div>
+                  )}
+                  <div className="order-actions">
+                    <Link to={`/stock-orders/${order.itemId}`} className="btn btn-outline">
+                      عرض التفاصيل
+                    </Link>
+                  </div>
+                </>
+              )}
+
+              {!order.isStock && order.type === "active" && (
                 <>
                   <div className="order-path-label">مسار الطلب</div>
                   <div className="order-timeline">
@@ -313,7 +341,7 @@ export default function MyOrders() {
                 </>
               )}
 
-              {order.type === "completed" && (
+              {!order.isStock && order.type === "completed" && (
                 <>
                   <div className="order-success-banner">✓ تم تسليم هذا الطلب بنجاح</div>
                   <div className="order-actions">
@@ -329,7 +357,7 @@ export default function MyOrders() {
                 </>
               )}
 
-              {order.type === "cancelled" && (
+              {!order.isStock && order.type === "cancelled" && (
                 <>
                   {order.rejectionReason && (
                     <>
