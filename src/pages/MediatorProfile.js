@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import {
   getMyStore,
   updateProfile,
@@ -11,7 +11,7 @@ import {
 } from "../api";
 import LogoutButton from "../components/LogoutButton";
 import { useAuth } from "../context/AuthContext";
-import { getStoreStockItems } from "../api";
+import { DELIVERY_REGIONS, normalizeZones } from "../utils/deliveryZones";
 import { formatDate, latestByDate } from "../utils/dates";
 import ReviewAvatar from "../components/ReviewAvatar";
 // رابط صورة المتجر يجي أحيانًا من الباك اند كمسار نسبي (بدون دومين) —
@@ -77,6 +77,7 @@ function StarRating({ rating, size }) {
 
 export default function MediatorProfile() {
   const { updateUser } = useAuth();
+  const navigate = useNavigate();
   const storedUser = JSON.parse(localStorage.getItem("user")) || {};
 
   const [form, setForm] = useState({
@@ -86,6 +87,8 @@ export default function MediatorProfile() {
     city: "",
     bio: "",
     commission: "",
+    pickupLocation: "",
+    deliveryZones: [],
   });
 
   const [acceptingOrders, setAcceptingOrders] = useState(true);
@@ -105,24 +108,35 @@ export default function MediatorProfile() {
   const [generalForm, setGeneralForm] = useState({
     bio: "",
     commission: "",
+    pickupLocation: "",
+    deliveryZones: {},
     acceptingOrders: true,
   });
   const [generalError, setGeneralError] = useState("");
   const [savingGeneral, setSavingGeneral] = useState(false);
 
-  const [previewMode, setPreviewMode] = useState(false);
+  const [previewMode, setPreviewMode] = useState(() => {
+    try {
+      return sessionStorage.getItem("wasata_profile_preview") === "1";
+    } catch (e) {
+      return false;
+    }
+  });
+  useEffect(() => {
+    try {
+      sessionStorage.removeItem("wasata_profile_preview");
+    } catch (e) {}
+  }, []);
 
-  // القطع المعروضة للبيع (بتظهر للزبونة بوضع المعاينة كنافذة بتنفتح من زر بالبانر)
-  const [showItems, setShowItems] = useState(false);
-  const [listedItems, setListedItems] = useState([]);
+  // القطع المعروضة للبيع: بوضع المعاينة بنفتح نفس صفحة الزبونة (بدون زر الطلب)
   const [myStoreId, setMyStoreId] = useState(null);
   const openItems = () => {
-    setShowItems(true);
-    if (myStoreId !== null) {
-      getStoreStockItems(myStoreId)
-        .then(setListedItems)
-        .catch(() => setListedItems([]));
-    }
+    if (myStoreId === null) return;
+    // بنتذكّر إنها كانت بوضع المعاينة عشان ترجع عليه بعد زر "عودة"
+    try {
+      sessionStorage.setItem("wasata_profile_preview", "1");
+    } catch (e) {}
+    navigate(`/mediators/${myStoreId}/items`);
   };
 
   const [toast, setToast] = useState("");
@@ -147,6 +161,9 @@ export default function MediatorProfile() {
           city: store.city || "",
           bio: store.bio || "",
           commission: store.commission_rate || "",
+          // نقطة الاستلام ورسوم التوصيل اللي بتظهر للزبونة عند الطلب
+          pickupLocation: store.pickup_location || "",
+          deliveryZones: normalizeZones(store.delivery_zones),
         }));
         // سويتش "استقبال الطلبات" — is_accepting_orders، منفصل عن استقبال طلبات واتساب
         setAcceptingOrders(!!store.is_accepting_orders);
@@ -165,6 +182,7 @@ export default function MediatorProfile() {
 
   // ===== تقييمات الزبائن الحقيقية — متوسط التقييم وعددها جاهزين من الباك اند =====
   const [reviews, setReviews] = useState([]);
+  const [reviewsShown, setReviewsShown] = useState(3); // عدد التقييمات الظاهرة (زر المزيد بيزيدهم)
   const [ratingSummary, setRatingSummary] = useState({ total: 0, avg: 0 });
   const [loadingReviews, setLoadingReviews] = useState(true);
 
@@ -324,6 +342,8 @@ export default function MediatorProfile() {
     setGeneralForm({
       bio: form.bio,
       commission: form.commission,
+      pickupLocation: form.pickupLocation,
+      deliveryZones: Object.fromEntries(form.deliveryZones.map((z) => [z.region, String(z.fee)])),
       acceptingOrders,
     });
     setGeneralError("");
@@ -345,17 +365,47 @@ export default function MediatorProfile() {
     try {
       // نبذة عني + نسبة العمولة + سويتش استقبال الطلبات — مدعومين
       // فعليًا بالباك اند (bio, commission_rate, is_accepting_orders)
-      await updateStore({
+      // أسعار التوصيل حسب المنطقة: المناطق اللي إلها سعر بس (فاضي = ما بتوصّل لهاي المنطقة)
+      const zonesToSave = DELIVERY_REGIONS.filter(
+        (region) => String(generalForm.deliveryZones[region] ?? "").trim() !== ""
+      )
+        .map((region) => ({ region, fee: Number(generalForm.deliveryZones[region]) }))
+        .filter((z) => Number.isFinite(z.fee) && z.fee >= 0);
+
+      const saveResult = await updateStore({
         bio: generalForm.bio,
         commission_rate: generalForm.commission,
+        pickup_location: generalForm.pickupLocation.trim(),
+        delivery_zones: zonesToSave,
         is_accepting_orders: generalForm.acceptingOrders,
       });
+
+      // تأكيد إن الباك اند فعلًا حفظ نقطة الاستلام (لو رجّع الحقل بالرد وما طابق، معناها بيتجاهله)
+      const savedStore = saveResult?.store || saveResult?.data || {};
+      const pickupIgnored =
+        generalForm.pickupLocation.trim() !== "" &&
+        savedStore.pickup_location !== undefined &&
+        (savedStore.pickup_location || "") !== generalForm.pickupLocation.trim();
+      const zonesIgnored =
+        savedStore.delivery_zones !== undefined &&
+        normalizeZones(savedStore.delivery_zones).length !== zonesToSave.length;
 
       setForm((prev) => ({
         ...prev,
         bio: generalForm.bio,
         commission: generalForm.commission,
+        pickupLocation: generalForm.pickupLocation.trim(),
+        deliveryZones: zonesToSave,
       }));
+      if (pickupIgnored || zonesIgnored) {
+        setGeneralError(
+          pickupIgnored
+            ? "الباك اند ما حفظ نقطة الاستلام. بلّغي مسؤولة الباك اند إنه يقبل pickup_location بـ PATCH /api/stores/me."
+            : "الباك اند ما حفظ أسعار التوصيل حسب المنطقة. بلّغي مسؤولة الباك اند إنه يقبل delivery_zones بـ PATCH /api/stores/me."
+        );
+        setSavingGeneral(false);
+        return;
+      }
       setAcceptingOrders(generalForm.acceptingOrders);
       setGeneralModalOpen(false);
       showToast("تم تحديث الملف الشخصي بنجاح ✓");
@@ -427,24 +477,38 @@ export default function MediatorProfile() {
             <h2>{form.fullName || "—"}</h2>
           </div>
           <div className="profile-hero-facts">
-            <span className="profile-hero-fact-row">🏷️ وسيطة</span>
-            <span className="profile-hero-fact-row">
-              📍 {form.city || "غير محدد"}
-            </span>
-            {form.phone && (
-              <span className="profile-hero-fact-row">📞 {form.phone}</span>
+            <div className="profile-hero-fact-line">
+              <span className="profile-hero-fact-row">🏷️ وسيطة</span>
+              <span className="profile-hero-fact-row">📍 {form.city || "غير محدد"}</span>
+            </div>
+            {(form.phone || form.commission) && (
+              <div className="profile-hero-fact-line">
+                {form.phone && <span className="profile-hero-fact-row">📞 {form.phone}</span>}
+                {form.commission && (
+                  <span className="profile-hero-fact-row">💰 {form.commission}% عمولة</span>
+                )}
+              </div>
             )}
-            {form.commission && (
+            <div className="profile-hero-fact-line">
               <span className="profile-hero-fact-row">
-                💰 {form.commission}% عمولة
+                🏬 نقطة الاستلام: {form.pickupLocation || "غير محددة"}
               </span>
+              <span className="profile-hero-fact-row">
+                <span className={`status-dot ${acceptingOrders ? "on" : "off"}`}></span>
+                {acceptingOrders ? "متاحة" : "غير متاحة"}
+              </span>
+            </div>
+            {form.deliveryZones.length > 0 && (
+              <div className="profile-hero-fact-line">
+                <span className="profile-hero-fact-row profile-hero-zones">
+                  🚚 توصيل إلى {form.deliveryZones.length} مناطق (
+                  {form.deliveryZones
+                    .map((z) => `${z.region} ${z.fee > 0 ? `${z.fee} ₪` : "مجاني"}`)
+                    .join("، ")}
+                  )
+                </span>
+              </div>
             )}
-            <span className="profile-hero-fact-row">
-              <span
-                className={`status-dot ${acceptingOrders ? "on" : "off"}`}
-              ></span>
-              {acceptingOrders ? "متاحة" : "غير متاحة"}
-            </span>
           </div>
         </div>
       </div>
@@ -527,7 +591,8 @@ export default function MediatorProfile() {
               ) : reviews.length === 0 ? (
                 <p className="service-description">لا توجد تقييمات بعد.</p>
               ) : (
-                latestByDate(reviews, 3).map((review) => (
+                <>
+                {latestByDate(reviews, reviewsShown).map((review) => (
                   <div className="review-card" key={review.id}>
                     <div className="review-card-top">
                       <div className="review-date">
@@ -545,7 +610,17 @@ export default function MediatorProfile() {
                     </div>
                     <p className="review-comment">{review.comment}</p>
                   </div>
-                ))
+                ))}
+                {reviews.length > reviewsShown && (
+                  <button
+                    type="button"
+                    className="btn btn-outline reviews-more-btn"
+                    onClick={() => setReviewsShown((n) => n + 3)}
+                  >
+                    المزيد ({reviews.length - reviewsShown})
+                  </button>
+                )}
+                </>
               )}
             </div>
           </div>
@@ -555,67 +630,6 @@ export default function MediatorProfile() {
               بدء طلب مع هذه الوسيطة
             </Link>
           </div>
-
-          {showItems && (
-            <div
-              className="stagnant-modal-backdrop"
-              onClick={() => setShowItems(false)}
-            >
-              <div
-                className="stagnant-modal wide"
-                onClick={(e) => e.stopPropagation()}
-              >
-                <h3>القطع المعروضة للبيع</h3>
-
-                {listedItems.length === 0 ? (
-                  <p className="service-description">
-                    لا توجد قطع معروضة حاليًا.
-                  </p>
-                ) : (
-                  listedItems.map((item) => (
-                    <div className="stagnant-item" key={item.id}>
-                      <div className="stagnant-item-row">
-                        {item.image ? (
-                          <img
-                            src={item.image}
-                            alt={item.name}
-                            className="stagnant-item-thumb"
-                          />
-                        ) : (
-                          <div
-                            className={`stagnant-item-icon ${item.category === "أحذية" ? "cat-shoes" : "cat-clothes"}`}
-                          >
-                            {item.icon}
-                          </div>
-                        )}
-                        <div className="stagnant-item-info">
-                          <div className="stagnant-item-name">{item.name}</div>
-                          <div className="stagnant-item-meta">
-                            <span>الفئة: {item.category}</span>
-                            {item.size && <span>مقاس: {item.size}</span>}
-                            {item.color && <span>اللون: {item.color}</span>}
-                          </div>
-                        </div>
-                        <div className="stagnant-item-price">
-                          {item.price} ₪
-                        </div>
-                      </div>
-                    </div>
-                  ))
-                )}
-
-                <div className="stagnant-modal-actions">
-                  <button
-                    type="button"
-                    className="stagnant-btn outline"
-                    onClick={() => setShowItems(false)}
-                  >
-                    إغلاق
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
         </main>
       </div>
     );
@@ -874,6 +888,26 @@ export default function MediatorProfile() {
               </div>
               <div className="public-stat-sub">نسبة العمولة</div>
             </div>
+            <div className="public-stat-box center wide">
+              <div className="public-stat-title">
+                {loadingStore ? "…" : form.pickupLocation || "غير محددة"}
+              </div>
+              <div className="public-stat-sub">نقطة الاستلام</div>
+            </div>
+            <div className="public-stat-box center wide">
+              {form.deliveryZones.length === 0 ? (
+                <div className="public-stat-title">غير محددة</div>
+              ) : (
+                <div className="zone-chips">
+                  {form.deliveryZones.map((z) => (
+                    <span className="zone-chip" key={z.region}>
+                      {z.region} · {z.fee > 0 ? `${z.fee} ₪` : "مجاني"}
+                    </span>
+                  ))}
+                </div>
+              )}
+              <div className="public-stat-sub">أسعار التوصيل للمنزل حسب المنطقة</div>
+            </div>
           </div>
         </div>
 
@@ -921,7 +955,7 @@ export default function MediatorProfile() {
                 </button>
               </div>
 
-              <form className="modal-body" onSubmit={saveGeneralInfo}>
+              <form className="modal-body modal-scroll" onSubmit={saveGeneralInfo}>
                 <label htmlFor="bio">نبذة عني</label>
                 <textarea
                   id="bio"
@@ -941,6 +975,41 @@ export default function MediatorProfile() {
                   value={generalForm.commission}
                   onChange={handleGeneralChange}
                 />
+
+                <label htmlFor="pickupLocation">نقطة الاستلام</label>
+                <input
+                  id="pickupLocation"
+                  name="pickupLocation"
+                  type="text"
+                  placeholder="مثال: غزة، الرمال، قرب مسجد ..."
+                  value={generalForm.pickupLocation}
+                  onChange={handleGeneralChange}
+                />
+
+                <span className="zone-title">رسوم التوصيل للمنزل حسب المنطقة (₪)</span>
+                <p className="zone-hint">
+                  حددي سعر التوصيل لكل منطقة بتوصّلي إلها. اتركي الحقل فاضي إذا ما بتوصّلي لهاي المنطقة، و0 = توصيل مجاني.
+                </p>
+                <div className="delivery-zones-editor">
+                  {DELIVERY_REGIONS.map((region) => (
+                    <div className="delivery-zone-row" key={region}>
+                      <span>{region}</span>
+                      <input
+                        type="number"
+                        min="0"
+                        step="0.5"
+                        placeholder="لا أوصّل"
+                        value={generalForm.deliveryZones[region] ?? ""}
+                        onChange={(e) =>
+                          setGeneralForm((prev) => ({
+                            ...prev,
+                            deliveryZones: { ...prev.deliveryZones, [region]: e.target.value },
+                          }))
+                        }
+                      />
+                    </div>
+                  ))}
+                </div>
 
                 <div className="service-availability-row">
                   <label className="switch">

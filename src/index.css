@@ -5746,6 +5746,115 @@ footer .copyright {
   border-top: 1px solid var(--line);
   font-weight: 800;
 }
+
+/* نافذة طلب القطعة بتطول بعد إضافة خيارات الاستلام، فبنخليها قابلة للتمرير */
+.stagnant-modal {
+  max-height: 90vh;
+  overflow-y: auto;
+}
+/* ===== مناطق التوصيل: قائمة المنطقة عند الزبونة + محرر الأسعار عند الوسيطة ===== */
+.delivery-home-fields select {
+  border: 1.5px solid var(--line);
+  border-radius: 10px;
+  padding: 10px 14px;
+  font-family: inherit;
+  font-size: 14px;
+  background: #fff;
+}
+
+.delivery-home-fields select:focus {
+  outline: none;
+  border-color: var(--blue);
+}
+
+.modal-scroll {
+  max-height: calc(100vh - 160px);
+  overflow-y: auto;
+}
+
+.zone-title {
+  display: block;
+  font-weight: 700;
+  margin-top: 6px;
+}
+
+.zone-hint {
+  margin: 4px 0 10px;
+  font-size: 12px;
+  color: var(--gray-light);
+}
+
+.delivery-zones-editor {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.delivery-zone-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.delivery-zone-row span {
+  font-weight: 600;
+  min-width: 90px;
+}
+
+.delivery-zone-row input {
+  flex: 1;
+  margin: 0;
+}/* ===== نافذة تعديل المعلومات: ما ننكمش الحقول لما يصير تمرير (صندوق نبذة عني) ===== */
+.modal-scroll > * {
+  flex-shrink: 0;
+}
+
+.modal-scroll textarea {
+  min-height: 110px;
+}
+
+/* ===== هيدر الملف الشخصي: كل معلومتين بنفس السطر، والتوصيل بسطر لحاله ===== */
+.profile-hero-fact-line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 24px;
+}
+
+.profile-hero-zones {
+  line-height: 1.8;
+  flex-wrap: wrap;
+}
+
+/* ===== بطاقات معلومات تظهر للزبائن: بطاقة بعرض السطر كامل + شرائح المناطق ===== */
+.public-stat-box.wide {
+  grid-column: 1 / -1;
+}
+
+.zone-chips {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.zone-chip {
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  padding: 6px 14px;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+/* ===== زر "المزيد" بالتقييمات ===== */
+.reviews-more-btn {
+  display: block;
+  margin: 12px auto 0;
+}
 @media (max-width: 600px) {
   .hero {
     min-height: 70vh;

@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import DashboardLayout from "../components/DashboardLayout";
 import { getStores, getStoreProfile, createOrder } from "../api";
+import { zoneFeeFor, feeLabel } from "../utils/deliveryZones";
 
 // صورة الوسيطة (صورة المتجر) — وإذا ما في صورة أو فشل تحميلها بنعرض أول حرف من الاسم
 function MediatorAvatar({ mediator }) {
@@ -139,6 +140,7 @@ export default function NewOrder() {
   const [deliveryMethod, setDeliveryMethod] = useState("pickup"); // "home" | "pickup"
   const [homeAddress, setHomeAddress] = useState("");
   const [homePhone, setHomePhone] = useState("");
+  const [deliveryRegion, setDeliveryRegion] = useState("");
   const [notesToMediator, setNotesToMediator] = useState("");
   // الخدمة المطلوبة من الوسيطة (شحن من شي إن، شراء بالنيابة...) — إلزامية من الباك اند لكل منتج
   const [selectedServiceId, setSelectedServiceId] = useState("");
@@ -180,8 +182,20 @@ export default function NewOrder() {
 
   // ===== خيارات التوصيل الحقيقية للوسيطة المختارة =====
   // رسوم التوصيل (null = الوسيطة ما حددتها)
-  const deliveryFee = profile.store?.deliveryFee ?? selectedMediator?.deliveryFee ?? null;
-  const homeFeeLabel = deliveryFee === null ? null : deliveryFee > 0 ? `${deliveryFee} ₪` : "مجاني";
+  // إذا الوسيطة حددت أسعار توصيل حسب المنطقة بنستخدمها، وإلا بنرجع لسعر عام قديم (إذا موجود)
+  const zones = profile.store?.deliveryZones?.length
+    ? profile.store.deliveryZones
+    : selectedMediator?.deliveryZones || [];
+  const hasZones = zones.length > 0;
+  const flatFee = profile.store?.deliveryFee ?? selectedMediator?.deliveryFee ?? null;
+  const deliveryFee = hasZones ? zoneFeeFor(zones, deliveryRegion) : flatFee;
+  const homeFeeLabel = feeLabel(deliveryFee);
+  const optionFeeLabel = hasZones && !deliveryRegion ? "حسب المنطقة" : homeFeeLabel;
+
+  // لو تغيّرت الوسيطة المختارة بنصفّر المنطقة (لأن مناطقها وأسعارها مختلفة)
+  useEffect(() => {
+    setDeliveryRegion("");
+  }, [selectedMediatorId]);
   // نقطة الاستلام: بتتوفر بس لو الوسيطة حددت pickup_location (لو الباك ما رجّع المعلومة منفترض متاحة والباك بيرفض لو لأ)
   const pickupLocation = profile.store?.pickupLocation || "";
   const pickupAvailable = selectedMediator?.pickupAvailable ?? profile.store?.pickupAvailable ?? true;
@@ -206,6 +220,11 @@ export default function NewOrder() {
       return;
     }
 
+    if (deliveryMethod === "home" && hasZones && !deliveryRegion) {
+      setSubmitError("اختاري منطقتك عشان نحسب رسوم التوصيل.");
+      return;
+    }
+
     if (deliveryMethod === "home" && (!homeAddress.trim() || !homePhone.trim())) {
       setSubmitError("عبّي العنوان ورقم التواصل قبل إرسال الطلب.");
       return;
@@ -221,6 +240,8 @@ export default function NewOrder() {
       await createOrder({
         storeId: selectedMediator.id,
         deliveryMethod: deliveryMethod === "home" ? "home_delivery" : "pickup",
+        // المنطقة بتحدد رسوم التوصيل (الباك اند هو اللي بيحسبها ويضيفها لإجمالي الطلب)
+        deliveryRegion: deliveryMethod === "home" && hasZones ? deliveryRegion : undefined,
         // إلزامي من الباك اند مع home_delivery — بدونه الطلب بيرجع 422
         address: deliveryMethod === "home" ? homeAddress.trim() : undefined,
         contactPhone: deliveryMethod === "home" ? homePhone.trim() : undefined,
@@ -536,12 +557,12 @@ export default function NewOrder() {
             </div>
             {deliveryMethod === "home" && homeFeeLabel && (
               <div className="review-row">
-                <span>رسوم التوصيل</span>
+                <span>رسوم التوصيل{hasZones && deliveryRegion ? ` (${deliveryRegion})` : ""}</span>
                 <span>{homeFeeLabel}</span>
               </div>
             )}
             <p className="review-disclaimer">
-              ⚠ السعر بيتحدد من الوسيطة بعد ما توافق على طلبك، وبيوصلك إشعار فيه.
+              ⚠ السعر بيتحدد من الوسيطة بعد ما توافق على طلبك، وبيوصلك إشعار فيه. رسوم التوصيل (إن وجدت) بتنضاف تلقائيًا للإجمالي.
             </p>
 
             {submitError && <div className="stagnant-form-error">{submitError}</div>}
@@ -612,8 +633,10 @@ export default function NewOrder() {
                 <span>طريقة استلام الطلب</span>
               </div>
               <label className="delivery-option">
-                {homeFeeLabel && (
-                  <span className={`delivery-fee-tag ${deliveryFee === 0 ? "free" : ""}`}>{homeFeeLabel}</span>
+                {optionFeeLabel && (
+                  <span className={`delivery-fee-tag ${deliveryFee === 0 && !(hasZones && !deliveryRegion) ? "free" : ""}`}>
+                    {optionFeeLabel}
+                  </span>
                 )}
                 <span>التوصيل إلى المنزل</span>
                 <input
@@ -629,6 +652,25 @@ export default function NewOrder() {
 
               {deliveryMethod === "home" && (
                 <div className="delivery-home-fields">
+                  {hasZones && (
+                    <label>
+                      <span>المنطقة</span>
+                      <select
+                        value={deliveryRegion}
+                        onChange={(e) => {
+                          setDeliveryRegion(e.target.value);
+                          setSubmitError("");
+                        }}
+                      >
+                        <option value="">اختاري منطقتك</option>
+                        {zones.map((z) => (
+                          <option key={z.region} value={z.region}>
+                            {z.region} — {z.fee > 0 ? `${z.fee} ₪` : "مجاني"}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                  )}
                   <label>
                     <span>العنوان</span>
                     <input

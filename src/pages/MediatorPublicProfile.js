@@ -126,6 +126,7 @@ export default function MediatorPublicProfile() {
 
   // ===== التقييمات =====
   const [reviews, setReviews] = useState([]);
+  const [reviewsShown, setReviewsShown] = useState(3); // عدد التقييمات الظاهرة (زر المزيد بيزيدهم)
   const [ratingAvg, setRatingAvg] = useState(0);
   const [loadingReviews, setLoadingReviews] = useState(true);
   const [reviewsError, setReviewsError] = useState(false);
@@ -288,7 +289,8 @@ export default function MediatorPublicProfile() {
                 {reviews.length === 0 ? (
                   <p className="service-description">لا توجد تقييمات بعد.</p>
                 ) : (
-                 latestByDate(reviews, 3).map((review) => (
+                  <>
+                  {latestByDate(reviews, reviewsShown).map((review) => (
                     <div className="review-card" key={review.id}>
                       <div className="review-card-top">
                         <div className="review-date">
@@ -303,7 +305,17 @@ export default function MediatorPublicProfile() {
                       </div>
                       <p className="review-comment">{review.comment}</p>
                     </div>
-                  ))
+                  ))}
+                  {reviews.length > reviewsShown && (
+                    <button
+                      type="button"
+                      className="btn btn-outline reviews-more-btn"
+                      onClick={() => setReviewsShown((n) => n + 3)}
+                    >
+                      المزيد ({reviews.length - reviewsShown})
+                    </button>
+                  )}
+                  </>
                 )}
               </>
             )}

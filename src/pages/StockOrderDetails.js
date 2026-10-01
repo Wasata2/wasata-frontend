@@ -10,6 +10,10 @@ export default function StockOrderDetails() {
   const location = useLocation();
   const order = getStockOrder(getCurrentUserId(), itemId);
 
+  const isHome = order?.deliveryMethod === "home_delivery";
+  const fee = isHome && order?.deliveryFee ? Number(order.deliveryFee) : 0;
+  const total = order ? Number(order.price) + fee : 0;
+
   const type = !order
     ? "active"
     : order.status === "received"
@@ -56,7 +60,7 @@ export default function StockOrderDetails() {
                 الوسيطة ألغت حجز هذه القطعة، وصارت متاحة للعرض من جديد.
               </div>
             ) : (
-              <p className="stock-order-instant-note">⚡ تسليم فوري — القطعة جاهزة عند الوسيطة، فما في مسار تتبع لهذا الطلب.</p>
+              <p className="stock-order-instant-note">⚡ تسليم فوري — القطعة جاهزة عند الوسيطة، فما في مسار تتبع لهذا الطلب (بس "تم الطلب" و"تم الاستلام").</p>
             )}
           </div>
 
@@ -108,14 +112,51 @@ export default function StockOrderDetails() {
               </div>
               <div>
                 <div className="profile-field-label">طريقة الاستلام</div>
-                <div className="profile-field-value">استلام فوري من الوسيطة</div>
+                <div className="profile-field-value">
+                  {isHome ? "توصيل إلى المنزل" : "استلام من نقطة استلام"}
+                </div>
               </div>
+              {isHome && order.deliveryRegion && (
+                <div>
+                  <div className="profile-field-label">منطقة التوصيل</div>
+                  <div className="profile-field-value">{order.deliveryRegion}</div>
+                </div>
+              )}
+              {isHome && (
+                <div>
+                  <div className="profile-field-label">العنوان</div>
+                  <div className="profile-field-value">{order.address || "—"}</div>
+                </div>
+              )}
+              {isHome && (
+                <div>
+                  <div className="profile-field-label">رقم التواصل</div>
+                  <div className="profile-field-value" dir="ltr" style={{ textAlign: "right" }}>
+                    {order.contactPhone || "—"}
+                  </div>
+                </div>
+              )}
+              {!isHome && order.pickupLocation && (
+                <div>
+                  <div className="profile-field-label">نقطة الاستلام</div>
+                  <div className="profile-field-value">📍 {order.pickupLocation}</div>
+                </div>
+              )}
             </div>
+            {order.customerNote && (
+              <p style={{ marginTop: "12px", whiteSpace: "pre-line" }}>📝 ملاحظاتك: {order.customerNote}</p>
+            )}
             <p className="review-payment-note">🔒 لم يتم خصم أي مبلغ، الدفع يتم بعد تأكيد الوسيطة طلبك.</p>
 
+            {isHome && fee > 0 && (
+              <div className="review-row">
+                <span>رسوم التوصيل{order.deliveryRegion ? ` (${order.deliveryRegion})` : ""}</span>
+                <span>{fee} ₪</span>
+              </div>
+            )}
             <div className="stock-order-total">
-              <span>إجمالي سعر الطلب</span>
-              <span>{order.price} ₪</span>
+              <span>إجمالي الطلب</span>
+              <span>{total} ₪</span>
             </div>
           </div>
         </>

@@ -41,7 +41,7 @@ export function getStockOrder(userId, itemId) {
 }
 
 // بنحفظ طلب القطعة (لو نفس القطعة انطلبت قبل وانلغت، بنستبدل القديم)
-export function saveStockOrder(userId, { item, mediator }) {
+export function saveStockOrder(userId, { item, mediator, delivery = {} }) {
   const order = {
     itemId: item.id,
     name: item.name,
@@ -55,6 +55,14 @@ export function saveStockOrder(userId, { item, mediator }) {
     storeImage: mediator.image || null,
     storePhone: mediator.phone || "",
     city: mediator.city || "",
+    // طريقة الاستلام: "home_delivery" (توصيل للمنزل) أو "pickup" (استلام من نقطة)
+    deliveryMethod: delivery.method || "pickup",
+    address: delivery.address || "",
+    contactPhone: delivery.contactPhone || "",
+    deliveryRegion: delivery.region || "",
+    deliveryFee: delivery.fee ?? null,
+    pickupLocation: delivery.pickupLocation || "",
+    customerNote: delivery.note || "",
     createdAt: new Date().toISOString(),
     status: "ordered",
   };

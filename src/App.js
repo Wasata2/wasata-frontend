@@ -174,7 +174,7 @@ function App() {
         <Route
           path="/mediators/:id/items"
           element={
-            <ProtectedRoute allowedRole="customer">
+            <ProtectedRoute allowedRole={["customer", "broker"]}>
               <MediatorItems />
             </ProtectedRoute>
           }

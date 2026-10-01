@@ -1,8 +1,10 @@
 import { useState, useEffect, useMemo } from "react";
 import { Link, useNavigate, useParams, useLocation } from "react-router-dom";
-import { getStores, getStoreStockItems, reserveStockItem } from "../api";
+import { getStores, getStoreProfile, getStoreStockItems, reserveStockItem } from "../api";
 import { STAGNANT_CATEGORIES as CATEGORIES } from "../stagnantItemsStore";
 import { getCurrentUserId, saveStockOrder } from "../utils/stockOrders";
+import { useAuth } from "../context/AuthContext";
+import { zoneFeeFor, feeLabel } from "../utils/deliveryZones";
 
 // صفحة كاملة: القطع المعروضة للبيع عند وسيطة معيّنة — الزبونة بتقدر تطلب القطعة من هون.
 // القطع والحجز مؤقتًا بالمتصفح (localStorage) لحد ما يجهز مسار للقطع بالباك اند.
@@ -11,12 +13,15 @@ export default function MediatorItems() {
   const { id } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
+  // الوسيطة (broker) بتشوف هاي الصفحة بوضع المعاينة لصفحتها: بدون زر طلب
+  const { role } = useAuth();
+  const isOwnerPreview = role === "broker";
 
   // زر عودة: بيرجع للصفحة اللي قبل فعلًا (مش رابط ثابت للملف الشخصي — هيك ما بنضل ندور بين الملف والقطع)
   // وإذا فتحت الصفحة مباشرة (ما في صفحة قبل) بنرجعها للملف الشخصي للوسيطة
   const goBack = () => {
     if (location.key !== "default") navigate(-1);
-    else navigate(`/mediators/${id}`, { replace: true });
+    else navigate(isOwnerPreview ? "/mediator-profile" : `/mediators/${id}`, { replace: true });
   };
 
   // ===== الوسيطة =====
@@ -66,18 +71,82 @@ export default function MediatorItems() {
   const [selectedItem, setSelectedItem] = useState(null);
   const [message, setMessage] = useState("");
 
+  // ===== طريقة الاستلام (نفس خيارات الطلبات العادية) =====
+  const [deliveryMethod, setDeliveryMethod] = useState("pickup"); // "home" | "pickup"
+  const [homeAddress, setHomeAddress] = useState("");
+  const [homePhone, setHomePhone] = useState("");
+  const [orderNote, setOrderNote] = useState("");
+  const [deliveryRegion, setDeliveryRegion] = useState("");
+  const [orderError, setOrderError] = useState("");
+  const [storeInfo, setStoreInfo] = useState(null); // نقطة الاستلام + رسوم التوصيل من ملف الوسيطة
+
+  useEffect(() => {
+    getStoreProfile(id)
+      .then(({ store }) => setStoreInfo(store))
+      .catch(() => setStoreInfo(null));
+  }, [id]);
+
+  // رسوم التوصيل: إذا الوسيطة حددت أسعار حسب المنطقة بنستخدمها، وإلا بنرجع لسعر عام قديم (إذا موجود)
+  const zones = storeInfo?.deliveryZones?.length ? storeInfo.deliveryZones : mediator?.deliveryZones || [];
+  const hasZones = zones.length > 0;
+  const flatFee = storeInfo?.deliveryFee ?? mediator?.deliveryFee ?? null;
+  const deliveryFee = hasZones ? zoneFeeFor(zones, deliveryRegion) : flatFee;
+  const homeFeeLabel = feeLabel(deliveryFee);
+  const optionFeeLabel = hasZones && !deliveryRegion ? "حسب المنطقة" : homeFeeLabel;
+  const pickupLocation = storeInfo?.pickupLocation || "";
+  const pickupAvailable = mediator?.pickupAvailable ?? storeInfo?.pickupAvailable ?? true;
+
+  // لو الوسيطة ما عندها نقطة استلام، بنحوّل الاختيار للتوصيل للمنزل
+  useEffect(() => {
+    if (!pickupAvailable && deliveryMethod === "pickup") setDeliveryMethod("home");
+  }, [pickupAvailable, deliveryMethod]);
+
+  const openOrderModal = (item) => {
+    setOrderError("");
+    setMessage("");
+    setSelectedItem(item);
+  };
+
   const [reserving, setReserving] = useState(false);
 
   const confirmOrder = async () => {
     if (!selectedItem || !mediator) return;
+
+    if (deliveryMethod === "home" && hasZones && !deliveryRegion) {
+      setOrderError("اختاري منطقتك عشان نحسب رسوم التوصيل.");
+      return;
+    }
+    if (deliveryMethod === "home" && (!homeAddress.trim() || !homePhone.trim())) {
+      setOrderError("عبّي العنوان ورقم التواصل قبل تأكيد الطلب.");
+      return;
+    }
+
+    setOrderError("");
     setReserving(true);
     try {
+      const isHome = deliveryMethod === "home";
+      const delivery = {
+        method: isHome ? "home_delivery" : "pickup",
+        address: isHome ? homeAddress.trim() : "",
+        contactPhone: isHome ? homePhone.trim() : "",
+        region: isHome && hasZones ? deliveryRegion : "",
+        fee: isHome ? deliveryFee : null,
+        pickupLocation: !isHome ? pickupLocation || mediator.city || "" : "",
+        note: orderNote.trim(),
+      };
       // بنحجز القطعة من الباك اند — لو انحجزت قبل (زبونة ثانية) بيرجع خطأ ومنبلّغ الزبونة
-      await reserveStockItem(selectedItem.id);
+      await reserveStockItem(selectedItem.id, {
+        deliveryMethod: delivery.method,
+        address: delivery.address,
+        contactPhone: delivery.contactPhone,
+        customerNote: delivery.note,
+        deliveryRegion: delivery.region,
+      });
       // بنسجّل الطلب عند الزبونة ليظهر مع طلباتها النشطة، وبنفتح شاشة تفاصيله
-      saveStockOrder(getCurrentUserId(), { item: selectedItem, mediator });
+      saveStockOrder(getCurrentUserId(), { item: selectedItem, mediator, delivery });
       const orderedId = selectedItem.id;
       setSelectedItem(null);
+      setOrderNote("");
       navigate(`/stock-orders/${orderedId}`, { state: { justOrdered: true } });
     } catch (err) {
       getStoreStockItems(id)
@@ -143,6 +212,10 @@ export default function MediatorItems() {
             <h1>القطع المعروضة</h1>
             <p>القطع المعروضة للبيع عند {mediator.name}. اختاري القطعة اللي عجبتك واطلبيها.</p>
           </div>
+
+          {isOwnerPreview && (
+            <div className="order-success-banner">👁 هاي معاينة لصفحتك كما بتظهر للزبائن (بدون زر الطلب).</div>
+          )}
 
           {message && <div className="stagnant-form-error">{message}</div>}
 
@@ -211,19 +284,18 @@ export default function MediatorItems() {
 
                     <div className="stagnant-item-price">{item.price} ₪</div>
 
-                    <div className="stagnant-item-side">
-                      <button
-                        type="button"
-                        className="stagnant-btn primary"
-                        disabled={!canOrder}
-                        onClick={() => {
-                          setMessage("");
-                          setSelectedItem(item);
-                        }}
-                      >
-                        {canOrder ? "اطلبي القطعة" : "غير متاحة الآن"}
-                      </button>
-                    </div>
+                    {!isOwnerPreview && (
+                      <div className="stagnant-item-side">
+                        <button
+                          type="button"
+                          className="stagnant-btn primary"
+                          disabled={!canOrder}
+                          onClick={() => openOrderModal(item)}
+                        >
+                          {canOrder ? "اطلبي القطعة" : "غير متاحة الآن"}
+                        </button>
+                      </div>
+                    )}
                   </div>
                 </div>
               ))}
@@ -245,13 +317,120 @@ export default function MediatorItems() {
                 <span>الوسيطة</span>
                 <span>{mediator.name}</span>
               </div>
-              <div className="review-row review-total">
+              <div className="review-row">
                 <span>السعر</span>
                 <span>{selectedItem.price} ₪</span>
               </div>
+              {deliveryMethod === "home" && homeFeeLabel && (
+                <div className="review-row">
+                  <span>رسوم التوصيل{hasZones && deliveryRegion ? ` (${deliveryRegion})` : ""}</span>
+                  <span>{homeFeeLabel}</span>
+                </div>
+              )}
+              <div className="review-row review-total">
+                <span>الإجمالي</span>
+                <span>{selectedItem.price + (deliveryMethod === "home" && deliveryFee ? deliveryFee : 0)} ₪</span>
+              </div>
+
+              <div className="review-side-header" style={{ marginTop: "16px" }}>
+                <span>طريقة استلام الطلب</span>
+              </div>
+              <label className="delivery-option">
+                {optionFeeLabel && (
+                  <span className={`delivery-fee-tag ${deliveryFee === 0 && !(hasZones && !deliveryRegion) ? "free" : ""}`}>
+                    {optionFeeLabel}
+                  </span>
+                )}
+                <span>التوصيل إلى المنزل</span>
+                <input
+                  type="radio"
+                  name="stock-delivery"
+                  checked={deliveryMethod === "home"}
+                  onChange={() => {
+                    setDeliveryMethod("home");
+                    setOrderError("");
+                  }}
+                />
+              </label>
+
+              {deliveryMethod === "home" && (
+                <div className="delivery-home-fields">
+                  {hasZones && (
+                    <label>
+                      <span>المنطقة</span>
+                      <select
+                        value={deliveryRegion}
+                        onChange={(e) => {
+                          setDeliveryRegion(e.target.value);
+                          setOrderError("");
+                        }}
+                      >
+                        <option value="">اختاري منطقتك</option>
+                        {zones.map((z) => (
+                          <option key={z.region} value={z.region}>
+                            {z.region} — {z.fee > 0 ? `${z.fee} ₪` : "مجاني"}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                  )}
+                  <label>
+                    <span>العنوان</span>
+                    <input
+                      type="text"
+                      placeholder="المدينة، الحي، أقرب معلم..."
+                      value={homeAddress}
+                      onChange={(e) => setHomeAddress(e.target.value)}
+                    />
+                  </label>
+                  <label>
+                    <span>رقم للتواصل</span>
+                    <input
+                      type="tel"
+                      placeholder="05xxxxxxxx"
+                      value={homePhone}
+                      onChange={(e) => setHomePhone(e.target.value)}
+                    />
+                  </label>
+                </div>
+              )}
+
+              <label className="delivery-option" style={!pickupAvailable ? { opacity: 0.55 } : undefined}>
+                <span className="delivery-fee-tag free">مجاني</span>
+                <span>الاستلام من نقطة استلام</span>
+                <input
+                  type="radio"
+                  name="stock-delivery"
+                  checked={deliveryMethod === "pickup"}
+                  disabled={!pickupAvailable}
+                  onChange={() => {
+                    setDeliveryMethod("pickup");
+                    setOrderError("");
+                  }}
+                />
+              </label>
+
+              {!pickupAvailable && (
+                <p className="delivery-pickup-note">هاي الوسيطة ما حدّدت نقطة استلام بعد.</p>
+              )}
+              {pickupAvailable && deliveryMethod === "pickup" && (
+                <p className="delivery-pickup-note">
+                  📍 نقطة الاستلام: {pickupLocation || mediator.city || "غير محددة، تواصلي مع الوسيطة"}
+                </p>
+              )}
+
+              <textarea
+                rows={2}
+                placeholder="ملاحظة للوسيطة (اختياري)"
+                value={orderNote}
+                onChange={(e) => setOrderNote(e.target.value)}
+                style={{ width: "100%", marginTop: "10px", boxSizing: "border-box" }}
+              ></textarea>
+
               <p className="review-payment-note">
                 🔒 لن يتم خصم أي مبلغ الآن، الدفع يتم بعد تأكيد الوسيطة طلبك.
               </p>
+              {orderError && <div className="stagnant-form-error">{orderError}</div>}
 
               <div className="stagnant-modal-actions">
                 <button type="button" className="btn btn-primary shop-card-btn" onClick={confirmOrder} disabled={reserving}>
