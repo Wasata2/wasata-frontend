@@ -318,6 +318,12 @@ export default function OrderDetails() {
                   </div>
                 ))
               )}
+              {(order.items || []).length > 0 && order.totals && order.totals.deliveryFee > 0 && (
+                <div style={{ display: "flex", justifyContent: "space-between", marginTop: "14px" }}>
+                  <span>رسوم التوصيل</span>
+                  <span>{order.totals.deliveryFee} ₪</span>
+                </div>
+              )}
               {(order.items || []).length > 0 && (
                 <div
                   style={{
@@ -331,7 +337,9 @@ export default function OrderDetails() {
                 >
                   <span>إجمالي سعر الطلب</span>
                   <span>
-                    {order.totalPrice != null ? `${order.totalPrice} ₪` : "لم يتم التسعير بعد"}
+                    {(order.totals?.totalAmount ?? order.totalPrice) != null
+                      ? `${order.totals?.totalAmount ?? order.totalPrice} ₪`
+                      : "لم يتم التسعير بعد"}
                   </span>
                 </div>
               )}
