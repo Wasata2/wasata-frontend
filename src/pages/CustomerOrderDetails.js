@@ -131,6 +131,14 @@ export default function CustomerOrderDetails() {
                                     <div className="profile-field-value">{order.address || "—"}</div>
                                 </div>
                             )}
+                            {!isHomeDelivery && (
+                                <div>
+                                    <div className="profile-field-label">نقطة الاستلام</div>
+                                    <div className="profile-field-value">
+                                        {order.pickupLocation || "غير محددة، تواصلي مع الوسيطة"}
+                                    </div>
+                                </div>
+                            )}
                             {isHomeDelivery && (
                                 <div>
                                     <div className="profile-field-label">رقم التواصل</div>

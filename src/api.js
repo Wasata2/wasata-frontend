@@ -1,5 +1,4 @@
 import { parseApiDate } from "./utils/dates";
-import { normalizeZones } from "./utils/deliveryZones";
 
 const BASE_URL = "https://wasata-backend-production-nojkxd.laravel.cloud";
 
@@ -133,10 +132,7 @@ export async function logoutUser() {
 
 // ملاحظة: تعديل المتجر بيصير دايمًا على متجر المستخدمة الحالية —
 // endpoint الصحيح PATCH /api/stores/me (من غير storeId بالمسار، حسب توثيق الباك اند)
-// استبدلي دالة updateStore الموجودة بـ src/api.js بهاي النسخة (فقط أضفت pickup_location و delivery_fee).
-// ملاحظة: الباك اند لازم يقبل الحقلين بـ PATCH /api/stores/me، وإلا بيتجاهلهم.
 export async function updateStore(data) {
-
   const formData = new FormData();
   // Laravel بيحتاج POST + _method=PATCH لما بيكون فيه ملف (multipart/form-data)
   formData.append("_method", "PATCH");
@@ -158,25 +154,10 @@ export async function updateStore(data) {
   if (data.commission_rate !== undefined) {
     formData.append("commission_rate", data.commission_rate);
   }
-  // نقطة الاستلام
-  if (data.pickup_location !== undefined) {
-    formData.append("pickup_location", data.pickup_location);
-  }
-  // أسعار التوصيل حسب المنطقة: delivery_zones[0][region], delivery_zones[0][fee] ...
-  // (مصفوفة فاضية = مسح كل المناطق، بنبعت delivery_zones فاضي)
-  if (Array.isArray(data.delivery_zones)) {
-    if (data.delivery_zones.length === 0) {
-      formData.append("delivery_zones", "");
-    } else {
-      data.delivery_zones.forEach((zone, i) => {
-        formData.append(`delivery_zones[${i}][region]`, zone.region);
-        formData.append(`delivery_zones[${i}][fee]`, zone.fee);
-      });
-    }
-  }
   if (data.image) {
     formData.append("image", data.image);
   }
+
   return request("/api/stores/me", {
     method: "POST",
     body: formData,
@@ -184,8 +165,6 @@ export async function updateStore(data) {
     errorMessage: "حدث خطأ أثناء تحديث بيانات المتجر",
   });
 }
-
-
 
 export async function updateProfile(data) {
   const hasImage = !!data.image;
@@ -519,6 +498,8 @@ function mapOrderFromApi(o) {
     // بيانات التوصيل (بتظهر للوسيطة بصفحة تفاصيل الطلب)
     deliveryType: o.delivery_method || null, // "home_delivery" | "pickup"
     address: o.address || o.delivery_address || "",
+    // نقطة الاستلام: الباك بيرجّعها جوا كائن المتجر المرفق مع الطلب (store.pickup_location)
+    pickupLocation: (o.store && o.store.pickup_location) || o.pickup_location || "",
     contactPhone: pickContactPhone(o),
     customerNote: extractUserNote(o.customer_note),
     totalPrice: sumItemPrices(items),
@@ -537,6 +518,9 @@ function mapTotals(o) {
     itemsTotal: num(t.items_total),
     deliveryFee: num(t.delivery_fee) ?? 0,
     totalAmount: num(t.total_amount),
+    // قبل ما الوسيطة تحدد الأسعار items_total = 0 و total_amount = رسوم التوصيل بس،
+    // فما بنعتبره "إجمالي الطلب" إلا لما تنسعّر المنتجات
+    priced: (num(t.items_total) ?? 0) > 0,
   };
 }
 
@@ -626,11 +610,12 @@ function mapMyOrderDetailFromApi(o) {
     statusUpdatedAt: o.status_updated_at || o.updated_at || o.created_at,
     status: o.status,
     // الإجمالي النهائي من الباك اند (منتجات + توصيل) وإلا مجموع المنتجات
-    price: mapTotals(o)?.totalAmount ?? totalPrice,
+    price: mapTotals(o)?.priced ? mapTotals(o).totalAmount : totalPrice,
     rejectionReason: o.rejection_reason || o.cancellation_reason || null,
     deliveryMethod: o.delivery_method === "home_delivery" ? "توصيل إلى المنزل" : "استلام من نقطة",
     deliveryType: o.delivery_method || null,
     address: o.address || o.delivery_address || "",
+    pickupLocation: (o.store && o.store.pickup_location) || o.pickup_location || "",
     contactPhone: pickContactPhone(o),
     customerNote: extractUserNote(o.customer_note),
     items,
@@ -652,7 +637,6 @@ export async function createOrder({
   deliveryMethod, // "home_delivery" | "pickup"
   address, // إلزامي من الباك اند لو deliveryMethod = home_delivery
   contactPhone, // رقم تواصل الزبونة للتوصيل (حقل contact_phone — لازم الباك اند يستقبله)
-  deliveryRegion,
   customerNote,
   estimatedAmount,
   items,
@@ -662,7 +646,6 @@ export async function createOrder({
   form.append("delivery_method", deliveryMethod);
   if (address) form.append("address", address);
   if (contactPhone) form.append("contact_phone", contactPhone);
-  if (deliveryRegion) form.append("delivery_region", deliveryRegion);
   if (customerNote) form.append("customer_note", customerNote);
   if (estimatedAmount !== null && estimatedAmount !== undefined) {
     form.append("estimated_amount", estimatedAmount);
@@ -898,7 +881,6 @@ function mapStoreFromApi(s) {
       s.delivery_fee !== undefined && s.delivery_fee !== null
         ? Number(s.delivery_fee)
         : null,
-    deliveryZones: normalizeZones(s.delivery_zones),
     acceptingOrders: !!s.is_accepting_orders,
     completedOrders:
       s.completed_orders_count ?? s.completed_orders ?? s.orders_completed ?? 0,
@@ -1141,28 +1123,12 @@ export async function getStoreStockItems(storeId) {
 }
 
 // جهة الزبونة: طلب حجز قطعة
-// استبدلي دالة reserveStockItem الموجودة بآخر src/api.js بهاي النسخة (باقي الملف ما بتغيّر).
-// بتبعت خيارات الاستلام مع الحجز. الباك اند الحالي بيتجاهل الحقول الإضافية، فما بتكسر شي قبل ما يجهزوا.
-
-// جهة الزبونة: طلب حجز قطعة (مع طريقة الاستلام)
-export async function reserveStockItem(
-  id,
-  { deliveryMethod, address, contactPhone, customerNote, deliveryRegion } = {},
-) {
-  const body = {};
-  if (deliveryMethod) body.delivery_method = deliveryMethod; // "home_delivery" | "pickup"
-  if (address) body.address = address;
-  if (contactPhone) body.contact_phone = contactPhone;
-  if (customerNote) body.customer_note = customerNote;
-  if (deliveryRegion) body.delivery_region = deliveryRegion;
-
+export async function reserveStockItem(id) {
   const result = await request(`/api/stock-items/${id}/reserve`, {
     method: "PATCH",
-    body: Object.keys(body).length ? body : undefined,
     errorMessage: "تعذر حجز القطعة، يمكن حجزها قبل قليل",
   });
   return mapStockItemFromApi(unwrapStockItem(result));
 }
-
 
 export { BASE_URL };

@@ -158,6 +158,12 @@ export default function OrderDetails() {
                         : "—"}
                   </div>
                 </div>
+                {order.deliveryType === "pickup" && (
+                  <div>
+                    <div className="profile-field-label">نقطة الاستلام</div>
+                    <div className="profile-field-value">{order.pickupLocation || "—"}</div>
+                  </div>
+                )}
                 {order.deliveryType === "home_delivery" && (
                   <div>
                     <div className="profile-field-label">العنوان</div>
@@ -337,9 +343,11 @@ export default function OrderDetails() {
                 >
                   <span>إجمالي سعر الطلب</span>
                   <span>
-                    {(order.totals?.totalAmount ?? order.totalPrice) != null
-                      ? `${order.totals?.totalAmount ?? order.totalPrice} ₪`
-                      : "لم يتم التسعير بعد"}
+                    {order.totals?.priced
+                      ? `${order.totals.totalAmount} ₪`
+                      : order.totalPrice != null
+                        ? `${order.totalPrice} ₪`
+                        : "لم يتم التسعير بعد"}
                   </span>
                 </div>
               )}

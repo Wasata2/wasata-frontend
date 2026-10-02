@@ -1,37 +1,7 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import DashboardLayout from "../components/DashboardLayout";
 import { getStores, getStoreProfile, createOrder } from "../api";
-import { zoneFeeFor, feeLabel } from "../utils/deliveryZones";
-
-// صورة الوسيطة (صورة المتجر) — وإذا ما في صورة أو فشل تحميلها بنعرض أول حرف من الاسم
-function MediatorAvatar({ mediator }) {
-  const [failed, setFailed] = useState(false);
-  useEffect(() => {
-    setFailed(false);
-  }, [mediator.image]);
-
-  return (
-    <div className="mediator-pick-avatar">
-      {mediator.image && !failed ? (
-        <img src={mediator.image} alt={mediator.name} onError={() => setFailed(true)} />
-      ) : (
-        (mediator.name || "و").charAt(0)
-      )}
-    </div>
-  );
-}
-
-// توحيد النص العربي للبحث: بدون تشكيل، وأ/إ/آ = ا، ة = ه، ى = ي
-function normalizeSearch(text) {
-  return String(text || "")
-    .toLowerCase()
-    .replace(/[\u064B-\u0652\u0640]/g, "")
-    .replace(/[أإآ]/g, "ا")
-    .replace(/ة/g, "ه")
-    .replace(/ى/g, "ي")
-    .trim();
-}
 
 export default function NewOrder() {
   const navigate = useNavigate();
@@ -58,13 +28,34 @@ export default function NewOrder() {
     setForm((f) => ({ ...f, image: file, imagePreview: URL.createObjectURL(file) }));
   };
 
+  // الباك اند بيتحقق إنه رابط المنتج URL صحيح (قاعدة url)، فبنتحقق قبله عشان الزبونة
+  // تعرف الغلط فورًا وقبل ما تكمل الطلب. لو كتبت الرابط بدون https:// بنضيفه إلها.
+  const normalizeProductUrl = (raw) => {
+    let value = (raw || "").trim();
+    if (!value) return null;
+    if (!/^https?:\/\//i.test(value)) value = `https://${value}`;
+    try {
+      const parsed = new URL(value);
+      // لازم الدومين يكون فيه نقطة (مثل shein.com) عشان ما يقبل كلام عادي
+      if (!parsed.hostname.includes(".")) return null;
+      return parsed.href;
+    } catch (e) {
+      return null;
+    }
+  };
+
   const addProduct = () => {
     if (!form.name.trim() || !form.url.trim()) {
       setError("يرجى إدخال اسم المنتج ورابطه.");
       return;
     }
+    const cleanUrl = normalizeProductUrl(form.url);
+    if (!cleanUrl) {
+      setError("رابط المنتج غير صحيح. انسخي الرابط كامل من موقع SHEIN (مثال: https://www.shein.com/...).");
+      return;
+    }
     setError("");
-    setProducts((prev) => [...prev, { id: Date.now() + Math.random(), notes: "", ...form }]);
+    setProducts((prev) => [...prev, { id: Date.now() + Math.random(), notes: "", ...form, url: cleanUrl }]);
     setForm(emptyForm);
     showToast("تمت إضافة المنتج إلى الطلب");
   };
@@ -87,25 +78,6 @@ export default function NewOrder() {
   useEffect(() => {
     loadMediators();
   }, []);
-
-  // البحث + الترتيب: المتاحة (تستقبل طلبات) أولًا، بعدها الأكثر إكمالًا للطلبات، وبعدها حسب الاسم
-  const [mediatorSearch, setMediatorSearch] = useState("");
-
-  const rankedMediators = useMemo(() => {
-    const q = normalizeSearch(mediatorSearch);
-    const list = q
-      ? mediators.filter((m) =>
-          [m.name, m.ownerName, m.city].some((v) => normalizeSearch(v).includes(q))
-        )
-      : [...mediators];
-
-    return list.sort((a, b) => {
-      if (a.acceptingOrders !== b.acceptingOrders) return a.acceptingOrders ? -1 : 1;
-      const diff = (Number(b.completedOrders) || 0) - (Number(a.completedOrders) || 0);
-      if (diff !== 0) return diff;
-      return String(a.name || "").localeCompare(String(b.name || ""), "ar");
-    });
-  }, [mediators, mediatorSearch]);
 
   const [selectedMediatorId, setSelectedMediatorId] = useState(preselectedId);
   // بنقبل بس وسيطة مستقبلة للطلبات
@@ -140,7 +112,6 @@ export default function NewOrder() {
   const [deliveryMethod, setDeliveryMethod] = useState("pickup"); // "home" | "pickup"
   const [homeAddress, setHomeAddress] = useState("");
   const [homePhone, setHomePhone] = useState("");
-  const [deliveryRegion, setDeliveryRegion] = useState("");
   const [notesToMediator, setNotesToMediator] = useState("");
   // الخدمة المطلوبة من الوسيطة (شحن من شي إن، شراء بالنيابة...) — إلزامية من الباك اند لكل منتج
   const [selectedServiceId, setSelectedServiceId] = useState("");
@@ -156,6 +127,12 @@ export default function NewOrder() {
     if (!message) return "";
     if (/pickup location/i.test(message)) {
       return "هاي الوسيطة ما حدّدت نقطة استلام بعد، فما بتقدري تختاري \"الاستلام من نقطة استلام\" معها حاليًا. جربي التوصيل إلى المنزل إذا كان متوفر، أو تواصلي مع الوسيطة مباشرة.";
+    }
+    if (/product_url/i.test(message)) {
+      return "رابط أحد المنتجات غير صحيح. ارجعي لخطوة المنتجات وتأكدي إنه رابط كامل من SHEIN.";
+    }
+    if (/delivery area/i.test(message)) {
+      return "لازم تختاري منطقة التوصيل عشان تكمّلي طلب التوصيل إلى المنزل.";
     }
     return message;
   };
@@ -182,20 +159,8 @@ export default function NewOrder() {
 
   // ===== خيارات التوصيل الحقيقية للوسيطة المختارة =====
   // رسوم التوصيل (null = الوسيطة ما حددتها)
-  // إذا الوسيطة حددت أسعار توصيل حسب المنطقة بنستخدمها، وإلا بنرجع لسعر عام قديم (إذا موجود)
-  const zones = profile.store?.deliveryZones?.length
-    ? profile.store.deliveryZones
-    : selectedMediator?.deliveryZones || [];
-  const hasZones = zones.length > 0;
-  const flatFee = profile.store?.deliveryFee ?? selectedMediator?.deliveryFee ?? null;
-  const deliveryFee = hasZones ? zoneFeeFor(zones, deliveryRegion) : flatFee;
-  const homeFeeLabel = feeLabel(deliveryFee);
-  const optionFeeLabel = hasZones && !deliveryRegion ? "حسب المنطقة" : homeFeeLabel;
-
-  // لو تغيّرت الوسيطة المختارة بنصفّر المنطقة (لأن مناطقها وأسعارها مختلفة)
-  useEffect(() => {
-    setDeliveryRegion("");
-  }, [selectedMediatorId]);
+  const deliveryFee = profile.store?.deliveryFee ?? selectedMediator?.deliveryFee ?? null;
+  const homeFeeLabel = deliveryFee === null ? null : deliveryFee > 0 ? `${deliveryFee} ₪` : "مجاني";
   // نقطة الاستلام: بتتوفر بس لو الوسيطة حددت pickup_location (لو الباك ما رجّع المعلومة منفترض متاحة والباك بيرفض لو لأ)
   const pickupLocation = profile.store?.pickupLocation || "";
   const pickupAvailable = selectedMediator?.pickupAvailable ?? profile.store?.pickupAvailable ?? true;
@@ -220,11 +185,6 @@ export default function NewOrder() {
       return;
     }
 
-    if (deliveryMethod === "home" && hasZones && !deliveryRegion) {
-      setSubmitError("اختاري منطقتك عشان نحسب رسوم التوصيل.");
-      return;
-    }
-
     if (deliveryMethod === "home" && (!homeAddress.trim() || !homePhone.trim())) {
       setSubmitError("عبّي العنوان ورقم التواصل قبل إرسال الطلب.");
       return;
@@ -240,8 +200,6 @@ export default function NewOrder() {
       await createOrder({
         storeId: selectedMediator.id,
         deliveryMethod: deliveryMethod === "home" ? "home_delivery" : "pickup",
-        // المنطقة بتحدد رسوم التوصيل (الباك اند هو اللي بيحسبها ويضيفها لإجمالي الطلب)
-        deliveryRegion: deliveryMethod === "home" && hasZones ? deliveryRegion : undefined,
         // إلزامي من الباك اند مع home_delivery — بدونه الطلب بيرجع 422
         address: deliveryMethod === "home" ? homeAddress.trim() : undefined,
         contactPhone: deliveryMethod === "home" ? homePhone.trim() : undefined,
@@ -466,32 +424,14 @@ export default function NewOrder() {
           )}
 
           {!loadingMediators && !mediatorsError && mediators.length > 0 && (
-            <input
-              type="text"
-              className="mediator-pick-search"
-              placeholder="ابحثي باسم الوسيطة أو المدينة..."
-              value={mediatorSearch}
-              onChange={(e) => setMediatorSearch(e.target.value)}
-            />
-          )}
-
-          {!loadingMediators && !mediatorsError && mediators.length > 0 && rankedMediators.length === 0 && (
-            <div className="explore-empty-state">
-              <div className="empty-icon">🔍</div>
-              <h3>ما في وسيطات مطابقة</h3>
-              <p>جربي اسم أو مدينة تانية.</p>
-            </div>
-          )}
-
-          {!loadingMediators && !mediatorsError && rankedMediators.length > 0 && (
             <div className="mediator-pick-grid">
-              {rankedMediators.map((m) => (
+              {mediators.map((m) => (
                 <div className="mediator-pick-card" key={m.id}>
                   <div className="mediator-pick-top">
                     <span className={`mediator-pick-tag ${m.acceptingOrders ? "" : "off"}`}>
                       {m.acceptingOrders ? "● تستقبل طلبات" : "● غير متاحة"}
                     </span>
-                    <MediatorAvatar mediator={m} />
+                    <div className="mediator-pick-avatar">{(m.name || "و").charAt(0)}</div>
                   </div>
                   <div className="mediator-pick-name">{m.name}</div>
                   {m.city && <div className="mediator-pick-loc">📍 {m.city}</div>}
@@ -519,7 +459,7 @@ export default function NewOrder() {
           <div className="mediator-pick-bar">
             {selectedMediator ? (
               <div className="mediator-pick-bar-selected">
-                <MediatorAvatar mediator={selectedMediator} />
+                <div className="mediator-pick-avatar">{(selectedMediator.name || "و").charAt(0)}</div>
                 <div>
                   <div className="mediator-pick-bar-name">{selectedMediator.name}</div>
                   {commissionText(selectedMediator) && (
@@ -557,12 +497,12 @@ export default function NewOrder() {
             </div>
             {deliveryMethod === "home" && homeFeeLabel && (
               <div className="review-row">
-                <span>رسوم التوصيل{hasZones && deliveryRegion ? ` (${deliveryRegion})` : ""}</span>
+                <span>رسوم التوصيل</span>
                 <span>{homeFeeLabel}</span>
               </div>
             )}
             <p className="review-disclaimer">
-              ⚠ السعر بيتحدد من الوسيطة بعد ما توافق على طلبك، وبيوصلك إشعار فيه. رسوم التوصيل (إن وجدت) بتنضاف تلقائيًا للإجمالي.
+              ⚠ السعر بيتحدد من الوسيطة بعد ما توافق على طلبك، وبيوصلك إشعار فيه.
             </p>
 
             {submitError && <div className="stagnant-form-error">{submitError}</div>}
@@ -598,7 +538,7 @@ export default function NewOrder() {
                 )}
               </div>
               <div className="review-mediator-row">
-                <MediatorAvatar mediator={selectedMediator} />
+                <div className="mediator-pick-avatar">{(selectedMediator.name || "و").charAt(0)}</div>
                 <div>
                   <div className="mediator-pick-bar-name">{selectedMediator.name}</div>
                   <div className="mediator-pick-bar-meta">
@@ -633,10 +573,8 @@ export default function NewOrder() {
                 <span>طريقة استلام الطلب</span>
               </div>
               <label className="delivery-option">
-                {optionFeeLabel && (
-                  <span className={`delivery-fee-tag ${deliveryFee === 0 && !(hasZones && !deliveryRegion) ? "free" : ""}`}>
-                    {optionFeeLabel}
-                  </span>
+                {homeFeeLabel && (
+                  <span className={`delivery-fee-tag ${deliveryFee === 0 ? "free" : ""}`}>{homeFeeLabel}</span>
                 )}
                 <span>التوصيل إلى المنزل</span>
                 <input
@@ -652,25 +590,6 @@ export default function NewOrder() {
 
               {deliveryMethod === "home" && (
                 <div className="delivery-home-fields">
-                  {hasZones && (
-                    <label>
-                      <span>المنطقة</span>
-                      <select
-                        value={deliveryRegion}
-                        onChange={(e) => {
-                          setDeliveryRegion(e.target.value);
-                          setSubmitError("");
-                        }}
-                      >
-                        <option value="">اختاري منطقتك</option>
-                        {zones.map((z) => (
-                          <option key={z.region} value={z.region}>
-                            {z.region} — {z.fee > 0 ? `${z.fee} ₪` : "مجاني"}
-                          </option>
-                        ))}
-                      </select>
-                    </label>
-                  )}
                   <label>
                     <span>العنوان</span>
                     <input
