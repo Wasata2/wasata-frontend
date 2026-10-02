@@ -1537,12 +1537,6 @@ footer .copyright {
   outline: none;
   border-color: var(--blue);
 }
-
-.dashboard-search .btn {
-  padding: 13px 28px;
-  white-space: nowrap;
-}
-
 .filter-btn {
   display: flex;
   align-items: center;
@@ -4045,11 +4039,8 @@ footer .copyright {
 }
 
 .profile-hero-facts {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 8px;
-  margin-bottom: 8px;
+  align-items: stretch;
+  width: 100%;
 }
 
 .profile-hero-fact-row {
@@ -4179,13 +4170,19 @@ footer .copyright {
 }
 
 .public-stat-box.center {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
   text-align: center;
 }
 
 .public-stat-box.center .public-stat-title {
   justify-content: center;
 }
-
+.public-info-stats {
+  align-items: stretch;
+}
 .public-stat-title {
   display: flex;
   align-items: center;
@@ -4262,7 +4259,7 @@ footer .copyright {
 .profile-preview-wrap {
   max-width: 640px;
   margin: 0 auto;
-  padding-bottom: 40px;
+  padding-bottom: 0px;
 }
 
 .rating-average.standalone {
@@ -4275,8 +4272,8 @@ footer .copyright {
   position: sticky;
   bottom: 0;
   background: #f7f8fc;
-  padding: 16px 0;
-  max-width: 640px;
+  padding: 0px 0 16px;
+    max-width: 640px;
   margin: 0 auto;
 }
 
@@ -5817,12 +5814,13 @@ footer .copyright {
 
 /* ===== هيدر الملف الشخصي: كل معلومتين بنفس السطر، والتوصيل بسطر لحاله ===== */
 .profile-hero-fact-line {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
   gap: 8px 24px;
 }
-
+.profile-hero-fact-line .profile-hero-zones {
+  grid-column: 1 / -1;
+}
 .profile-hero-zones {
   line-height: 1.8;
   flex-wrap: wrap;
@@ -5830,7 +5828,7 @@ footer .copyright {
 
 /* ===== بطاقات معلومات تظهر للزبائن: بطاقة بعرض السطر كامل + شرائح المناطق ===== */
 .public-stat-box.wide {
-  grid-column: 1 / -1;
+  grid-column: auto;
 }
 
 .zone-chips {
@@ -5855,6 +5853,58 @@ footer .copyright {
   display: block;
   margin: 12px auto 0;
 }
+/* ===== زر المزيد / إخفاء: بحجم أصغر وبالنص ===== */
+.preview-cta.reviews-more-btn {
+  display: block;
+  width: auto;
+  min-width: 140px;
+  margin: 12px auto 0;
+  padding: 10px 28px;
+  font-size: 14px;
+}
+/* ===== بطاقة تقييم مضغوطة ===== */
+.review-card.compact {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 12px 16px;
+  margin-bottom: 10px;
+}
+
+.review-card.compact .review-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.review-card.compact .review-head {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px 10px;
+  margin-bottom: 2px;
+}
+
+.review-card.compact .review-author-name {
+  margin-bottom: 0;
+  font-size: 16px;
+}
+
+.review-card.compact .review-date {
+  margin-inline-start: auto;
+  font-size: 12px;
+}
+
+.review-card.compact .review-comment {
+  font-size: 16px;
+  line-height: 1.7;
+  margin: 0;
+}
+
+.review-card.compact .review-avatar {
+  width: 38px;
+  height: 38px;
+  font-size: 14px;
+}
 @media (max-width: 600px) {
   .hero {
     min-height: 70vh;
@@ -5866,6 +5916,10 @@ footer .copyright {
   .hero p {
     font-size: 16px;
   }
+}
+.scroll-arrows {
+  display: flex;
+  gap: 8px;
 }
 @media (max-width: 640px) {
   .stagnant-item-row {
@@ -6012,6 +6066,9 @@ footer .copyright {
   .review-order-layout {
     grid-template-columns: 1fr;
   }
+  .dashboard-search {
+  flex-wrap: wrap;
+}
 }
 
 @media (max-width:520px) {
@@ -6021,5 +6078,8 @@ footer .copyright {
 
   .dashboard-main {
     padding: 20px 16px 40px;
+  }
+  .profile-hero-fact-line {
+    grid-template-columns: 1fr;
   }
 }

@@ -343,7 +343,9 @@ export default function MediatorProfile() {
       bio: form.bio,
       commission: form.commission,
       pickupLocation: form.pickupLocation,
-      deliveryZones: Object.fromEntries(form.deliveryZones.map((z) => [z.region, String(z.fee)])),
+      deliveryZones: Object.fromEntries(
+        form.deliveryZones.map((z) => [z.region, String(z.fee)]),
+      ),
       acceptingOrders,
     });
     setGeneralError("");
@@ -367,9 +369,13 @@ export default function MediatorProfile() {
       // فعليًا بالباك اند (bio, commission_rate, is_accepting_orders)
       // أسعار التوصيل حسب المنطقة: المناطق اللي إلها سعر بس (فاضي = ما بتوصّل لهاي المنطقة)
       const zonesToSave = DELIVERY_REGIONS.filter(
-        (region) => String(generalForm.deliveryZones[region] ?? "").trim() !== ""
+        (region) =>
+          String(generalForm.deliveryZones[region] ?? "").trim() !== "",
       )
-        .map((region) => ({ region, fee: Number(generalForm.deliveryZones[region]) }))
+        .map((region) => ({
+          region,
+          fee: Number(generalForm.deliveryZones[region]),
+        }))
         .filter((z) => Number.isFinite(z.fee) && z.fee >= 0);
 
       const saveResult = await updateStore({
@@ -385,7 +391,8 @@ export default function MediatorProfile() {
       const pickupIgnored =
         generalForm.pickupLocation.trim() !== "" &&
         savedStore.pickup_location !== undefined &&
-        (savedStore.pickup_location || "") !== generalForm.pickupLocation.trim();
+        (savedStore.pickup_location || "") !==
+          generalForm.pickupLocation.trim();
       const zonesIgnored =
         savedStore.delivery_zones !== undefined &&
         normalizeZones(savedStore.delivery_zones).length !== zonesToSave.length;
@@ -401,7 +408,7 @@ export default function MediatorProfile() {
         setGeneralError(
           pickupIgnored
             ? "الباك اند ما حفظ نقطة الاستلام. بلّغي مسؤولة الباك اند إنه يقبل pickup_location بـ PATCH /api/stores/me."
-            : "الباك اند ما حفظ أسعار التوصيل حسب المنطقة. بلّغي مسؤولة الباك اند إنه يقبل delivery_zones بـ PATCH /api/stores/me."
+            : "الباك اند ما حفظ أسعار التوصيل حسب المنطقة. بلّغي مسؤولة الباك اند إنه يقبل delivery_zones بـ PATCH /api/stores/me.",
         );
         setSavingGeneral(false);
         return;
@@ -479,13 +486,19 @@ export default function MediatorProfile() {
           <div className="profile-hero-facts">
             <div className="profile-hero-fact-line">
               <span className="profile-hero-fact-row">🏷️ وسيطة</span>
-              <span className="profile-hero-fact-row">📍 {form.city || "غير محدد"}</span>
+              <span className="profile-hero-fact-row">
+                📍 {form.city || "غير محدد"}
+              </span>
             </div>
             {(form.phone || form.commission) && (
               <div className="profile-hero-fact-line">
-                {form.phone && <span className="profile-hero-fact-row">📞 {form.phone}</span>}
+                {form.phone && (
+                  <span className="profile-hero-fact-row">📞 {form.phone}</span>
+                )}
                 {form.commission && (
-                  <span className="profile-hero-fact-row">💰 {form.commission}% عمولة</span>
+                  <span className="profile-hero-fact-row">
+                    💰 {form.commission}% عمولة
+                  </span>
                 )}
               </div>
             )}
@@ -494,7 +507,9 @@ export default function MediatorProfile() {
                 🏬 نقطة الاستلام: {form.pickupLocation || "غير محددة"}
               </span>
               <span className="profile-hero-fact-row">
-                <span className={`status-dot ${acceptingOrders ? "on" : "off"}`}></span>
+                <span
+                  className={`status-dot ${acceptingOrders ? "on" : "off"}`}
+                ></span>
                 {acceptingOrders ? "متاحة" : "غير متاحة"}
               </span>
             </div>
@@ -503,7 +518,10 @@ export default function MediatorProfile() {
                 <span className="profile-hero-fact-row profile-hero-zones">
                   🚚 توصيل إلى {form.deliveryZones.length} مناطق (
                   {form.deliveryZones
-                    .map((z) => `${z.region} ${z.fee > 0 ? `${z.fee} ₪` : "مجاني"}`)
+                    .map(
+                      (z) =>
+                        `${z.region} ${z.fee > 0 ? `${z.fee} ₪` : "مجاني"}`,
+                    )
                     .join("، ")}
                   )
                 </span>
@@ -592,34 +610,45 @@ export default function MediatorProfile() {
                 <p className="service-description">لا توجد تقييمات بعد.</p>
               ) : (
                 <>
-                {latestByDate(reviews, reviewsShown).map((review) => (
-                  <div className="review-card" key={review.id}>
-                    <div className="review-card-top">
-                      <div className="review-date">
-                        {formatDate(review.date)}
-                      </div>
-                      <div className="review-author">
-                        <div className="review-author-info">
-                          <div className="review-author-name">
+                  {latestByDate(reviews, reviewsShown).map((review) => (
+                    <div className="review-card compact" key={review.id}>
+                      <ReviewAvatar
+                        name={review.customer}
+                        image={review.customerImage}
+                      />
+                      <div className="review-body">
+                        <div className="review-head">
+                          <span className="review-author-name">
                             {review.customer}
-                          </div>
+                          </span>
                           <StarRating rating={review.rating} />
+                          <span className="review-date">
+                            {formatDate(review.date)}
+                          </span>
                         </div>
-                        <ReviewAvatar name={review.customer} image={review.customerImage} />
+                        <p className="review-comment">{review.comment}</p>
                       </div>
                     </div>
-                    <p className="review-comment">{review.comment}</p>
-                  </div>
-                ))}
-                {reviews.length > reviewsShown && (
-                  <button
-                    type="button"
-                    className="btn btn-outline reviews-more-btn"
-                    onClick={() => setReviewsShown((n) => n + 3)}
-                  >
-                    المزيد ({reviews.length - reviewsShown})
-                  </button>
-                )}
+                  ))}
+                  {reviews.length > reviewsShown ? (
+                    <button
+                      type="button"
+                      className="btn btn-primary preview-cta reviews-more-btn"
+                      onClick={() => setReviewsShown((n) => n + 3)}
+                    >
+                      المزيد ({reviews.length - reviewsShown})
+                    </button>
+                  ) : (
+                    reviews.length > 3 && (
+                      <button
+                        type="button"
+                        className="btn btn-primary preview-cta reviews-more-btn"
+                        onClick={() => setReviewsShown(3)}
+                      >
+                        إخفاء
+                      </button>
+                    )
+                  )}
                 </>
               )}
             </div>
@@ -906,7 +935,9 @@ export default function MediatorProfile() {
                   ))}
                 </div>
               )}
-              <div className="public-stat-sub">أسعار التوصيل للمنزل حسب المنطقة</div>
+              <div className="public-stat-sub">
+                أسعار التوصيل للمنزل حسب المنطقة
+              </div>
             </div>
           </div>
         </div>
@@ -955,7 +986,10 @@ export default function MediatorProfile() {
                 </button>
               </div>
 
-              <form className="modal-body modal-scroll" onSubmit={saveGeneralInfo}>
+              <form
+                className="modal-body modal-scroll"
+                onSubmit={saveGeneralInfo}
+              >
                 <label htmlFor="bio">نبذة عني</label>
                 <textarea
                   id="bio"
@@ -986,9 +1020,12 @@ export default function MediatorProfile() {
                   onChange={handleGeneralChange}
                 />
 
-                <span className="zone-title">رسوم التوصيل للمنزل حسب المنطقة (₪)</span>
+                <span className="zone-title">
+                  رسوم التوصيل للمنزل حسب المنطقة (₪)
+                </span>
                 <p className="zone-hint">
-                  حددي سعر التوصيل لكل منطقة بتوصّلي إلها. اتركي الحقل فاضي إذا ما بتوصّلي لهاي المنطقة، و0 = توصيل مجاني.
+                  حددي سعر التوصيل لكل منطقة بتوصّلي إلها. اتركي الحقل فاضي إذا
+                  ما بتوصّلي لهاي المنطقة، و0 = توصيل مجاني.
                 </p>
                 <div className="delivery-zones-editor">
                   {DELIVERY_REGIONS.map((region) => (
@@ -1003,7 +1040,10 @@ export default function MediatorProfile() {
                         onChange={(e) =>
                           setGeneralForm((prev) => ({
                             ...prev,
-                            deliveryZones: { ...prev.deliveryZones, [region]: e.target.value },
+                            deliveryZones: {
+                              ...prev.deliveryZones,
+                              [region]: e.target.value,
+                            },
                           }))
                         }
                       />

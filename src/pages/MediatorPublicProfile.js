@@ -51,7 +51,10 @@ function StarRating({ rating, size }) {
   return (
     <span className={`star-rating ${size || ""}`}>
       {[1, 2, 3, 4, 5].map((n) => (
-        <span key={n} className={n <= Math.round(rating) ? "star filled" : "star"}>
+        <span
+          key={n}
+          className={n <= Math.round(rating) ? "star filled" : "star"}
+        >
           ★
         </span>
       ))}
@@ -217,7 +220,11 @@ export default function MediatorPublicProfile() {
               <div className="profile-hero-avatar-wrap">
                 <div
                   className="profile-hero-avatar"
-                  style={{ backgroundImage: mediator.image ? `url(${mediator.image})` : "none" }}
+                  style={{
+                    backgroundImage: mediator.image
+                      ? `url(${mediator.image})`
+                      : "none",
+                  }}
                 >
                   {!mediator.image && initial}
                 </div>
@@ -228,14 +235,38 @@ export default function MediatorPublicProfile() {
                   <h2>{mediator.name}</h2>
                 </div>
                 <div className="profile-hero-facts">
-                  <span className="profile-hero-fact-row">🏷️ وسيطة</span>
-                  {mediator.city && <span className="profile-hero-fact-row">📍 {mediator.city}</span>}
-                  {phone && <span className="profile-hero-fact-row">📞 {phone}</span>}
-                  {commission && <span className="profile-hero-fact-row">💰 {commission} عمولة</span>}
-                  <span className="profile-hero-fact-row">
-                    <span className={`status-dot ${mediator.acceptingOrders ? "on" : "off"}`}></span>
-                    {mediator.acceptingOrders ? "متاحة" : "غير متاحة"}
-                  </span>
+                  <div className="profile-hero-fact-line">
+                    <span className="profile-hero-fact-row">🏷️ وسيطة</span>
+                    {mediator.city && (
+                      <span className="profile-hero-fact-row">
+                        📍 {mediator.city}
+                      </span>
+                    )}
+                  </div>
+
+                  {(phone || commission) && (
+                    <div className="profile-hero-fact-line">
+                      {phone && (
+                        <span className="profile-hero-fact-row">
+                          📞 {phone}
+                        </span>
+                      )}
+                      {commission && (
+                        <span className="profile-hero-fact-row">
+                          💰 {commission} عمولة
+                        </span>
+                      )}
+                    </div>
+                  )}
+
+                  <div className="profile-hero-fact-line">
+                    <span className="profile-hero-fact-row">
+                      <span
+                        className={`status-dot ${mediator.acceptingOrders ? "on" : "off"}`}
+                      ></span>
+                      {mediator.acceptingOrders ? "متاحة" : "غير متاحة"}
+                    </span>
+                  </div>
                 </div>
               </div>
             </div>
@@ -243,7 +274,9 @@ export default function MediatorPublicProfile() {
 
           <div className="public-info-card">
             <h3 className="public-info-card-title">عن الوسيطة</h3>
-            <p className="public-info-bio-text">{mediator.bio || "لم تتم إضافة نبذة بعد."}</p>
+            <p className="public-info-bio-text">
+              {mediator.bio || "لم تتم إضافة نبذة بعد."}
+            </p>
           </div>
 
           <div className="public-info-card">
@@ -258,11 +291,15 @@ export default function MediatorPublicProfile() {
               <div className="public-services-list">
                 {services.map((s) => (
                   <div className="service-card" key={s.id}>
-                    <div className="service-icon-badge">{iconEmoji(s.icon)}</div>
+                    <div className="service-icon-badge">
+                      {iconEmoji(s.icon)}
+                    </div>
                     <div className="service-content">
                       <div className="service-name">{s.name}</div>
                       <div className="service-description">{s.description}</div>
-                      {s.notes && <div className="service-notes">📌 {s.notes}</div>}
+                      {s.notes && (
+                        <div className="service-notes">📌 {s.notes}</div>
+                      )}
                     </div>
                     <div className="service-meta-row">
                       <span className="service-fee-tag">{feeLabel(s)}</span>
@@ -278,11 +315,15 @@ export default function MediatorPublicProfile() {
             {loadingReviews ? (
               <p className="service-description">جاري التحميل...</p>
             ) : reviewsError ? (
-              <p className="service-description">تعذر تحميل التقييمات حاليًا.</p>
+              <p className="service-description">
+                تعذر تحميل التقييمات حاليًا.
+              </p>
             ) : (
               <>
                 <div className="rating-average standalone">
-                  <div className="rating-average-number">{ratingAvg || "0.0"}</div>
+                  <div className="rating-average-number">
+                    {ratingAvg || "0.0"}
+                  </div>
                   <StarRating rating={ratingAvg} size="lg" />
                 </div>
 
@@ -290,31 +331,45 @@ export default function MediatorPublicProfile() {
                   <p className="service-description">لا توجد تقييمات بعد.</p>
                 ) : (
                   <>
-                  {latestByDate(reviews, reviewsShown).map((review) => (
-                    <div className="review-card" key={review.id}>
-                      <div className="review-card-top">
-                        <div className="review-date">
-                          {formatDate(review.date)}
-                        </div>
-                        <div className="review-author">
-                          <div className="review-author-info">
-                            <div className="review-author-name">{review.customer}</div>
+                    {latestByDate(reviews, reviewsShown).map((review) => (
+                      <div className="review-card compact" key={review.id}>
+                        <ReviewAvatar
+                          name={review.customer}
+                          image={review.customerImage}
+                        />
+                        <div className="review-body">
+                          <div className="review-head">
+                            <span className="review-author-name">
+                              {review.customer}
+                            </span>
                             <StarRating rating={review.rating} />
+                            <span className="review-date">
+                              {formatDate(review.date)}
+                            </span>
                           </div>
-<ReviewAvatar name={review.customer} image={review.customerImage} />                        </div>
+                          <p className="review-comment">{review.comment}</p>
+                        </div>
                       </div>
-                      <p className="review-comment">{review.comment}</p>
-                    </div>
-                  ))}
-                  {reviews.length > reviewsShown && (
-                    <button
-                      type="button"
-                      className="btn btn-outline reviews-more-btn"
-                      onClick={() => setReviewsShown((n) => n + 3)}
-                    >
-                      المزيد ({reviews.length - reviewsShown})
-                    </button>
-                  )}
+                    ))}
+                    {reviews.length > reviewsShown ? (
+                      <button
+                        type="button"
+                        className="btn btn-primary preview-cta reviews-more-btn"
+                        onClick={() => setReviewsShown((n) => n + 3)}
+                      >
+                        المزيد ({reviews.length - reviewsShown})
+                      </button>
+                    ) : (
+                      reviews.length > 3 && (
+                        <button
+                          type="button"
+                          className="btn btn-primary preview-cta reviews-more-btn"
+                          onClick={() => setReviewsShown(3)}
+                        >
+                          إخفاء
+                        </button>
+                      )
+                    )}
                   </>
                 )}
               </>
@@ -333,7 +388,11 @@ export default function MediatorPublicProfile() {
             </Link>
           ) : (
             // الوسيطة مش مستقبلة طلبات هلأ: زر معطّل وما بيوديها لصفحة إضافة الطلب
-            <button type="button" className="btn btn-primary preview-cta" disabled>
+            <button
+              type="button"
+              className="btn btn-primary preview-cta"
+              disabled
+            >
               غير متاحة الآن
             </button>
           )}

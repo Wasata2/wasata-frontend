@@ -20,20 +20,20 @@ export default function CustomerDashboard() {
   const { user } = useAuth();
   const userName = user?.full_name || user?.name || "زبونة";
   const userFirstName = userName.split(" ")[0];
-
+  const userCity = (user?.location || user?.city || "").trim();
   const [searchTerm, setSearchTerm] = useState("");
-  const [showFilters, setShowFilters] = useState(false);
-  const [filters, setFilters] = useState({ name: "", city: "", commission: "" });
 
   const suggestedScrollRef = useRef(null);
-  const scrollSuggested = () => {
-    if (suggestedScrollRef.current) {
-      suggestedScrollRef.current.scrollBy({ left: 260, behavior: "smooth" });
-    }
-  };
+  const scrollSuggested = (direction) => {
+  if (suggestedScrollRef.current) {
+    // الصفحة RTL: القيمة السالبة = لجهة اليسار (الوسيطات الباقية)
+    suggestedScrollRef.current.scrollBy({
+      left: direction * -260,
+      behavior: "smooth",
+    });
+  }
+};
 
-  // الطلب النشط الحالي: بيضل ظاهر طول مسار التتبع (من "تم الطلب" لحد "تم الفحص")،
-  // وبيختفي بس لما يوصل "تم الاستلام" (يصير مكتمل) أو يتلغى/يترفض
   const [pendingOrder, setPendingOrder] = useState(null);
   useEffect(() => {
     getMyOrders()
@@ -44,96 +44,87 @@ export default function CustomerDashboard() {
       .catch(() => {});
   }, []);
 
-  // وسيطات مقترحة — نفس بيانات صفحة استكشاف الوسيطات الحقيقية، أول 4 بس
-  const [suggestedMediators, setSuggestedMediators] = useState([]);
-  const [loadingSuggested, setLoadingSuggested] = useState(true);
+  // كل الوسيطات — منها بنطلّع المقترحات ونتائج البحث
+  const [allMediators, setAllMediators] = useState([]);
+  const [loadingMediators, setLoadingMediators] = useState(true);
   useEffect(() => {
     getStores()
-      .then((list) => setSuggestedMediators(list.slice(0, 4)))
+      .then((list) => setAllMediators(list))
       .catch(() => {})
-      .finally(() => setLoadingSuggested(false));
+      .finally(() => setLoadingMediators(false));
   }, []);
 
-  const handleSearch = (e) => {
-    e.preventDefault();
-    // TODO: ربط البحث الفعلي بالـ API لاحقًا
-    console.log("بحث عن:", searchTerm);
-  };
+  // ===== البحث: باسم الوسيطة أو بنسبة العمولة (مثال: 5 أو 5%) =====
+  const query = searchTerm.trim().toLowerCase().replace("%", "").trim();
+  const isNumberQuery = query !== "" && !isNaN(Number(query));
+  const searchResults = query
+    ? allMediators.filter((m) => {
+        const nameMatch = (m.name || "").toLowerCase().includes(query);
+        const commissionMatch =
+          isNumberQuery && parseFloat(m.commission) === Number(query);
+        return nameMatch || commissionMatch;
+      })
+    : [];
+
+  // ===== المقترحات: وسيطات نفس منطقة الزبونة (6 كحد أقصى) =====
+  // ===== المقترحات: وسيطات نفس مدينة الزبونة (6 كحد أقصى) =====
+  const sameCityMediators = userCity
+    ? allMediators.filter((m) => (m.city || "").trim() === userCity)
+    : [];
+  const hasCityMatch = sameCityMediators.length > 0;
+  const suggestedMediators = (
+    hasCityMatch ? sameCityMediators : allMediators
+  ).slice(0, 6);
+
+  const renderCard = (m) => (
+    <MediatorCard
+      key={m.id}
+      mediator={m}
+      onSelect={() => navigate("/new-order", { state: { mediatorId: m.id } })}
+      onViewProfile={() => navigate(`/mediators/${m.id}`)}
+    />
+  );
 
   return (
     <DashboardLayout role="customer">
-
-      {/* ===== المحتوى الرئيسي ===== */}
-
-
-      {/* رسالة الترحيب */}
       <div className="dashboard-welcome">
         <h1>مرحبًا، {userFirstName} 👋</h1>
         <p>اختاري الوسيطة المناسبة وابدئي طلبك بسهولة.</p>
       </div>
 
-      {/* شريط البحث — الحقل أولاً (يظهر يمين) وبعده زري التصفية والبحث (يظهروا يسار) */}
-      <form className="dashboard-search" onSubmit={handleSearch}>
+      {/* شريط البحث — بيفلتر مباشرة وأنتِ بتكتبي */}
+      <div className="dashboard-search">
         <input
           type="text"
-          placeholder="ابحثي عن وسيطة بالاسم أو الموقع"
+          placeholder="ابحثي باسم الوسيطة أو نسبة العمولة (مثال: 5)"
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
         />
-        <button type="submit" className="btn btn-primary">
-          بحث
-        </button>
-        <button
-          type="button"
-          className="filter-btn"
-          onClick={() => setShowFilters((v) => !v)}
-        >
-          ⚙ تصفية
-        </button>
-      </form>
+      </div>
 
-      {/* لوحة التصفية — بتظهر/بتختفي بالضغط على زر تصفية */}
-      {showFilters && (
-        <div className="filter-panel">
-          <div className="filter-field">
-            <label>اسم الوسيطة</label>
-            <input
-              type="text"
-              placeholder="ابحثي بالاسم"
-              value={filters.name}
-              onChange={(e) => setFilters({ ...filters, name: e.target.value })}
-            />
+      {/* نتائج البحث */}
+      {query && (
+        <section className="explore-section">
+          <div className="explore-section-header">
+            <h2>نتائج البحث</h2>
+            <span className="explore-section-count">
+              {searchResults.length} وسيطة
+            </span>
           </div>
-          <div className="filter-field">
-            <label>الموقع</label>
-            <input
-              type="text"
-              placeholder="المدينة"
-              value={filters.city}
-              onChange={(e) => setFilters({ ...filters, city: e.target.value })}
-            />
-          </div>
-          <div className="filter-field">
-            <label>نسبة العمولة</label>
-            <select
-              value={filters.commission}
-              onChange={(e) =>
-                setFilters({ ...filters, commission: e.target.value })
-              }
-            >
-              <option value="">الكل</option>
-              <option value="low">أقل من 10%</option>
-              <option value="mid">10% - 15%</option>
-              <option value="high">أكثر من 15%</option>
-            </select>
-          </div>
-          <button type="button" className="btn btn-primary filter-apply-btn">
-            تطبيق
-          </button>
-        </div>
+          {loadingMediators ? (
+            <p className="explore-loading">جاري التحميل...</p>
+          ) : searchResults.length === 0 ? (
+            <div className="explore-empty-state">
+              <div className="empty-icon">🔍</div>
+              <h3>ما لقينا وسيطة مطابقة</h3>
+              <p>جربي اسم تاني أو نسبة عمولة مختلفة.</p>
+            </div>
+          ) : (
+            <div className="explore-grid">{searchResults.map(renderCard)}</div>
+          )}
+        </section>
       )}
 
-      {/* قسم: ابدئي طلبك بثلاث خطوات — تم نقله ليكون تحت شريط البحث مباشرة */}
       <section className="dashboard-steps">
         <h2>ابدئي طلبك بثلاث خطوات</h2>
         <div className="steps">
@@ -155,12 +146,13 @@ export default function CustomerDashboard() {
         </div>
       </section>
 
-      {/* الطلب الحالي وتتبعه — بيظهر بس إذا في طلب لسا ما انقبل ولا انرفض */}
       {pendingOrder && (
         <section className="order-card">
           <div className="order-card-top">
             <div>
-              <span className="order-status-badge">{pendingOrder.statusLabel}</span>
+              <span className="order-status-badge">
+                {pendingOrder.statusLabel}
+              </span>
               <div className="order-id">طلب #{pendingOrder.id}</div>
               <div className="order-store">{pendingOrder.store}</div>
             </div>
@@ -187,7 +179,9 @@ export default function CustomerDashboard() {
               return (
                 <div key={label} className={`timeline-step ${status}`}>
                   <div className="timeline-line"></div>
-                  <div className="timeline-dot">{status === "done" ? "✓" : index + 1}</div>
+                  <div className="timeline-dot">
+                    {status === "done" ? "✓" : index + 1}
+                  </div>
                   <div className="timeline-label">{label}</div>
                 </div>
               );
@@ -196,37 +190,41 @@ export default function CustomerDashboard() {
         </section>
       )}
 
-      {/* وسيطات مقترحة */}
+      {/* وسيطات مقترحة حسب منطقة الزبونة */}
       <section className="suggested-section">
         <div className="suggested-header">
-          <h2>وسيطات مقترحة لك</h2>
-          <button
-            type="button"
-            className="scroll-arrow-btn"
-            onClick={scrollSuggested}
-            aria-label="عرض المزيد من الوسيطات"
-          >
-            ‹
-          </button>
+          <h2>
+            {hasCityMatch ? "وسيطات مقترحة حسب مدينتك" : "وسيطات مقترحة لك"}
+          </h2>
+          <div className="scroll-arrows">
+            <button
+              type="button"
+              className="scroll-arrow-btn"
+              onClick={() => scrollSuggested(-1)}
+              aria-label="رجوع"
+            >
+              ‹
+            </button>
+            <button
+              type="button"
+              className="scroll-arrow-btn"
+              onClick={() => scrollSuggested(1)}
+              aria-label="عرض المزيد من الوسيطات"
+            >
+              ›
+            </button>
+          </div>
         </div>
 
-        {loadingSuggested ? (
+        {loadingMediators ? (
           <p className="explore-loading">جاري تحميل الوسيطات...</p>
         ) : suggestedMediators.length === 0 ? (
           <p className="explore-loading">لا توجد وسيطات حاليًا.</p>
         ) : (
           <div className="suggested-grid" ref={suggestedScrollRef}>
-            {suggestedMediators.map((m) => (
-              <MediatorCard
-                key={m.id}
-                mediator={m}
-                onSelect={() => navigate("/new-order", { state: { mediatorId: m.id } })}
-                onViewProfile={() => navigate(`/mediators/${m.id}`)}
-              />
-            ))}
+            {suggestedMediators.map(renderCard)}
           </div>
         )}
-
       </section>
     </DashboardLayout>
   );

@@ -6,7 +6,11 @@ import { formatDate } from "../utils/dates";
 import ReviewAvatar from "../components/ReviewAvatar";
 function resolveImageUrl(path) {
   if (!path) return null;
-  if (/^https?:\/\//i.test(path) || path.startsWith("blob:") || path.startsWith("data:")) {
+  if (
+    /^https?:\/\//i.test(path) ||
+    path.startsWith("blob:") ||
+    path.startsWith("data:")
+  ) {
     return path;
   }
   const clean = path.startsWith("/") ? path.slice(1) : path;
@@ -20,7 +24,10 @@ function StarRating({ rating, size }) {
   return (
     <span className={`star-rating ${size || ""}`}>
       {[1, 2, 3, 4, 5].map((n) => (
-        <span key={n} className={n <= Math.round(rating) ? "star filled" : "star"}>
+        <span
+          key={n}
+          className={n <= Math.round(rating) ? "star filled" : "star"}
+        >
           ★
         </span>
       ))}
@@ -37,7 +44,9 @@ const SORT_TABS = [
 export default function MediatorReviews() {
   const [stats, setStats] = useState(null);
   useEffect(() => {
-    getOrderStats().then(setStats).catch(() => { });
+    getOrderStats()
+      .then(setStats)
+      .catch(() => {});
   }, []);
 
   const [imagePreview, setImagePreview] = useState(null);
@@ -84,7 +93,12 @@ export default function MediatorReviews() {
   }, [reviews, sortBy]);
 
   return (
-    <DashboardLayout role="broker" notifBadge={stats && stats.newCount} notifLink="/mediator-notifications" avatarImage={imagePreview}>
+    <DashboardLayout
+      role="broker"
+      notifBadge={stats && stats.newCount}
+      notifLink="/mediator-notifications"
+      avatarImage={imagePreview}
+    >
       <div className="dashboard-welcome">
         <h1>التقييمات والمراجعات</h1>
         <p>اطّلعي على تقييمات الزبائن وآرائهم حول خدماتك.</p>
@@ -98,7 +112,10 @@ export default function MediatorReviews() {
             <div className="rating-dist-row" key={row.star}>
               <span className="rating-dist-pct">{row.pct}%</span>
               <div className="rating-bar-track">
-                <div className="rating-bar-fill" style={{ width: `${row.pct}%` }} />
+                <div
+                  className="rating-bar-fill"
+                  style={{ width: `${row.pct}%` }}
+                />
               </div>
               <span className="rating-dist-label">{row.star} نجوم</span>
             </div>
@@ -144,22 +161,17 @@ export default function MediatorReviews() {
         </div>
       ) : (
         sortedReviews.map((review) => (
-          <div className="review-card" key={review.id}>
-            <div className="review-card-top">
-              <div className="review-date">
-                {formatDate(review.date)}
+          <div className="review-card compact" key={review.id}>
+            <ReviewAvatar name={review.customer} image={review.customerImage} />
+            <div className="review-body">
+              <div className="review-head">
+                <span className="review-author-name">{review.customer}</span>
+                <StarRating rating={review.rating} />
+                <span className="review-date">{formatDate(review.date)}</span>
               </div>
-              <div className="review-author">
-                <div className="review-author-info">
-                  <div className="review-author-name">{review.customer}</div>
-                  <StarRating rating={review.rating} />
-                </div>
-<ReviewAvatar name={review.customer} image={review.customerImage} />              </div>
+              <p className="review-comment">{review.comment}</p>
+              <span className="review-order-tag">طلب #{review.orderId}</span>
             </div>
-
-            <p className="review-comment">{review.comment}</p>
-
-            <span className="review-order-tag">طلب #{review.orderId}</span>
           </div>
         ))
       )}
