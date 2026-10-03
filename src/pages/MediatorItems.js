@@ -135,16 +135,19 @@ export default function MediatorItems() {
         note: orderNote.trim(),
       };
       // بنحجز القطعة من الباك اند — لو انحجزت قبل (زبونة ثانية) بيرجع خطأ ومنبلّغ الزبونة
-      await reserveStockItem(selectedItem.id, {
-        deliveryMethod: delivery.method,
+const reserved = await reserveStockItem(selectedItem.id, {        deliveryMethod: delivery.method,
         address: delivery.address,
         contactPhone: delivery.contactPhone,
         customerNote: delivery.note,
         deliveryRegion: delivery.region,
       });
       // بنسجّل الطلب عند الزبونة ليظهر مع طلباتها النشطة، وبنفتح شاشة تفاصيله
-      saveStockOrder(getCurrentUserId(), { item: selectedItem, mediator, delivery });
-      const orderedId = selectedItem.id;
+saveStockOrder(getCurrentUserId(), {
+  item: selectedItem,
+  mediator,
+  delivery,
+  orderId: reserved?.orderId ?? null,
+});      const orderedId = selectedItem.id;
       setSelectedItem(null);
       setOrderNote("");
       navigate(`/stock-orders/${orderedId}`, { state: { justOrdered: true } });

@@ -7,6 +7,8 @@ import { getMyStore, getReviews, BASE_URL } from "../api";
 import { getUnseenReviews, markReviewsSeen } from "../utils/reviewsSeen";
 import { useCustomerNotifications } from "../utils/customerNotifications";
 import { useMediatorNotifications } from "../utils/mediatorNotifications";
+import { useReservedItems } from "../utils/reservedItems";
+
 // رابط الصورة بيجي أحيانًا كمسار نسبي
 function resolveImageUrl(path) {
   if (!path) return null;
@@ -23,7 +25,7 @@ const BROKER_LINKS = [
   { to: "/mediator-dashboard", icon: "▦", label: "لوحة التحكم" },
   { to: "/mediator-orders", icon: "📋", label: "الطلبات", showBadge: true },
   { to: "/mediator-services", icon: "🛍", label: "الخدمات" },
-  { to: "/stagnant-items", icon: "📦", label: "القطع الراكدة" },
+  { to: "/stagnant-items", icon: "📦", label: "القطع الراكدة", showReservedBadge: true },
   { to: "/mediator-reviews", icon: "⭐", label: "التقييمات", showReviewsBadge: true },
   { to: "/mediator-profile", icon: "👤", label: "الملف الشخصي" },
 ];
@@ -47,8 +49,10 @@ export default function DashboardLayout({
 }) {
   const { user } = useAuth();
   const { favoritesCount } = useFavorites();
-const customerNotif = useCustomerNotifications(role === "customer");
-const brokerNotif = useMediatorNotifications(role === "broker");
+  const customerNotif = useCustomerNotifications(role === "customer");
+  const brokerNotif = useMediatorNotifications(role === "broker");
+  // القطع المحجوزة بانتظار قرار الوسيطة (تأكيد البيع / إلغاء الحجز)
+  const reserved = useReservedItems(role === "broker");
 
   // لو الصفحة ما مرّرت avatarImage (undefined) والدور وسيطة، بنجيب صورة المتجر هون
   // بدل ما كل صفحة تعيد نفس الكود (هيك ما بتضيع الصورة بأي صفحة جديدة)
@@ -66,6 +70,7 @@ const brokerNotif = useMediatorNotifications(role === "broker");
       active = false;
     };
   }, [role, avatarImage]);
+
   // صورة الزبونة من بيانات حسابها (profile_picture_url) عشان تظهر بكل صفحات الزبونة
   const customerAvatar =
     role === "customer"
@@ -76,7 +81,8 @@ const brokerNotif = useMediatorNotifications(role === "broker");
       ? avatarImage
       : role === "broker"
         ? storeAvatar
-        : customerAvatar;  const location = useLocation();
+        : customerAvatar;
+  const location = useLocation();
 
   // عدد التقييمات الجديدة (اللي الوسيطة لسا ما شافتها) — بيظهر على رابط "التقييمات" بالقائمة الجانبية.
   // "الجديد" = أي تقييم رقمه أكبر من آخر رقم شافته الوسيطة بصفحة التقييمات (محفوظ بالمتصفح).
@@ -106,16 +112,19 @@ const brokerNotif = useMediatorNotifications(role === "broker");
   // حالة فتح/إغلاق قائمة الموبايل — false يعني مقفولة بشكل افتراضي
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
-  // الجرس 🔔: طلبات جديدة (من الصفحة) + تقييمات جديدة (من هون)، وللوسيطة بيروح دايمًا لصفحة الإشعارات
+  // الجرس 🔔: طلبات جديدة (من الصفحة) + تقييمات جديدة + تحديثات الزبائن + قطع محجوزة،
+  // وللوسيطة بيروح دايمًا لصفحة الإشعارات
   const bellLink =
-  role === "customer"
-    ? "/customer-notifications"
-    : notifLink || (role === "broker" ? "/mediator-notifications" : null);
-const bellCount =
-  role === "customer"
-    ? customerNotif.unreadCount
-    : (notifBadge || 0) +
-      (role === "broker" ? newReviewsCount + brokerNotif.unreadCount : 0);
+    role === "customer"
+      ? "/customer-notifications"
+      : notifLink || (role === "broker" ? "/mediator-notifications" : null);
+  const bellCount =
+    role === "customer"
+      ? customerNotif.unreadCount
+      : (notifBadge || 0) +
+        (role === "broker"
+          ? newReviewsCount + brokerNotif.unreadCount + reserved.count
+          : 0);
 
   const links = role === "broker" ? BROKER_LINKS : CUSTOMER_LINKS;
   const roleLabel = role === "broker" ? "وسيطة" : "زبونة";
@@ -156,6 +165,9 @@ const bellCount =
               )}
               {link.showReviewsBadge && newReviewsCount > 0 && (
                 <span className="sidebar-badge">{newReviewsCount}</span>
+              )}
+              {link.showReservedBadge && reserved.count > 0 && (
+                <span className="sidebar-badge">{reserved.count}</span>
               )}
             </Link>
           ))}

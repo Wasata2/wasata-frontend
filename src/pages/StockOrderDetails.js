@@ -1,18 +1,40 @@
+import { useState, useEffect } from "react";
 import { Link, useParams, useLocation } from "react-router-dom";
 import DashboardLayout from "../components/DashboardLayout";
 import { formatDateTime } from "../utils/dates";
-import { getCurrentUserId, getStockOrder, STOCK_ORDER_LABELS } from "../utils/stockOrders";
+import {
+  getCurrentUserId,
+  getStockOrder,
+  syncStockOrders,
+  getStockOrderFee,
+  getStockOrderTotal,
+  STOCK_ORDER_LABELS,
+} from "../utils/stockOrders";
 
 // شاشة طلب قطعة راكدة — نفس ستايل مراجعة الطلب لكن بمعلومات القطعة،
 // وبدون مسار تتبع لأن التسليم فوري: الحالة إما "تم الطلب" أو "تم الاستلام"
 export default function StockOrderDetails() {
   const { itemId } = useParams();
   const location = useLocation();
-  const order = getStockOrder(getCurrentUserId(), itemId);
+  const userId = getCurrentUserId();
+  const [order, setOrder] = useState(() => getStockOrder(userId, itemId));
+
+  // بنحدّث الحالة من الباك اند كل ما تنفتح الصفحة (تم الاستلام / ملغي)
+  useEffect(() => {
+    let active = true;
+    syncStockOrders(userId)
+      .then(() => {
+        if (active) setOrder(getStockOrder(userId, itemId));
+      })
+      .catch(() => {});
+    return () => {
+      active = false;
+    };
+  }, [userId, itemId]);
 
   const isHome = order?.deliveryMethod === "home_delivery";
-  const fee = isHome && order?.deliveryFee ? Number(order.deliveryFee) : 0;
-  const total = order ? Number(order.price) + fee : 0;
+  const fee = getStockOrderFee(order);
+  const total = getStockOrderTotal(order);
 
   const type = !order
     ? "active"
@@ -43,11 +65,11 @@ export default function StockOrderDetails() {
             <div className="order-success-banner">✓ تم إرسال طلبك للوسيطة، وتقدري تتابعيه من طلباتي</div>
           )}
 
-          {/* ===== بطاقة الطلب: الحالة + السعر ===== */}
+          {/* ===== بطاقة الطلب: الحالة + السعر الإجمالي (شامل التوصيل) ===== */}
           <div className="order-details-card">
             <div className="order-details-top">
               <h1>طلب قطعة راكدة</h1>
-              <span className="order-list-price">{order.price} ₪</span>
+              <span className="order-list-price">{total} ₪</span>
             </div>
             <p className="order-store">🕐 {order.storeName}</p>
             <div style={{ marginTop: "14px" }}>
@@ -58,6 +80,10 @@ export default function StockOrderDetails() {
             {type === "cancelled" ? (
               <div className="order-reject-banner" style={{ marginTop: "16px" }}>
                 الوسيطة ألغت حجز هذه القطعة، وصارت متاحة للعرض من جديد.
+              </div>
+            ) : type === "completed" ? (
+              <div className="order-success-banner" style={{ marginTop: "16px" }}>
+                ✓ تم استلام القطعة
               </div>
             ) : (
               <p className="stock-order-instant-note">⚡ تسليم فوري — القطعة جاهزة عند الوسيطة، فما في مسار تتبع لهذا الطلب (بس "تم الطلب" و"تم الاستلام").</p>
@@ -76,7 +102,7 @@ export default function StockOrderDetails() {
                   {order.color && <span className="service-fee-tag">اللون: {order.color}</span>}
                   {order.size && <span className="service-fee-tag">المقاس: {order.size}</span>}
                   <span className="service-fee-tag">الكمية: 1</span>
-                  <span className="service-fee-tag">السعر: {order.price} ₪</span>
+                  <span className="service-fee-tag">سعر القطعة: {order.price} ₪</span>
                 </div>
               </div>
             </div>
@@ -148,6 +174,10 @@ export default function StockOrderDetails() {
             )}
             <p className="review-payment-note">🔒 لم يتم خصم أي مبلغ، الدفع يتم بعد تأكيد الوسيطة طلبك.</p>
 
+            <div className="review-row">
+              <span>سعر القطعة</span>
+              <span>{order.price} ₪</span>
+            </div>
             {isHome && fee > 0 && (
               <div className="review-row">
                 <span>رسوم التوصيل{order.deliveryRegion ? ` (${order.deliveryRegion})` : ""}</span>

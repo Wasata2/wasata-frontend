@@ -13,7 +13,8 @@ import {
   deleteStockItem,
 } from "../api";
 import DashboardLayout from "../components/DashboardLayout";
-import { formatDate } from "../utils/dates";
+import { formatDate, formatDateTime } from "../utils/dates";
+import { refreshReservedItems } from "../utils/reservedItems";
 import {
   STAGNANT_CATEGORIES as CATEGORIES,
   STAGNANT_STATUS as STATUS,
@@ -50,6 +51,82 @@ function resolveImageUrl(path) {
     return `${BASE_URL}/storage/${clean}`;
   }
   return `${BASE_URL}/${clean}`;
+}
+
+// تفاصيل حجز القطعة (الزبونة + طريقة الاستلام) — بتظهر لما الباك اند يرجّع بيانات الحجز مع القطعة.
+// لحد ما يجهز، بنعرض بس بيانات القطعة مع ملاحظة.
+function ReservationDetails({ item }) {
+  const r = item.reservation;
+  return (
+    <div className="stagnant-item-details" style={{ display: "block" }}>
+      <div className="order-details-meta">
+        <div>
+          <div className="profile-field-label">القطعة</div>
+          <div className="profile-field-value">{item.name}</div>
+        </div>
+        <div>
+          <div className="profile-field-label">سعر القطعة</div>
+          <div className="profile-field-value">{item.price} ₪</div>
+        </div>
+        {r && r.customer && (
+          <div>
+            <div className="profile-field-label">اسم الزبونة</div>
+            <div className="profile-field-value">{r.customer}</div>
+          </div>
+        )}
+        {r && r.phone && (
+          <div>
+            <div className="profile-field-label">رقم التواصل</div>
+            <div className="profile-field-value">
+              <a href={`tel:${r.phone}`} dir="ltr">
+                {r.phone}
+              </a>
+            </div>
+          </div>
+        )}
+        {r && r.deliveryMethod && (
+          <div>
+            <div className="profile-field-label">طريقة الاستلام</div>
+            <div className="profile-field-value">
+              {r.deliveryMethod === "home_delivery" ? "توصيل إلى المنزل" : "استلام من نقطة استلام"}
+            </div>
+          </div>
+        )}
+        {r && r.region && r.deliveryMethod === "home_delivery" && (
+          <div>
+            <div className="profile-field-label">منطقة التوصيل</div>
+            <div className="profile-field-value">{r.region}</div>
+          </div>
+        )}
+        {r && r.address && r.deliveryMethod === "home_delivery" && (
+          <div>
+            <div className="profile-field-label">العنوان</div>
+            <div className="profile-field-value">{r.address}</div>
+          </div>
+        )}
+        {r && r.total != null && (
+          <div>
+            <div className="profile-field-label">الإجمالي (شامل التوصيل)</div>
+            <div className="profile-field-value">{r.total} ₪</div>
+          </div>
+        )}
+        {r && r.createdAt && (
+          <div>
+            <div className="profile-field-label">وقت الحجز</div>
+            <div className="profile-field-value">{formatDateTime(r.createdAt)}</div>
+          </div>
+        )}
+      </div>
+      {r && r.note && (
+        <p style={{ marginTop: "10px", whiteSpace: "pre-line" }}>📝 ملاحظة الزبونة: {r.note}</p>
+      )}
+      {!r && (
+        <p className="service-description" style={{ marginTop: "10px" }}>
+          بيانات الزبونة وطريقة الاستلام رح تظهر هون أول ما تكون متوفرة من النظام.
+        </p>
+      )}
+    </div>
+  );
 }
 
 export default function StagnantItems() {
@@ -238,7 +315,7 @@ export default function StagnantItems() {
     }
   };
 
-    // قفل بسيط: أثناء ما طلب "عرض للبيع" شغّال ما منقبل ضغطة تانية (الضغطة المزدوجة كانت بتسبب الخطأ)
+  // قفل بسيط: أثناء ما طلب "عرض للبيع" شغّال ما منقبل ضغطة تانية (الضغطة المزدوجة كانت بتسبب الخطأ)
   const listingRef = useRef(false);
   const listForSale = async (id) => {
     if (listingRef.current) return;
@@ -271,6 +348,7 @@ export default function StagnantItems() {
       const updated = await confirmStockSale(id);
       setItems((prev) => prev.map((item) => (item.id === id ? updated : item)));
       setExpandedId(null);
+      refreshReservedItems(); // التنبيه (الجرس + القائمة) بيتحدّث فورًا
     } catch (err) {
       setActionError(err.message || "تعذر تأكيد البيع");
     }
@@ -282,10 +360,13 @@ export default function StagnantItems() {
       const updated = await cancelStockReservation(id);
       setItems((prev) => prev.map((item) => (item.id === id ? updated : item)));
       setExpandedId(null);
+      refreshReservedItems();
     } catch (err) {
       setActionError(err.message || "تعذر إلغاء الحجز");
     }
   };
+
+  const toggleDetails = (id) => setExpandedId((current) => (current === id ? null : id));
 
   return (
     <DashboardLayout
@@ -319,6 +400,13 @@ export default function StagnantItems() {
             onClick={() => toggleStatusFilter("listed")}
           >
             <span aria-hidden="true">🛍</span> القطع المعروضة للبيع
+          </button>
+          <button
+            type="button"
+            className={`stagnant-action-btn ${statusFilter === "reserved" ? "is-active" : ""}`}
+            onClick={() => toggleStatusFilter("reserved")}
+          >
+            <span aria-hidden="true">🔖</span> القطع المحجوزة
           </button>
           <button
             type="button"
@@ -516,6 +604,13 @@ export default function StagnantItems() {
                       </button>
                       <button
                         type="button"
+                        className="stagnant-btn outline-brand"
+                        onClick={() => toggleDetails(item.id)}
+                      >
+                        {isExpanded ? "إخفاء التفاصيل" : "عرض التفاصيل"}
+                      </button>
+                      <button
+                        type="button"
                         className="stagnant-btn outline"
                         onClick={() => cancelReservation(item.id)}
                       >
@@ -527,15 +622,17 @@ export default function StagnantItems() {
                     <button
                       type="button"
                       className="stagnant-btn outline"
-                      onClick={() => setExpandedId(isExpanded ? null : item.id)}
+                      onClick={() => toggleDetails(item.id)}
                     >
-                      عرض التفاصيل
+                      {isExpanded ? "إخفاء التفاصيل" : "عرض التفاصيل"}
                     </button>
                   )}
                 </div>
               </div>
 
-              {isExpanded && (
+              {isExpanded && item.status === "reserved" && <ReservationDetails item={item} />}
+
+              {isExpanded && item.status === "sold" && (
                 <div className="stagnant-item-details">
                   <span>تاريخ الإضافة: {formatDate(item.createdAt)}</span>
                   <span>الحالة: {status.label}</span>

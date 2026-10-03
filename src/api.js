@@ -1037,6 +1037,21 @@ function unwrapStockList(result) {
   ];
   return candidates.find(Array.isArray) || [];
 }
+function mapReservationFromApi(r) {
+  if (!r || typeof r !== "object") return null;
+  const t = r.totals || {};
+  return {
+    orderId: r.id ?? r.order_id ?? null,
+    customer: r.customer_name || r.customer?.full_name || r.customer?.name || "",
+    phone: r.contact_phone || r.customer_phone || r.customer?.phone || "",
+    address: r.address || r.delivery_address || "",
+    deliveryMethod: r.delivery_method || "",
+    region: r.delivery_region || r.delivery_area || "",
+    total: t.total_amount ?? r.total_amount ?? null,
+    note: r.customer_note || "",
+    createdAt: r.created_at || "",
+  };
+}
 function mapStockItemFromApi(o) {
   o = o || {};
   const category = categoryFromApi(o.category);
@@ -1053,6 +1068,7 @@ function mapStockItemFromApi(o) {
     image: rawImage ? resolveStockImage(rawImage) : null,
     status: normalizeStockStatus(o.status),
     createdAt: o.created_at || o.date || "",
+    reservation: mapReservationFromApi(o.order || o.reservation),
   };
 }
 

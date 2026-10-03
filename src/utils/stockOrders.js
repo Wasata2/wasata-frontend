@@ -1,8 +1,9 @@
 // طلبات القطع الراكدة عند الزبونة.
 // لما الزبونة بتطلب قطعة، الباك اند بيحجزها (reserve) بس ما بيرجّع لها طلب ضمن GET /api/my-orders،
 // فبنحفظ نسخة من بيانات القطعة والوسيطة بالمتصفح (لكل حساب) ونعرضها مع الطلبات النشطة.
-// لما الباك اند يجهّز مسار طلبات القطع، بنستبدل readStockOrders بالنداء الحقيقي وباقي الشاشات بتضل زي ما هي.
-import { getStoreStockItems } from "../api";
+// لما الباك اند يجهّز مسار طلبات القطع (reserve بيرجّع order_id)، بنخزّن orderId مع الطلب
+// وبنقرا حالته الحقيقية من الباك اند (تم الاستلام / ملغي) بدل التخمين.
+import { getStoreStockItems, getMyOrderDetail } from "../api";
 
 const keyFor = (userId) => `wasata_stock_orders_${userId ?? "me"}`;
 
@@ -40,10 +41,22 @@ export function getStockOrder(userId, itemId) {
   return readStockOrders(userId).find((o) => String(o.itemId) === String(itemId)) || null;
 }
 
+// رسوم التوصيل (بس لو الاستلام توصيل للمنزل) + الإجمالي النهائي = سعر القطعة + الرسوم
+export function getStockOrderFee(o) {
+  if (!o || o.deliveryMethod !== "home_delivery") return 0;
+  return Number(o.deliveryFee) || 0;
+}
+
+export function getStockOrderTotal(o) {
+  if (!o) return 0;
+  return (Number(o.price) || 0) + getStockOrderFee(o);
+}
+
 // بنحفظ طلب القطعة (لو نفس القطعة انطلبت قبل وانلغت، بنستبدل القديم)
-export function saveStockOrder(userId, { item, mediator, delivery = {} }) {
+export function saveStockOrder(userId, { item, mediator, delivery = {}, orderId = null }) {
   const order = {
     itemId: item.id,
+    orderId: orderId ?? null, // رقم الطلب الحقيقي بالباك اند (لو reserve رجّعه)
     name: item.name,
     image: item.image || null,
     category: item.category || "",
@@ -71,36 +84,68 @@ export function saveStockOrder(userId, { item, mediator, delivery = {} }) {
   return order;
 }
 
-// القطع المحجوزة أو المباعة ما بتظهر بقائمة القطع المعروضة، فلو القطعة رجعت "معروضة للبيع"
-// يعني الوسيطة ألغت الحجز — منعلّم الطلب ملغي
+// حالة الطلب الحقيقية من الباك اند ← حالة طلب القطعة عندنا
+function statusFromRealOrder(status) {
+  if (status === "received" || status === "completed") return "received";
+  if (status === "cancelled" || status === "rejected") return "cancelled";
+  return "ordered";
+}
+
+// مزامنة حالة طلبات القطع:
+// 1) الطلبات اللي الها orderId حقيقي: بنقرا حالتها من GET /api/orders/{id}
+//    (الوسيطة أكدت البيع ← received، ألغت الحجز ← cancelled)
+// 2) الطلبات القديمة بدون orderId: لو القطعة رجعت "معروضة للبيع" يعني الوسيطة ألغت الحجز.
+//    (تأكيد البيع بدون طلب حقيقي ما بنقدر نكتشفه من جهة الزبونة)
 export async function syncStockOrders(userId) {
   const list = readStockOrders(userId);
   const pending = list.filter((o) => o.status === "ordered");
   if (pending.length === 0) return list;
 
-  const storeIds = [...new Set(pending.map((o) => o.storeId))];
-  const relisted = new Set();
+  const updates = new Map(); // itemId ← الحالة الجديدة
+
+  const withOrderId = pending.filter((o) => o.orderId);
   await Promise.all(
-    storeIds.map((storeId) =>
-      getStoreStockItems(storeId)
-        .then((items) => {
-          items.forEach((it) => {
-            if (it.status === "listed") relisted.add(String(it.id));
-          });
+    withOrderId.map((o) =>
+      getMyOrderDetail(o.orderId)
+        .then((detail) => {
+          const next = statusFromRealOrder(detail.status);
+          if (next !== "ordered") updates.set(String(o.itemId), next);
         })
         .catch(() => {})
     )
   );
 
-  if (relisted.size === 0) return list;
+  const legacy = pending.filter((o) => !o.orderId);
+  if (legacy.length > 0) {
+    const storeIds = [...new Set(legacy.map((o) => o.storeId))];
+    const relisted = new Set();
+    await Promise.all(
+      storeIds.map((storeId) =>
+        getStoreStockItems(storeId)
+          .then((items) => {
+            items.forEach((it) => {
+              if (it.status === "listed") relisted.add(String(it.id));
+            });
+          })
+          .catch(() => {})
+      )
+    );
+    legacy.forEach((o) => {
+      if (relisted.has(String(o.itemId))) updates.set(String(o.itemId), "cancelled");
+    });
+  }
+
+  if (updates.size === 0) return list;
   const next = list.map((o) =>
-    o.status === "ordered" && relisted.has(String(o.itemId)) ? { ...o, status: "cancelled" } : o
+    updates.has(String(o.itemId)) && o.status === "ordered"
+      ? { ...o, status: updates.get(String(o.itemId)) }
+      : o
   );
   writeStockOrders(userId, next);
   return next;
 }
 
-// نفس شكل الطلب بقائمة "طلباتي"
+// نفس شكل الطلب بقائمة "طلباتي" — السعر هون شامل التوصيل
 export function toListOrder(o) {
   const type = o.status === "received" ? "completed" : o.status === "cancelled" ? "cancelled" : "active";
   return {
@@ -111,7 +156,7 @@ export function toListOrder(o) {
     store: o.storeName || "—",
     storeId: o.storeId,
     itemsCount: 1,
-    price: o.price,
+    price: getStockOrderTotal(o),
     date: o.createdAt,
     rawStatus: o.status,
     type,

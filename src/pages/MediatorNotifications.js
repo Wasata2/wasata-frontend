@@ -4,11 +4,13 @@ import { getOrders, getOrderStats, rejectOrder, getReviews } from "../api";
 import { useAuth } from "../context/AuthContext";
 import { getUnseenReviews } from "../utils/reviewsSeen";
 import { useMediatorNotifications } from "../utils/mediatorNotifications";
+import { useReservedItems } from "../utils/reservedItems";
 import DashboardLayout from "../components/DashboardLayout";
 import { formatDateTime } from "../utils/dates";
 import { formatProductsCount } from "../utils/orders";
 
-// صفحة الإشعارات: طلبات جديدة تحتاج قرار، تحديثات من الزبائن (موافقة على السعر / إلغاء)، وتقييمات جديدة
+// صفحة الإشعارات: قطع محجوزة بانتظار تأكيدك، طلبات جديدة تحتاج قرار،
+// تحديثات من الزبائن (موافقة على السعر / إلغاء)، وتقييمات جديدة
 export default function MediatorNotifications() {
   const { user } = useAuth();
   const [newReviews, setNewReviews] = useState([]);
@@ -28,6 +30,9 @@ export default function MediatorNotifications() {
     markAllRead,
     unreadCount,
   } = useMediatorNotifications(true);
+
+  // القطع الراكدة المحجوزة (زبونة حجزت قطعة وبانتظار تأكيد البيع أو إلغاء الحجز)
+  const { items: reservedItems } = useReservedItems(true);
 
   useEffect(() => {
     const reviewsPromise = getReviews().catch(() => ({ reviews: [] }));
@@ -58,7 +63,11 @@ export default function MediatorNotifications() {
     }
   };
 
-  const isEmpty = orders.length === 0 && newReviews.length === 0 && customerEvents.length === 0;
+  const isEmpty =
+    orders.length === 0 &&
+    newReviews.length === 0 &&
+    customerEvents.length === 0 &&
+    reservedItems.length === 0;
 
   return (
     <DashboardLayout
@@ -70,7 +79,7 @@ export default function MediatorNotifications() {
       <div className="dashboard-welcome-row">
         <div className="dashboard-welcome">
           <h1>الإشعارات</h1>
-          <p>الطلبات الجديدة، وتحديثات الزبائن على طلباتهم، والتقييمات الجديدة على متجرك.</p>
+          <p>القطع المحجوزة، والطلبات الجديدة، وتحديثات الزبائن على طلباتهم، والتقييمات الجديدة على متجرك.</p>
         </div>
         {unreadCount > 0 && (
           <button type="button" className="btn btn-outline" onClick={markAllRead}>
@@ -98,6 +107,28 @@ export default function MediatorNotifications() {
           </div>
         ) : (
           <div className="notifications-list">
+            {reservedItems.length > 0 && (
+              <h3 className="notifications-section-title">قطع محجوزة بانتظار تأكيدك</h3>
+            )}
+            {reservedItems.map((item) => (
+              <div className="notification-card" key={`reserved-${item.id}`}>
+                <div className="notification-card-main">
+                  <div className="notification-card-title">
+                    <span className="notif-unread-dot" />
+                    📦 زبونة حجزت قطعة "{item.name}"
+                  </div>
+                  <div className="notification-card-sub">
+                    {item.price} ₪ · أكدي البيع أو ألغي الحجز من صفحة القطع الراكدة
+                  </div>
+                </div>
+                <div className="notification-card-actions">
+                  <Link to="/stagnant-items" className="details-link">
+                    عرض الحجز
+                  </Link>
+                </div>
+              </div>
+            ))}
+
             {customerEvents.length > 0 && (
               <h3 className="notifications-section-title">تحديثات من الزبائن</h3>
             )}
@@ -147,9 +178,10 @@ export default function MediatorNotifications() {
               </div>
             ))}
 
-            {orders.length > 0 && (newReviews.length > 0 || customerEvents.length > 0) && (
-              <h3 className="notifications-section-title">طلبات جديدة تحتاج قرارك</h3>
-            )}
+            {orders.length > 0 &&
+              (newReviews.length > 0 || customerEvents.length > 0 || reservedItems.length > 0) && (
+                <h3 className="notifications-section-title">طلبات جديدة تحتاج قرارك</h3>
+              )}
             {orders.map((order) => (
               <div className="notification-card" key={order.id}>
                 <div className="notification-card-main">
@@ -161,10 +193,10 @@ export default function MediatorNotifications() {
                   </div>
                 </div>
                 <div className="notification-card-actions">
-                  {/* القبول بدو تحديد سعر كل منتج، فبيتم من صفحة الطلبات */}
+                  {/* التسعير بدو تحديد سعر كل منتج، فبيتم من صفحة الطلبات */}
                   <Link to="/mediator-orders" className="details-link">
-تحديد السعر وإرساله للزبونة   
-               </Link>
+                    تحديد السعر وإرساله للزبونة
+                  </Link>
                   <Link to={`/mediator-orders/${order.id}`} className="details-link">
                     عرض التفاصيل
                   </Link>
