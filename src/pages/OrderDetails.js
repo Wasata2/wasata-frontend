@@ -5,7 +5,6 @@ import DashboardLayout from "../components/DashboardLayout";
 import { formatDateTime } from "../utils/dates";
 import { formatProductsCount, getStepTime, applyStatusUpdate } from "../utils/orders";
 
-// خطوات مسار الطلب — بنفس ترتيب وأسماء الحالات الحقيقية القادمة من الباك اند
 const STATUS_STEPS = [
   { key: "pending", label: "تم الطلب" },
   { key: "ordered_from_shein", label: "تم الطلب من SHEIN" },
@@ -34,7 +33,6 @@ export default function OrderDetails() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
-  // ===== تحديث حالة الطلب =====
   const [updateModalOpen, setUpdateModalOpen] = useState(false);
   const [confirmModalOpen, setConfirmModalOpen] = useState(false);
   const [updating, setUpdating] = useState(false);
@@ -53,15 +51,12 @@ export default function OrderDetails() {
   }, [id]);
 
   const isAwaiting = order && order.status === "awaiting_approval";
-  // بحالة الانتظار بنضل عند الخطوة الأولى لحد ما الزبونة توافق على السعر
   const currentStepIndex = order
     ? isAwaiting
       ? 0
       : STATUS_STEPS.findIndex((s) => s.key === order.status)
     : -1;
   const isCancelled = order && (order.status === "cancelled" || order.status === "rejected");
-  // pending: بانتظار قبول/رفض الوسيطة. awaiting_approval: بانتظار موافقة الزبونة.
-  // بالحالتين ما في تحديث حالة من هون
   const isPending = order && order.status === "pending";
   const isLocked = isPending || isAwaiting;
   const isFinalStep = currentStepIndex === STATUS_STEPS.length - 1;
@@ -90,7 +85,6 @@ export default function OrderDetails() {
     setUpdateError("");
     try {
       const updated = await updateOrderStatus(order.id, nextStep.key);
-      // نحافظ على اسم الزبونة والمنتجات (رد الـ PATCH ما بيرجّعهم)
       setOrder((prev) => applyStatusUpdate(prev, updated));
       setConfirmModalOpen(false);
     } catch (err) {
@@ -149,7 +143,6 @@ export default function OrderDetails() {
             </div>
           </div>
 
-          {/* ===== بيانات التوصيل (عنوان الزبونة ورقم تواصلها) ===== */}
           <div className="order-details-card">
             <h2 className="order-details-section-title">بيانات التوصيل</h2>
             <div className="order-details-meta">
@@ -163,6 +156,12 @@ export default function OrderDetails() {
                       : "—"}
                 </div>
               </div>
+              {order.deliveryType === "pickup" && (
+                <div>
+                  <div className="profile-field-label">نقطة الاستلام</div>
+                  <div className="profile-field-value">{order.pickupLocation || "—"}</div>
+                </div>
+              )}
               {order.deliveryType === "home_delivery" && (
                 <div>
                   <div className="profile-field-label">العنوان</div>
@@ -189,14 +188,12 @@ export default function OrderDetails() {
             )}
           </div>
 
-          {/* ===== مسار الطلب ===== */}
           {!isCancelled && (
             <div className="order-details-card">
               <h2 className="order-details-section-title">مسار الطلب</h2>
 
               <div className="order-track-row">
                 {STATUS_STEPS.map((step, index) => {
-                  // آخر مرحلة (تم الاستلام) لما توصلها تعتبر مكتملة: ✓ وخط كامل
                   const isDone = index < currentStepIndex || (isFinalStep && index === currentStepIndex);
                   const isCurrent = index === currentStepIndex && !isFinalStep;
                   const timestamp = getStepTime(order, step.key, index, currentStepIndex);
@@ -210,7 +207,6 @@ export default function OrderDetails() {
                         >
                           {isDone ? "✓" : index + 1}
                         </div>
-                        {/* خط بيربط هاي المرحلة بالمرحلة اللي قبلها */}
                         {index > 0 && (
                           <div
                             className={`order-track-connector ${
@@ -246,7 +242,6 @@ export default function OrderDetails() {
             </div>
           )}
 
-          {/* ===== تحديث حالة الطلب ===== */}
           {!isCancelled && (
             <div className="order-details-card order-status-update-card">
               <div>
@@ -355,15 +350,16 @@ export default function OrderDetails() {
               >
                 <span>إجمالي سعر الطلب</span>
                 <span>
-                  {(order.totals?.totalAmount ?? order.totalPrice) != null
-                    ? `${order.totals?.totalAmount ?? order.totalPrice} ₪`
-                    : "لم يتم التسعير بعد"}
+                  {order.totals?.priced
+                    ? `${order.totals.totalAmount} ₪`
+                    : order.totalPrice != null
+                      ? `${order.totalPrice} ₪`
+                      : "لم يتم التسعير بعد"}
                 </span>
               </div>
             )}
           </div>
 
-          {/* ===== نافذة اختيار الحالة التالية ===== */}
           {updateModalOpen && (
             <div className="modal-overlay" onClick={() => setUpdateModalOpen(false)}>
               <div className="modal-card" onClick={(e) => e.stopPropagation()}>
@@ -388,7 +384,6 @@ export default function OrderDetails() {
             </div>
           )}
 
-          {/* ===== نافذة تأكيد التحديث ===== */}
           {confirmModalOpen && (
             <div className="modal-overlay" onClick={cancelConfirm}>
               <div className="modal-card confirm-modal-card" onClick={(e) => e.stopPropagation()}>

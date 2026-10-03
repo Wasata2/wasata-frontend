@@ -64,7 +64,7 @@ export default function CustomerOrderDetails() {
     setDeciding(true);
     try {
       await approveOrderPrice(id);
-      load(); // بيعيد تحميل الطلب وبيصير "تم الطلب من SHEIN"
+      load();
     } catch (err) {
       setDecideError(err.message);
     } finally {
@@ -87,7 +87,6 @@ export default function CustomerOrderDetails() {
   };
 
   const isAwaiting = order?.status === "awaiting_approval";
-  // بحالة الانتظار بنضل عند الخطوة الأولى لحد ما الزبونة توافق
   const currentStepIndex = order
     ? isAwaiting
       ? 0
@@ -112,7 +111,6 @@ export default function CustomerOrderDetails() {
 
       {order && (
         <>
-          {/* ===== بطاقة الطلب: الرقم + السعر + مسار الطلب ===== */}
           <div className="order-details-card">
             <div className="order-details-top">
               <h1>طلب #{order.id}</h1>
@@ -177,7 +175,6 @@ export default function CustomerOrderDetails() {
             {cancelError && <p className="form-error">{cancelError}</p>}
           </div>
 
-          {/* ===== بطاقة قرار السعر: بتظهر لما الوسيطة تحدد السعر ===== */}
           {isAwaiting && (
             <div className="order-details-card price-approval-card">
               <h3 className="order-details-section-title">
@@ -235,7 +232,6 @@ export default function CustomerOrderDetails() {
             </div>
           )}
 
-          {/* ===== تفاصيل التوصيل: كل معلومة بحقلها (بدون تكرار) ===== */}
           <div className="order-details-card">
             <h3 className="order-details-section-title">تفاصيل التوصيل</h3>
             <div className="order-details-meta">
@@ -252,6 +248,14 @@ export default function CustomerOrderDetails() {
                   <div className="profile-field-label">العنوان</div>
                   <div className="profile-field-value">
                     {order.address || "—"}
+                  </div>
+                </div>
+              )}
+              {!isHomeDelivery && (
+                <div>
+                  <div className="profile-field-label">نقطة الاستلام</div>
+                  <div className="profile-field-value">
+                    {order.pickupLocation || "غير محددة، تواصلي مع الوسيطة"}
                   </div>
                 </div>
               )}
@@ -275,7 +279,6 @@ export default function CustomerOrderDetails() {
             )}
           </div>
 
-          {/* ===== المنتجات ===== */}
           <div className="order-details-card">
             <h3 className="order-details-section-title">
               المنتجات ({order.items.length})
