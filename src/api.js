@@ -513,11 +513,12 @@ function mapOrderFromApi(o) {
     statusTimes: buildStatusTimes(o),
     itemsCount: o.items_count ?? rawItems.length,
     totalQuantity,
-amount: (() => {
-  const t = mapTotals(o);
-  if (t?.priced) return t.totalAmount;
-  return o.estimated_amount ?? o.total_amount ?? o.amount ?? 0;
-})(),    status: o.status,
+    amount: (() => {
+      const t = mapTotals(o);
+      if (t?.priced) return t.totalAmount;
+      return o.estimated_amount ?? o.total_amount ?? o.amount ?? 0;
+    })(),
+    status: o.status,
     items,
     // بيانات التوصيل (بتظهر للوسيطة بصفحة تفاصيل الطلب)
     deliveryType: o.delivery_method || null, // "home_delivery" | "pickup"
@@ -529,7 +530,8 @@ amount: (() => {
     customerNote: extractUserNote(o.customer_note),
     totalPrice: sumItemPrices(items),
     totals: mapTotals(o),
-rejectionReason: o.rejection_reason || o.cancellation_reason || null,  };
+    rejectionReason: o.rejection_reason || o.cancellation_reason || null,
+  };
 }
 
 // الإجماليات من الباك اند (totals): total_amount = items_total + delivery_fee
@@ -602,7 +604,8 @@ function mapMyOrderFromApi(o) {
     statusUpdatedAt: o.status_updated_at || o.updated_at || o.created_at || "",
     statusTimes: buildStatusTimes(o),
     reviewed: !!o.reviewed,
-rejectionReason: o.rejection_reason || o.cancellation_reason || null,    rawStatus: o.status,
+    rejectionReason: o.rejection_reason || o.cancellation_reason || null,
+    rawStatus: o.status,
     awaitingApproval: isAwaiting,
     type: isCancelled ? "cancelled" : isCompleted ? "completed" : "active",
     statusLabel: isCancelled
