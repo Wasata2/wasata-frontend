@@ -1201,8 +1201,11 @@ export async function reserveStockItem(
   { deliveryMethod, address, contactPhone, customerNote, deliveryRegion } = {},
 ) {
   const body = {};
-  if (deliveryMethod) body.delivery_method = deliveryMethod; // "home_delivery" | "pickup"
-  if (address) body.address = address;
+if (deliveryRegion) {
+  const apiRegion = regionToApi(deliveryRegion);
+  body.delivery_region = apiRegion;
+  body.delivery_area = apiRegion; // الباك بيقبل أحد الاسمين
+}  if (address) body.address = address;
   if (contactPhone) body.contact_phone = contactPhone;
   if (customerNote) body.customer_note = customerNote;
   if (deliveryRegion) body.delivery_area = regionToApi(deliveryRegion);
