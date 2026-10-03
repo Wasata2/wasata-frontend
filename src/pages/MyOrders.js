@@ -4,8 +4,11 @@ import DashboardLayout from "../components/DashboardLayout";
 import { getMyOrders, cancelOrder, CUSTOMER_ORDER_STATUSES } from "../api";
 import { formatDateTime } from "../utils/dates";
 import { getStepTime } from "../utils/orders";
-import { getCurrentUserId, syncStockOrders, toListOrder } from "../utils/stockOrders";
-
+import {
+  getCurrentUserId,
+  syncStockOrders,
+  toListOrder,
+} from "../utils/stockOrders";
 
 // تحويل وقت مخزّن (timestamp) لنص "منذ كذا" — بيتحسب وقت العرض، مش وقت الإنشاء
 function getRelativeTime(timestamp) {
@@ -19,9 +22,19 @@ function getRelativeTime(timestamp) {
   return `منذ ${diffDays} يوم`;
 }
 
+// زر عرض التفاصيل — بيتحول لزر بارز لما الطلب بانتظار موافقة الزبونة على السعر
+function OrderDetailsLink({ order }) {
+  return (
+    <Link
+      to={`/orders/${order.id}`}
+      className={`btn ${order.awaitingApproval ? "btn-primary" : "btn-outline"}`}
+    >
+      {order.awaitingApproval ? "مراجعة السعر والرد" : "عرض التفاصيل"}
+    </Link>
+  );
+}
 
 export default function MyOrders() {
-
   const [orders, setOrders] = useState([]);
   const [loadingOrders, setLoadingOrders] = useState(true);
   const [ordersError, setOrdersError] = useState("");
@@ -47,9 +60,12 @@ export default function MyOrders() {
       .catch(() => {});
   }, []);
 
-  const allOrders = useMemo(() => [...stockOrders, ...orders], [stockOrders, orders]);
+  const allOrders = useMemo(
+    () => [...stockOrders, ...orders],
+    [stockOrders, orders],
+  );
 
-    const [cancellingId, setCancellingId] = useState(null);
+  const [cancellingId, setCancellingId] = useState(null);
   const [cancelError, setCancelError] = useState({ id: null, message: "" });
 
   const handleCancel = async (orderId) => {
@@ -77,7 +93,7 @@ export default function MyOrders() {
   ];
 
   const statusOptionsByTab = {
-    active: timelineSteps,
+    active: [...timelineSteps, "بانتظار موافقتك على السعر"],
     completed: ["مكتمل", "تم الاستلام"],
     cancelled: ["ملغي", "مرفوض"],
   };
@@ -114,10 +130,7 @@ export default function MyOrders() {
   const filteredOrders = useMemo(() => {
     return allOrders.filter((o) => {
       if (o.type !== activeTab) return false;
-      if (
-        statusFilter &&
-        (activeTab === "active" ? o.statusLabel : o.statusLabel) !== statusFilter
-      ) {
+      if (statusFilter && o.statusLabel !== statusFilter) {
         return false;
       }
       if (
@@ -130,266 +143,301 @@ export default function MyOrders() {
       ) {
         return false;
       }
-      // فلتر التاريخ شكلي حاليًا (بيانات وهمية) — هيتفعّل فعليًا لما توصل الطلبات من الـ API
+      // فلتر التاريخ شكلي حاليًا — هيتفعّل فعليًا لاحقًا
       return true;
     });
   }, [allOrders, activeTab, statusFilter, searchTerm]);
 
-   return (
+  return (
     <DashboardLayout role="customer">
-        <div className="dashboard-welcome-row">
-          <div className="dashboard-welcome">
-            <h1>طلباتي</h1>
-            <p>تابعي طلباتك الحالية وراجعي سجل طلباتك السابقة.</p>
+      <div className="dashboard-welcome-row">
+        <div className="dashboard-welcome">
+          <h1>طلباتي</h1>
+          <p>تابعي طلباتك الحالية وراجعي سجل طلباتك السابقة.</p>
+        </div>
+        <Link to="/new-order" className="new-order-btn">
+          + طلب جديد
+        </Link>
+      </div>
+
+      {/* بطاقات الإحصائيات — ثابتة للعرض فقط، النشطة يمين والملغاة/المرفوضة يسار */}
+      <div className="orders-stats-grid">
+        <div className="orders-stat-card">
+          <div>
+            <div className="orders-stat-value">{activeCount}</div>
+            <div className="orders-stat-label">طلبات نشطة</div>
           </div>
-          <Link to="/new-order" className="new-order-btn">
-            + طلب جديد
-          </Link>
+          <div className="orders-stat-icon icon-purple">📅</div>
         </div>
 
-        {/* بطاقات الإحصائيات — ثابتة للعرض فقط، النشطة يمين والملغاة/المرفوضة يسار */}
-        <div className="orders-stats-grid">
-          <div className="orders-stat-card">
-            <div>
-              <div className="orders-stat-value">{activeCount}</div>
-              <div className="orders-stat-label">طلبات نشطة</div>
-            </div>
-            <div className="orders-stat-icon icon-purple">📅</div>
+        <div className="orders-stat-card">
+          <div>
+            <div className="orders-stat-value">{completedCount}</div>
+            <div className="orders-stat-label">طلبات مكتملة</div>
           </div>
-
-          <div className="orders-stat-card">
-            <div>
-              <div className="orders-stat-value">{completedCount}</div>
-              <div className="orders-stat-label">طلبات مكتملة</div>
-            </div>
-            <div className="orders-stat-icon icon-green">✓</div>
-          </div>
-
-          <div className="orders-stat-card">
-            <div>
-              <div className="orders-stat-value">{cancelledCount}</div>
-              <div className="orders-stat-label">ملغاة / مرفوضة</div>
-            </div>
-            <div className="orders-stat-icon icon-red">✕</div>
-          </div>
+          <div className="orders-stat-icon icon-green">✓</div>
         </div>
 
-        {/* تبويبات الحالة */}
-        <div className="orders-tabs">
-          <button
-            type="button"
-            className={`orders-tab ${activeTab === "active" ? "active" : ""}`}
-            onClick={() => switchTab("active")}
-          >
-            {activeCount} النشطة
-          </button>
-          <button
-            type="button"
-            className={`orders-tab ${activeTab === "completed" ? "active" : ""}`}
-            onClick={() => switchTab("completed")}
-          >
-            {completedCount} المكتملة
-          </button>
-          <button
-            type="button"
-            className={`orders-tab ${activeTab === "cancelled" ? "active" : ""}`}
-            onClick={() => switchTab("cancelled")}
-          >
-            {cancelledCount} الملغاة / المرفوضة
-          </button>
+        <div className="orders-stat-card">
+          <div>
+            <div className="orders-stat-value">{cancelledCount}</div>
+            <div className="orders-stat-label">ملغاة / مرفوضة</div>
+          </div>
+          <div className="orders-stat-icon icon-red">✕</div>
         </div>
+      </div>
 
-        {/* شريط الفلاتر */}
-        <div className="orders-filters">
-          <input
-            type="text"
-            placeholder="ابحثي برقم الطلب أو اسم الوسيطة"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-          />
-          <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
-            <option value="">الحالة</option>
-            {statusOptionsByTab[activeTab].map((s) => (
-              <option key={s} value={s}>
-                {s}
-              </option>
-            ))}
-          </select>
-          <select value={dateFilter} onChange={(e) => setDateFilter(e.target.value)}>
-            <option value="">التاريخ</option>
-            <option value="7">آخر 7 أيام</option>
-            <option value="30">آخر 30 يومًا</option>
-            <option value="all">كل الفترات</option>
-          </select>
-          {hasActiveFilters && (
-            <button type="button" className="clear-filters-chip" onClick={clearFilters}>
-              مسح الفلاتر ✕
-            </button>
+      {/* تبويبات الحالة */}
+      <div className="orders-tabs">
+        <button
+          type="button"
+          className={`orders-tab ${activeTab === "active" ? "active" : ""}`}
+          onClick={() => switchTab("active")}
+        >
+          {activeCount} النشطة
+        </button>
+        <button
+          type="button"
+          className={`orders-tab ${activeTab === "completed" ? "active" : ""}`}
+          onClick={() => switchTab("completed")}
+        >
+          {completedCount} المكتملة
+        </button>
+        <button
+          type="button"
+          className={`orders-tab ${activeTab === "cancelled" ? "active" : ""}`}
+          onClick={() => switchTab("cancelled")}
+        >
+          {cancelledCount} الملغاة / المرفوضة
+        </button>
+      </div>
+
+      {/* شريط الفلاتر */}
+      <div className="orders-filters">
+        <input
+          type="text"
+          placeholder="ابحثي برقم الطلب أو اسم الوسيطة"
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+        />
+        <select
+          value={statusFilter}
+          onChange={(e) => setStatusFilter(e.target.value)}
+        >
+          <option value="">الحالة</option>
+          {statusOptionsByTab[activeTab].map((s) => (
+            <option key={s} value={s}>
+              {s}
+            </option>
+          ))}
+        </select>
+        <select
+          value={dateFilter}
+          onChange={(e) => setDateFilter(e.target.value)}
+        >
+          <option value="">التاريخ</option>
+          <option value="7">آخر 7 أيام</option>
+          <option value="30">آخر 30 يومًا</option>
+          <option value="all">كل الفترات</option>
+        </select>
+        {hasActiveFilters && (
+          <button
+            type="button"
+            className="clear-filters-chip"
+            onClick={clearFilters}
+          >
+            مسح الفلاتر ✕
+          </button>
+        )}
+      </div>
+
+      {/* قائمة الطلبات */}
+      {filteredOrders.length === 0 ? (
+        <div className="orders-empty-state">
+          {loadingOrders ? (
+            <p>جاري تحميل طلباتك...</p>
+          ) : ordersError ? (
+            <>
+              <p>تعذر تحميل الطلبات</p>
+              <span>{ordersError}</span>
+              <button
+                type="button"
+                className="btn btn-outline"
+                onClick={loadOrders}
+              >
+                إعادة المحاولة
+              </button>
+            </>
+          ) : hasActiveFilters ? (
+            <>
+              <p>لا توجد طلبات مطابقة</p>
+              <span>حاولي تعديل معايير البحث</span>
+            </>
+          ) : (
+            <p>لا توجد طلبات {tabLabels[activeTab]} حاليًا.</p>
           )}
         </div>
+      ) : (
+        filteredOrders.map((order) => (
+          <div className="order-list-card" key={order.id}>
+            <div className="order-list-top">
+              <div className="order-list-info-col">
+                <div className="order-list-badge-row">
+                  <span
+                    className={`order-list-status-badge status-${order.type}`}
+                  >
+                    ● {order.statusLabel}
+                  </span>
+                </div>
+                <div className="order-id">
+                  {order.isStock ? "طلب قطعة راكدة" : `طلب #${order.id}`}
+                </div>
+                <div className="order-store">🕐 {order.store}</div>
+                <div className="order-list-info">
+                  {order.isStock
+                    ? `🏷 ${order.itemName}`
+                    : `📦 ${order.itemsCount} منتجات`}{" "}
+                  &nbsp; 🗓 {formatDateTime(order.date)}
+                </div>
+              </div>
+              <div className="order-list-price">
+                {order.price > 0 ? `${order.price} ₪` : "السعر قيد التحديد"}
+              </div>
+            </div>
 
-        {/* قائمة الطلبات */}
-        {filteredOrders.length === 0 ? (
-          <div className="orders-empty-state">
-            {loadingOrders ? (
-              <p>جاري تحميل طلباتك...</p>
-            ) : ordersError ? (
+            <div className="order-list-divider"></div>
+
+            {order.isStock && (
               <>
-                <p>تعذر تحميل الطلبات</p>
-                <span>{ordersError}</span>
-                <button type="button" className="btn btn-outline" onClick={loadOrders}>
-                  إعادة المحاولة
-                </button>
+                {order.type === "completed" && (
+                  <div className="order-success-banner">✓ تم استلام القطعة</div>
+                )}
+                {order.type === "cancelled" && (
+                  <div className="order-reject-banner">
+                    الوسيطة ألغت حجز هذه القطعة
+                  </div>
+                )}
+                <div className="order-actions">
+                  <Link
+                    to={`/stock-orders/${order.itemId}`}
+                    className="btn btn-outline"
+                  >
+                    عرض التفاصيل
+                  </Link>
+                </div>
               </>
-            ) : hasActiveFilters ? (
+            )}
+
+            {!order.isStock && order.type === "active" && (
               <>
-                <p>لا توجد طلبات مطابقة</p>
-                <span>حاولي تعديل معايير البحث</span>
+                <div className="order-path-label">مسار الطلب</div>
+                <div className="order-timeline">
+                  {timelineSteps.map((label, index) => {
+                    const status =
+                      index < order.currentStepIndex
+                        ? "done"
+                        : index === order.currentStepIndex
+                          ? "current"
+                          : "upcoming";
+                    // وقت كل خطوة لحاله — بنفس أسلوب مسار الوسيطة
+                    const stepTime =
+                      status === "upcoming"
+                        ? null
+                        : getStepTime(
+                            order,
+                            CUSTOMER_ORDER_STATUSES[index],
+                            index,
+                            order.currentStepIndex,
+                          );
+                    return (
+                      <div key={label} className={`timeline-step ${status}`}>
+                        <div className="timeline-line"></div>
+                        <div className="timeline-dot">
+                          {status === "done" ? "✓" : index + 1}
+                        </div>
+                        <div className="timeline-label">{label}</div>
+                        {stepTime && (
+                          <div className="timeline-date">
+                            {formatDateTime(stepTime)}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+                <div className="order-actions">
+                  <OrderDetailsLink order={order} />
+                  {/* الإلغاء مسموح بس لما الطلب لسا "تم الطلب" (pending) —
+                        الباك اند بيرفض أي حالة تانية بخطأ 422 */}
+                  {order.rawStatus === "pending" && (
+                    <button
+                      type="button"
+                      className="btn btn-outline"
+                      style={{ color: "#dc2626", borderColor: "#dc2626" }}
+                      onClick={() => handleCancel(order.id)}
+                      disabled={cancellingId === order.id}
+                    >
+                      {cancellingId === order.id
+                        ? "جاري الإلغاء..."
+                        : "إلغاء الطلب"}
+                    </button>
+                  )}
+                </div>
+                {cancelError.id === order.id && (
+                  <p className="form-error">{cancelError.message}</p>
+                )}
               </>
-            ) : (
-              <p>لا توجد طلبات {tabLabels[activeTab]} حاليًا.</p>
+            )}
+
+            {!order.isStock && order.type === "completed" && (
+              <>
+                <div className="order-success-banner">
+                  ✓ تم تسليم هذا الطلب بنجاح
+                </div>
+                <div className="order-actions">
+                  <OrderDetailsLink order={order} />
+                  {!order.reviewed && (
+                    <Link
+                      to={`/orders/${order.id}/review`}
+                      className="btn btn-primary"
+                    >
+                      ★ تقييم الوسيطة
+                    </Link>
+                  )}
+                </div>
+              </>
+            )}
+
+            {!order.isStock && order.type === "cancelled" && (
+              <>
+                {order.rejectionReason && (
+                  <>
+                    <button
+                      type="button"
+                      className="reject-reason-toggle"
+                      onClick={() =>
+                        setExpandedReasonId(
+                          expandedReasonId === order.id ? null : order.id,
+                        )
+                      }
+                    >
+                      عرض سبب الرفض {expandedReasonId === order.id ? "˄" : "˅"}
+                    </button>
+                    {expandedReasonId === order.id && (
+                      <div className="order-reject-banner">
+                        {order.rejectionReason}
+                      </div>
+                    )}
+                  </>
+                )}
+                <div className="order-actions">
+                  <OrderDetailsLink order={order} />
+                </div>
+              </>
             )}
           </div>
-        ) : (
-          filteredOrders.map((order) => (
-            <div className="order-list-card" key={order.id}>
-              <div className="order-list-top">
-                <div className="order-list-info-col">
-                  <div className="order-list-badge-row">
-                    <span
-                      className={`order-list-status-badge status-${order.type}`}
-                    >
-                      ● {order.statusLabel}
-                    </span>
-                  </div>
-                  <div className="order-id">{order.isStock ? "طلب قطعة راكدة" : `طلب #${order.id}`}</div>
-                  <div className="order-store">🕐 {order.store}</div>
-                  <div className="order-list-info">
-                    {order.isStock ? `🏷 ${order.itemName}` : `📦 ${order.itemsCount} منتجات`} &nbsp; 🗓 {formatDateTime(order.date)}
-                  </div>
-                </div>
-                <div className="order-list-price">{order.price} ₪</div>
-              </div>
-
-              <div className="order-list-divider"></div>
-
-              {order.isStock && (
-                <>
-                  {order.type === "completed" && (
-                    <div className="order-success-banner">✓ تم استلام القطعة</div>
-                  )}
-                  {order.type === "cancelled" && (
-                    <div className="order-reject-banner">الوسيطة ألغت حجز هذه القطعة</div>
-                  )}
-                  <div className="order-actions">
-                    <Link to={`/stock-orders/${order.itemId}`} className="btn btn-outline">
-                      عرض التفاصيل
-                    </Link>
-                  </div>
-                </>
-              )}
-
-              {!order.isStock && order.type === "active" && (
-                <>
-                  <div className="order-path-label">مسار الطلب</div>
-                  <div className="order-timeline">
-                    {timelineSteps.map((label, index) => {
-                      const status =
-                        index < order.currentStepIndex
-                          ? "done"
-                          : index === order.currentStepIndex
-                            ? "current"
-                            : "upcoming";
-                      // وقت كل خطوة لحاله — بنفس أسلوب مسار الوسيطة
-                      const stepTime =
-                        status === "upcoming"
-                          ? null
-                          : getStepTime(order, CUSTOMER_ORDER_STATUSES[index], index, order.currentStepIndex);
-                      return (
-                        <div key={label} className={`timeline-step ${status}`}>
-                          <div className="timeline-line"></div>
-                          <div className="timeline-dot">
-                            {status === "done" ? "✓" : index + 1}
-                          </div>
-                          <div className="timeline-label">{label}</div>
-                          {stepTime && <div className="timeline-date">{formatDateTime(stepTime)}</div>}
-                        </div>
-                      );
-                    })}
-                  </div>
-                  <div className="order-actions">
-                    <Link to={`/orders/${order.id}`} className="btn btn-outline">
-                      عرض التفاصيل
-                    </Link>
-                    {/* الإلغاء مسموح بس لما الطلب لسا "تم الطلب" (pending) —
-                        الباك اند بيرفض أي حالة تانية بخطأ 422 */}
-                    {order.rawStatus === "pending" && (
-                      <button
-                        type="button"
-                        className="btn btn-outline"
-                        style={{ color: "#dc2626", borderColor: "#dc2626" }}
-                        onClick={() => handleCancel(order.id)}
-                        disabled={cancellingId === order.id}
-                      >
-                        {cancellingId === order.id ? "جاري الإلغاء..." : "إلغاء الطلب"}
-                      </button>
-                    )}
-                  </div>
-                  {cancelError.id === order.id && (
-                    <p className="form-error">{cancelError.message}</p>
-                  )}
-                </>
-              )}
-
-              {!order.isStock && order.type === "completed" && (
-                <>
-                  <div className="order-success-banner">✓ تم تسليم هذا الطلب بنجاح</div>
-                  <div className="order-actions">
-                    <Link to={`/orders/${order.id}`} className="btn btn-outline">
-                      عرض التفاصيل
-                    </Link>
-                    {!order.reviewed && (
-                      <Link to={`/orders/${order.id}/review`} className="btn btn-primary">
-                        ★ تقييم الوسيطة
-                      </Link>
-                    )}
-                  </div>
-                </>
-              )}
-
-              {!order.isStock && order.type === "cancelled" && (
-                <>
-                  {order.rejectionReason && (
-                    <>
-                      <button
-                        type="button"
-                        className="reject-reason-toggle"
-                        onClick={() =>
-                          setExpandedReasonId(
-                            expandedReasonId === order.id ? null : order.id
-                          )
-                        }
-                      >
-                        عرض سبب الرفض{" "}
-                        {expandedReasonId === order.id ? "˄" : "˅"}
-                      </button>
-                      {expandedReasonId === order.id && (
-                        <div className="order-reject-banner">
-                          {order.rejectionReason}
-                        </div>
-                      )}
-                    </>
-                  )}
-                  <div className="order-actions">
-                    <Link to={`/orders/${order.id}`} className="btn btn-outline">
-                      عرض التفاصيل
-                    </Link>
-                  </div>
-                </>
-              )}
-            </div>
-          ))
-        )}
-          </DashboardLayout>
+        ))
+      )}
+    </DashboardLayout>
   );
 }

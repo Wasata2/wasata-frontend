@@ -1,7 +1,25 @@
 // مناطق التوصيل: الوسيطة بتحدد سعر توصيل لكل منطقة، والزبونة بتختار منطقتها وبينضاف السعر للإجمالي.
 export const DELIVERY_REGIONS = ["غزة", "شمال غزة", "الوسطى", "خانيونس", "رفح"];
 
-// بنقبل أكثر من شكل من الباك اند: مصفوفة [{region, fee}]، أو كائن {غزة: 10}، أو نص JSON
+// الاسم العربي (للعرض) ← القيمة اللي بيقبلها الباك اند (StoreDeliveryZone::REGIONS)
+export const REGION_API_VALUES = {
+  "غزة": "gaza",
+  "شمال غزة": "north_gaza",
+  "الوسطى": "middle",
+  "خانيونس": "khan_younis",
+  "رفح": "rafah",
+};
+
+const API_TO_REGION = Object.fromEntries(
+  Object.entries(REGION_API_VALUES).map(([ar, api]) => [api, ar]),
+);
+
+// للإرسال للباك اند: عربي ← إنجليزي
+export const regionToApi = (region) => REGION_API_VALUES[region] || region;
+// للعرض: إنجليزي ← عربي
+export const regionFromApi = (value) => API_TO_REGION[value] || value;
+
+// بنقبل أكثر من شكل من الباك اند: مصفوفة [{region, fee}]، أو كائن {gaza: 10}، أو نص JSON
 export function normalizeZones(raw) {
   let data = raw;
   if (typeof data === "string") {
@@ -21,7 +39,10 @@ export function normalizeZones(raw) {
     : Object.entries(data).map(([region, fee]) => ({ region, fee }));
 
   return list
-    .map((z) => ({ region: String(z.region || "").trim(), fee: Number(z.fee) }))
+    .map((z) => ({
+      region: regionFromApi(String(z.region || "").trim()),
+      fee: Number(z.fee),
+    }))
     .filter((z) => z.region && Number.isFinite(z.fee) && z.fee >= 0);
 }
 

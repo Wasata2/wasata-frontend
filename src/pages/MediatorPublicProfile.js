@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { Link, useNavigate, useParams, useLocation } from "react-router-dom";
 import { getStores, getStoreProfile, getStoreReviews } from "../api";
 import { formatDate, latestByDate } from "../utils/dates";
-import ReviewAvatar from "../components/ReviewAvatar";
+import { feeLabel as zoneFeeLabel } from "../utils/deliveryZones";import ReviewAvatar from "../components/ReviewAvatar";
 // الملف العام للوسيطة — بنفس شكل "معاينة الملف كما يظهر للزبائن" بصفحة ملف الوسيطة،
 // بس هون بيانات أي وسيطة (حسب الـ id بالرابط) مش وسيطة واحدة.
 
@@ -100,7 +100,12 @@ export default function MediatorPublicProfile() {
   // ===== الخدمات المتاحة (جاية مع بروفايل المتجر: GET /api/stores/{id}) =====
   const [services, setServices] = useState([]);
   // حقول إضافية من بروفايل المتجر بنستخدمها لو قائمة الوسيطات ما رجّعتها (التلفون والعمولة)
-  const [extra, setExtra] = useState({ phone: "", commission: null });
+  const [extra, setExtra] = useState({
+    phone: "",
+    commission: null,
+    pickupLocation: "",
+    deliveryZones: [],
+  });
   const [loadingServices, setLoadingServices] = useState(true);
   const [servicesError, setServicesError] = useState(false);
 
@@ -112,7 +117,12 @@ export default function MediatorPublicProfile() {
       .then(({ store, services: list }) => {
         if (cancelled) return;
         setServices(list.filter((s) => s.available));
-        setExtra({ phone: store.phone, commission: store.commission });
+        setExtra({
+          phone: store.phone,
+          commission: store.commission,
+          pickupLocation: store.pickupLocation,
+          deliveryZones: store.deliveryZones,
+        });
       })
       .catch((err) => {
         // بنسجّل سبب الفشل بالـ console عشان نعرف مسار الخدمات الصحيح مع الباك اند
@@ -278,7 +288,33 @@ export default function MediatorPublicProfile() {
               {mediator.bio || "لم تتم إضافة نبذة بعد."}
             </p>
           </div>
+          <div className="public-info-card">
+            <h3 className="public-info-card-title">الاستلام والتوصيل</h3>
 
+            <div className="delivery-info-block">
+              <div className="delivery-info-label">🏬 نقطة الاستلام</div>
+              <p className="public-info-bio-text">
+                {extra.pickupLocation || "غير محددة"}
+              </p>
+            </div>
+
+            <div className="delivery-info-block">
+              <div className="delivery-info-label">
+                🚚 أسعار التوصيل للمنزل حسب المنطقة
+              </div>
+              {extra.deliveryZones.length === 0 ? (
+                <p className="public-info-bio-text">غير محددة</p>
+              ) : (
+                <div className="zone-chips">
+                  {extra.deliveryZones.map((z) => (
+                    <span className="zone-chip" key={z.region}>
+                      {z.region} · {zoneFeeLabel(z.fee)}
+                    </span>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
           <div className="public-info-card">
             <h3 className="public-info-card-title">الخدمات المتاحة</h3>
             {loadingServices ? (

@@ -27,6 +27,7 @@ import MediatorPublicProfile from "./pages/MediatorPublicProfile";
 import MediatorItems from "./pages/MediatorItems";
 import ProtectedRoute from "./components/ProtectedRoute";
 import { FavoritesProvider } from "./context/FavoritesContext";
+import CustomerNotifications from "./pages/CustomerNotifications";
 import CustomerOrderDetails from "./pages/CustomerOrderDetails";
 
 function App() {
@@ -194,6 +195,10 @@ function App() {
               <FavoriteMediators />
             </ProtectedRoute>
           }
+        />
+        <Route
+          path="/customer-notifications"
+          element={<CustomerNotifications />}
         />
         <Route
           path="/explore-mediators"

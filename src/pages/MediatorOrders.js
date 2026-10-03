@@ -17,7 +17,11 @@ import { formatProductsCount, applyStatusUpdate } from "../utils/orders";
 // هاي الدالة بتتأكد إنه رابط كامل قبل ما نعرضه، وإلا بترجع null
 function resolveImageUrl(path) {
   if (!path) return null;
-  if (/^https?:\/\//i.test(path) || path.startsWith("blob:") || path.startsWith("data:")) {
+  if (
+    /^https?:\/\//i.test(path) ||
+    path.startsWith("blob:") ||
+    path.startsWith("data:")
+  ) {
     return path;
   }
   const clean = path.startsWith("/") ? path.slice(1) : path;
@@ -35,6 +39,7 @@ function isClosedNegative(status) {
 
 const STATUS_META = {
   pending: { label: "تم الطلب", className: "pending" },
+  awaiting_approval: { label: "بانتظار موافقة الزبونة", className: "pending" },
   ordered_from_shein: { label: "تم الطلب من SHEIN", className: "ordered" },
   shipped: { label: "تم الشحن", className: "shipped" },
   arrived: { label: "وصلت", className: "progress" },
@@ -132,10 +137,17 @@ export default function MediatorOrders() {
     const items = acceptOrderData.items || [];
     const hasInvalidPrice = items.some((item) => {
       const value = acceptPrices[item.id];
-      return value === "" || value === undefined || isNaN(Number(value)) || Number(value) < 0;
+      return (
+        value === "" ||
+        value === undefined ||
+        isNaN(Number(value)) ||
+        Number(value) < 0
+      );
     });
     if (hasInvalidPrice) {
-      setAcceptModalError("لازم تحددي سعر نهائي صحيح لكل منتج بالطلب قبل التأكيد");
+      setAcceptModalError(
+        "لازم تحددي سعر نهائي صحيح لكل منتج بالطلب قبل التأكيد",
+      );
       return;
     }
 
@@ -147,7 +159,11 @@ export default function MediatorOrders() {
         unit_price: Number(acceptPrices[item.id]),
       }));
       const updated = await acceptOrder(acceptOrderData.id, payload);
-      setOrders((prev) => prev.map((o) => (o.id === updated.id ? applyStatusUpdate(o, updated) : o)));
+      setOrders((prev) =>
+        prev.map((o) =>
+          o.id === updated.id ? applyStatusUpdate(o, updated) : o,
+        ),
+      );
       closeAcceptModal();
     } catch (err) {
       setAcceptModalError(err.message);
@@ -176,7 +192,9 @@ export default function MediatorOrders() {
     try {
       // السبب اختياري: لو فاضي الباك اند بيخزّن null
       const updated = await rejectOrder(orderId, rejectReason);
-      setOrders((prev) => prev.map((o) => (o.id === orderId ? applyStatusUpdate(o, updated) : o)));
+      setOrders((prev) =>
+        prev.map((o) => (o.id === orderId ? applyStatusUpdate(o, updated) : o)),
+      );
       closeRejectModal();
     } catch (err) {
       setActionError(err.message);
@@ -196,12 +214,17 @@ export default function MediatorOrders() {
     return c;
   }, [orders]);
 
-  const hasActiveFilters = dateFilter || statusFilter || search || activeTab !== "all";
+  const hasActiveFilters =
+    dateFilter || statusFilter || search || activeTab !== "all";
 
   const filteredOrders = useMemo(() => {
     return orders.filter((o) => {
       if (activeTab !== "all") {
-        if (activeTab === "cancelled" ? !isClosedNegative(o.status) : o.status !== activeTab) {
+        if (
+          activeTab === "cancelled"
+            ? !isClosedNegative(o.status)
+            : o.status !== activeTab
+        ) {
           return false;
         }
       }
@@ -213,7 +236,10 @@ export default function MediatorOrders() {
   }, [orders, activeTab, statusFilter, dateFilter, search]);
 
   const totalPages = Math.max(1, Math.ceil(filteredOrders.length / PAGE_SIZE));
-  const pagedOrders = filteredOrders.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+  const pagedOrders = filteredOrders.slice(
+    (page - 1) * PAGE_SIZE,
+    page * PAGE_SIZE,
+  );
 
   const clearFilters = () => {
     setActiveTab("all");
@@ -226,6 +252,7 @@ export default function MediatorOrders() {
   const tabs = [
     { key: "all", label: "الكل" },
     { key: "pending", label: "تم الطلب" },
+    { key: "awaiting_approval", label: "بانتظار الموافقة" },
     { key: "ordered_from_shein", label: "تم الطلب من SHEIN" },
     { key: "shipped", label: "تم الشحن" },
     { key: "arrived", label: "وصلت" },
@@ -242,328 +269,353 @@ export default function MediatorOrders() {
       notifLink="/mediator-notifications"
       avatarImage={imagePreview}
     >
-        <div className="dashboard-welcome">
-          <h1>الطلبات</h1>
-          <p>إدارة ومتابعة جميع طلبات الزبائن.</p>
+      <div className="dashboard-welcome">
+        <h1>الطلبات</h1>
+        <p>إدارة ومتابعة جميع طلبات الزبائن.</p>
+      </div>
+
+      {loadError && (
+        <div className="empty-orders">
+          <p>تعذر تحميل الطلبات: {loadError}</p>
         </div>
+      )}
 
-        {loadError && (
-          <div className="empty-orders">
-            <p>تعذر تحميل الطلبات: {loadError}</p>
+      {actionError && <p className="form-error">{actionError}</p>}
+
+      {stats && (
+        <div className="dashboard-stats cols-4">
+          <div className="stat-card">
+            <div>
+              <div className="stat-label">مكتملة</div>
+              <div className="stat-value">{stats.completedCount}</div>
+            </div>
+            <div className="stat-icon">✅</div>
           </div>
-        )}
-
-        {actionError && <p className="form-error">{actionError}</p>}
-
-        {stats && (
-          <div className="dashboard-stats cols-4">
-            <div className="stat-card">
-              <div>
-                <div className="stat-label">مكتملة</div>
-                <div className="stat-value">{stats.completedCount}</div>
-              </div>
-              <div className="stat-icon">✅</div>
+          <div className="stat-card">
+            <div>
+              <div className="stat-label">قيد التنفيذ</div>
+              <div className="stat-value">{stats.inProgressCount}</div>
             </div>
-            <div className="stat-card">
-              <div>
-                <div className="stat-label">قيد التنفيذ</div>
-                <div className="stat-value">{stats.inProgressCount}</div>
-              </div>
-              <div className="stat-icon">📈</div>
-            </div>
-            <div className="stat-card">
-              <div>
-                <div className="stat-label">طلبات جديدة</div>
-                <div className="stat-value">{stats.newCount}</div>
-              </div>
-              <div className="stat-icon">📦</div>
-            </div>
-            <div className="stat-card">
-              <div>
-                <div className="stat-label">إجمالي الطلبات</div>
-                <div className="stat-value">{stats.total}</div>
-              </div>
-              <div className="stat-icon">🧾</div>
-            </div>
+            <div className="stat-icon">📈</div>
           </div>
-        )}
+          <div className="stat-card">
+            <div>
+              <div className="stat-label">طلبات جديدة</div>
+              <div className="stat-value">{stats.newCount}</div>
+            </div>
+            <div className="stat-icon">📦</div>
+          </div>
+          <div className="stat-card">
+            <div>
+              <div className="stat-label">إجمالي الطلبات</div>
+              <div className="stat-value">{stats.total}</div>
+            </div>
+            <div className="stat-icon">🧾</div>
+          </div>
+        </div>
+      )}
 
-        <div className="orders-filters-bar">
-          {hasActiveFilters && (
-            <button className="clear-filters-btn" onClick={clearFilters}>
-              مسح الفلاتر ✕
-            </button>
-          )}
-          <input
-            type="date"
-            className="filter-date-input"
-            value={dateFilter}
-            onChange={(e) => {
-              setDateFilter(e.target.value);
-              setPage(1);
-            }}
-          />
-          <select
-            className="filter-status-select"
-            value={statusFilter}
-            onChange={(e) => {
-              setStatusFilter(e.target.value);
+      <div className="orders-filters-bar">
+        {hasActiveFilters && (
+          <button className="clear-filters-btn" onClick={clearFilters}>
+            مسح الفلاتر ✕
+          </button>
+        )}
+        <input
+          type="date"
+          className="filter-date-input"
+          value={dateFilter}
+          onChange={(e) => {
+            setDateFilter(e.target.value);
+            setPage(1);
+          }}
+        />
+        <select
+          className="filter-status-select"
+          value={statusFilter}
+          onChange={(e) => {
+            setStatusFilter(e.target.value);
+            setPage(1);
+          }}
+        >
+          <option value="">الحالة</option>
+          {Object.entries(STATUS_META).map(([key, meta]) => (
+            <option key={key} value={key}>
+              {meta.label}
+            </option>
+          ))}
+        </select>
+        <input
+          type="text"
+          className="filter-search-input"
+          placeholder="ابحثي برقم الطلب أو اسم الزبونة"
+          value={search}
+          onChange={(e) => {
+            setSearch(e.target.value);
+            setPage(1);
+          }}
+        />
+      </div>
+
+      <div className="status-tabs">
+        {tabs.map((tab) => (
+          <button
+            key={tab.key}
+            className={`status-tab ${activeTab === tab.key ? "active" : ""}`}
+            onClick={() => {
+              setActiveTab(tab.key);
               setPage(1);
             }}
           >
-            <option value="">الحالة</option>
-            {Object.entries(STATUS_META).map(([key, meta]) => (
-              <option key={key} value={key}>
-                {meta.label}
-              </option>
-            ))}
-          </select>
-          <input
-            type="text"
-            className="filter-search-input"
-            placeholder="ابحثي برقم الطلب أو اسم الزبونة"
-            value={search}
-            onChange={(e) => {
-              setSearch(e.target.value);
-              setPage(1);
-            }}
-          />
-        </div>
+            <span className="status-tab-count">{counts[tab.key] || 0}</span>{" "}
+            {tab.label}
+          </button>
+        ))}
+      </div>
 
-        <div className="status-tabs">
-          {tabs.map((tab) => (
-            <button
-              key={tab.key}
-              className={`status-tab ${activeTab === tab.key ? "active" : ""}`}
-              onClick={() => {
-                setActiveTab(tab.key);
-                setPage(1);
-              }}
-            >
-              <span className="status-tab-count">{counts[tab.key] || 0}</span> {tab.label}
-            </button>
-          ))}
-        </div>
-
-        <div className="dashboard-orders">
-          {loadingOrders ? (
-            <div className="empty-orders">
-              <p>جاري تحميل الطلبات...</p>
-            </div>
-          ) : pagedOrders.length === 0 ? (
-            <div className="empty-orders">
-              <p>لا توجد طلبات مطابقة.</p>
-            </div>
-          ) : (
-            <>
-              <div className="orders-table-wrap">
-                <table className="orders-table">
-                  <thead>
-                    <tr>
-                      <th>رقم الطلب</th>
-                      <th>اسم الزبونة</th>
-                      <th>التاريخ</th>
-                      <th>عدد المنتجات</th>
-                      <th>المبلغ التقديري</th>
-                      <th>الحالة</th>
-                      <th>الإجراء</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {pagedOrders.map((order) => (
-                      <tr key={order.id}>
-                        <td>#{order.id}</td>
-                        <td>{order.customer}</td>
-                        <td>{formatDateTime(order.date)}</td>
-                        <td>{formatProductsCount(order)}</td>
-                        <td>{order.amount} ₪</td>
-                        <td>
-                          <span
-                            className={`status-badge ${STATUS_META[order.status]?.className || ""}`}
+      <div className="dashboard-orders">
+        {loadingOrders ? (
+          <div className="empty-orders">
+            <p>جاري تحميل الطلبات...</p>
+          </div>
+        ) : pagedOrders.length === 0 ? (
+          <div className="empty-orders">
+            <p>لا توجد طلبات مطابقة.</p>
+          </div>
+        ) : (
+          <>
+            <div className="orders-table-wrap">
+              <table className="orders-table">
+                <thead>
+                  <tr>
+                    <th>رقم الطلب</th>
+                    <th>اسم الزبونة</th>
+                    <th>التاريخ</th>
+                    <th>عدد المنتجات</th>
+                    <th>المبلغ </th>
+                    <th>الحالة</th>
+                    <th>الإجراء</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {pagedOrders.map((order) => (
+                    <tr key={order.id}>
+                      <td>#{order.id}</td>
+                      <td>{order.customer}</td>
+                      <td>{formatDateTime(order.date)}</td>
+                      <td>{formatProductsCount(order)}</td>
+                      <td>
+                        {order.totalPrice != null
+                          ? `${order.totalPrice} ₪`
+                          : `${order.amount} ₪`}
+                      </td>{" "}
+                      <td>
+                        <span
+                          className={`status-badge ${STATUS_META[order.status]?.className || ""}`}
+                        >
+                          {STATUS_META[order.status]?.label || order.status}
+                        </span>
+                      </td>
+                      <td>
+                        {isClosedNegative(order.status) ? (
+                          // الطلب المرفوض/الملغي خلص، ما إلو تفاصيل نعرضها ولا حالة نحدثها
+                          <span className="no-action">—</span>
+                        ) : (
+                          <Link
+                            to={`/mediator-orders/${order.id}`}
+                            className="details-link"
                           >
-                            {STATUS_META[order.status]?.label || order.status}
-                          </span>
-                        </td>
-                        <td>
-                          {isClosedNegative(order.status) ? (
-                            // الطلب المرفوض/الملغي خلص، ما إلو تفاصيل نعرضها ولا حالة نحدثها
-                            <span className="no-action">—</span>
-                          ) : (
-                            <Link to={`/mediator-orders/${order.id}`} className="details-link">
-                              عرض التفاصيل
-                            </Link>
-                          )}
-                          {order.status === "pending" && (
-                            <span className="row-actions">
-                              <button
-                                className="text-action-btn accept"
-                                onClick={() => openAcceptModal(order.id)}
-                                disabled={acceptLoading}
-                              >
-                                قبول
-                              </button>
-                              <button
-                                className="text-action-btn reject"
-                                onClick={() => openRejectModal(order.id)}
-                                disabled={actionOrderId === order.id}
-                              >
-                                رفض
-                              </button>
-                            </span>
-                          )}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-
-              <div className="orders-pagination">
-                <button
-                  className="page-arrow"
-                  onClick={() => setPage((p) => Math.max(1, p - 1))}
-                  disabled={page === 1}
-                >
-                  ‹
-                </button>
-                <span className="page-number">{page}</span>
-                <button
-                  className="page-arrow"
-                  onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                  disabled={page === totalPages}
-                >
-                  ›
-                </button>
-                <span className="pagination-summary">
-                  عرض {pagedOrders.length} من {filteredOrders.length} طلب
-                </span>
-              </div>
-            </>
-          )}
-        </div>
-
-        {/* ===== نافذة تحديد السعر النهائي لكل منتج قبل تأكيد القبول ===== */}
-        {acceptOrderData && (
-          <div className="modal-overlay" onClick={closeAcceptModal}>
-            <div className="modal-card" onClick={(e) => e.stopPropagation()}>
-              <div className="modal-header">
-                <span>تحديد السعر النهائي — طلب #{acceptOrderData.id}</span>
-                <button className="modal-close-btn" onClick={closeAcceptModal}>
-                  ✕
-                </button>
-              </div>
-              <div className="modal-body">
-                <p className="service-description">
-                  حددي السعر النهائي الحقيقي لكل منتج قبل تأكيد قبول الطلب.
-                </p>
-
-                {(acceptOrderData.items || []).length === 0 ? (
-                  <p className="service-description">لا توجد منتجات بهذا الطلب.</p>
-                ) : (
-                  acceptOrderData.items.map((item) => (
-                    <div className="order-item-row" key={item.id}>
-                      {item.image && (
-                        <img src={item.image} alt={item.name} className="order-item-image" />
-                      )}
-                      <div className="order-item-info">
-                        <div className="order-item-name">{item.name}</div>
-                        {item.quantity && (
-                          <span className="service-fee-tag">الكمية: {item.quantity}</span>
+                            عرض التفاصيل
+                          </Link>
                         )}
-                      </div>
-                      <div className="accept-price-field">
-                        <label className="accept-price-label" htmlFor={`price-${item.id}`}>
-                          السعر (₪)
-                        </label>
-                        <input
-                          id={`price-${item.id}`}
-                          type="number"
-                          min="0"
-                          step="0.01"
-                          className="accept-price-input"
-                          value={acceptPrices[item.id] ?? ""}
-                          onChange={(e) => handlePriceChange(item.id, e.target.value)}
-                        />
-                      </div>
-                    </div>
-                  ))
-                )}
-
-                {acceptModalError && <p className="form-error">{acceptModalError}</p>}
-
-                <div className="modal-actions confirm-actions">
-                  <button
-                    className="btn btn-outline"
-                    onClick={closeAcceptModal}
-                    disabled={acceptSubmitting}
-                  >
-                    إلغاء
-                  </button>
-                  <button
-                    className="btn btn-primary"
-                    onClick={confirmAccept}
-                    disabled={acceptSubmitting}
-                  >
-                    {acceptSubmitting ? "جاري التأكيد..." : "تأكيد القبول"}
-                  </button>
-                </div>
-              </div>
+                        {order.status === "pending" && (
+                          <span className="row-actions">
+                            <button
+                              className="text-action-btn accept"
+                              onClick={() => openAcceptModal(order.id)}
+                              disabled={acceptLoading}
+                            >
+                              قبول
+                            </button>
+                            <button
+                              className="text-action-btn reject"
+                              onClick={() => openRejectModal(order.id)}
+                              disabled={actionOrderId === order.id}
+                            >
+                              رفض
+                            </button>
+                          </span>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
-          </div>
-        )}
 
-        {/* ===== نافذة سبب الرفض (اختياري) ===== */}
-        {rejectTargetId !== null && (
-          <div className="modal-overlay" onClick={closeRejectModal}>
-            <div className="modal-card" onClick={(e) => e.stopPropagation()}>
-              <div className="modal-header">
-                <span>رفض الطلب #{rejectTargetId}</span>
-                <button className="modal-close-btn" onClick={closeRejectModal}>
-                  ✕
+            <div className="orders-pagination">
+              <button
+                className="page-arrow"
+                onClick={() => setPage((p) => Math.max(1, p - 1))}
+                disabled={page === 1}
+              >
+                ‹
+              </button>
+              <span className="page-number">{page}</span>
+              <button
+                className="page-arrow"
+                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                disabled={page === totalPages}
+              >
+                ›
+              </button>
+              <span className="pagination-summary">
+                عرض {pagedOrders.length} من {filteredOrders.length} طلب
+              </span>
+            </div>
+          </>
+        )}
+      </div>
+
+      {/* ===== نافذة تحديد السعر النهائي لكل منتج قبل تأكيد القبول ===== */}
+      {acceptOrderData && (
+        <div className="modal-overlay" onClick={closeAcceptModal}>
+          <div className="modal-card" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <span>تحديد السعر النهائي — طلب #{acceptOrderData.id}</span>
+              <button className="modal-close-btn" onClick={closeAcceptModal}>
+                ✕
+              </button>
+            </div>
+            <div className="modal-body">
+              <p className="service-description">
+                حددي السعر النهائي الحقيقي لكل منتج قبل تأكيد قبول الطلب.
+              </p>
+
+              {(acceptOrderData.items || []).length === 0 ? (
+                <p className="service-description">
+                  لا توجد منتجات بهذا الطلب.
+                </p>
+              ) : (
+                acceptOrderData.items.map((item) => (
+                  <div className="order-item-row" key={item.id}>
+                    {item.image && (
+                      <img
+                        src={item.image}
+                        alt={item.name}
+                        className="order-item-image"
+                      />
+                    )}
+                    <div className="order-item-info">
+                      <div className="order-item-name">{item.name}</div>
+                      {item.quantity && (
+                        <span className="service-fee-tag">
+                          الكمية: {item.quantity}
+                        </span>
+                      )}
+                    </div>
+                    <div className="accept-price-field">
+                      <label
+                        className="accept-price-label"
+                        htmlFor={`price-${item.id}`}
+                      >
+                        السعر (₪)
+                      </label>
+                      <input
+                        id={`price-${item.id}`}
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        className="accept-price-input"
+                        value={acceptPrices[item.id] ?? ""}
+                        onChange={(e) =>
+                          handlePriceChange(item.id, e.target.value)
+                        }
+                      />
+                    </div>
+                  </div>
+                ))
+              )}
+
+              {acceptModalError && (
+                <p className="form-error">{acceptModalError}</p>
+              )}
+
+              <div className="modal-actions confirm-actions">
+                <button
+                  className="btn btn-outline"
+                  onClick={closeAcceptModal}
+                  disabled={acceptSubmitting}
+                >
+                  إلغاء
+                </button>
+                <button
+                  className="btn btn-primary"
+                  onClick={confirmAccept}
+                  disabled={acceptSubmitting}
+                >
+                  {acceptSubmitting ? "جاري التأكيد..." : "تأكيد القبول"}
                 </button>
               </div>
-              <div className="modal-body">
-                <p className="service-description">
-                  تقدري تكتبي سبب الرفض وبيوصل للزبونة (اختياري).
-                </p>
-                <textarea
-                  className="accept-price-input"
-                  style={{ width: "100%", minHeight: "90px" }}
-                  placeholder="مثال: المنتج غير متوفر حاليًا"
-                  value={rejectReason}
-                  onChange={(e) => setRejectReason(e.target.value)}
-                />
-                {actionError && <p className="form-error">{actionError}</p>}
-                <div className="modal-actions confirm-actions">
-                  <button
-                    className="btn btn-outline"
-                    onClick={closeRejectModal}
-                    disabled={actionOrderId === rejectTargetId}
-                  >
-                    رجوع
-                  </button>
-                  <button
-                    className="btn btn-primary"
-                    onClick={confirmReject}
-                    disabled={actionOrderId === rejectTargetId}
-                  >
-                    {actionOrderId === rejectTargetId ? "جاري الرفض..." : "تأكيد الرفض"}
-                  </button>
-                </div>
-              </div>
             </div>
           </div>
-        )}
+        </div>
+      )}
 
-        {acceptLoading && (
-          <div className="modal-overlay">
-            <div className="modal-card">
-              <div className="modal-body">
-                <p>جاري تحميل تفاصيل الطلب...</p>
+      {/* ===== نافذة سبب الرفض (اختياري) ===== */}
+      {rejectTargetId !== null && (
+        <div className="modal-overlay" onClick={closeRejectModal}>
+          <div className="modal-card" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <span>رفض الطلب #{rejectTargetId}</span>
+              <button className="modal-close-btn" onClick={closeRejectModal}>
+                ✕
+              </button>
+            </div>
+            <div className="modal-body">
+              <p className="service-description">
+                تقدري تكتبي سبب الرفض وبيوصل للزبونة (اختياري).
+              </p>
+              <textarea
+                className="accept-price-input"
+                style={{ width: "100%", minHeight: "90px" }}
+                placeholder="مثال: المنتج غير متوفر حاليًا"
+                value={rejectReason}
+                onChange={(e) => setRejectReason(e.target.value)}
+              />
+              {actionError && <p className="form-error">{actionError}</p>}
+              <div className="modal-actions confirm-actions">
+                <button
+                  className="btn btn-outline"
+                  onClick={closeRejectModal}
+                  disabled={actionOrderId === rejectTargetId}
+                >
+                  رجوع
+                </button>
+                <button
+                  className="btn btn-primary"
+                  onClick={confirmReject}
+                  disabled={actionOrderId === rejectTargetId}
+                >
+                  {actionOrderId === rejectTargetId
+                    ? "جاري الرفض..."
+                    : "تأكيد الرفض"}
+                </button>
               </div>
             </div>
           </div>
-        )}
+        </div>
+      )}
+
+      {acceptLoading && (
+        <div className="modal-overlay">
+          <div className="modal-card">
+            <div className="modal-body">
+              <p>جاري تحميل تفاصيل الطلب...</p>
+            </div>
+          </div>
+        </div>
+      )}
     </DashboardLayout>
   );
 }

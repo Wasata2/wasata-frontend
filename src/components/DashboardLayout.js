@@ -5,7 +5,8 @@ import { useFavorites } from "../context/FavoritesContext";
 import LogoutButton from "./LogoutButton";
 import { getMyStore, getReviews, BASE_URL } from "../api";
 import { getUnseenReviews, markReviewsSeen } from "../utils/reviewsSeen";
-
+import { useCustomerNotifications } from "../utils/customerNotifications";
+import { useMediatorNotifications } from "../utils/mediatorNotifications";
 // رابط الصورة بيجي أحيانًا كمسار نسبي
 function resolveImageUrl(path) {
   if (!path) return null;
@@ -46,6 +47,8 @@ export default function DashboardLayout({
 }) {
   const { user } = useAuth();
   const { favoritesCount } = useFavorites();
+const customerNotif = useCustomerNotifications(role === "customer");
+const brokerNotif = useMediatorNotifications(role === "broker");
 
   // لو الصفحة ما مرّرت avatarImage (undefined) والدور وسيطة، بنجيب صورة المتجر هون
   // بدل ما كل صفحة تعيد نفس الكود (هيك ما بتضيع الصورة بأي صفحة جديدة)
@@ -104,8 +107,15 @@ export default function DashboardLayout({
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   // الجرس 🔔: طلبات جديدة (من الصفحة) + تقييمات جديدة (من هون)، وللوسيطة بيروح دايمًا لصفحة الإشعارات
-  const bellLink = notifLink || (role === "broker" ? "/mediator-notifications" : null);
-  const bellCount = (notifBadge || 0) + (role === "broker" ? newReviewsCount : 0);
+  const bellLink =
+  role === "customer"
+    ? "/customer-notifications"
+    : notifLink || (role === "broker" ? "/mediator-notifications" : null);
+const bellCount =
+  role === "customer"
+    ? customerNotif.unreadCount
+    : (notifBadge || 0) +
+      (role === "broker" ? newReviewsCount + brokerNotif.unreadCount : 0);
 
   const links = role === "broker" ? BROKER_LINKS : CUSTOMER_LINKS;
   const roleLabel = role === "broker" ? "وسيطة" : "زبونة";

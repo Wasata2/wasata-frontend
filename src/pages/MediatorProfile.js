@@ -504,29 +504,12 @@ export default function MediatorProfile() {
             )}
             <div className="profile-hero-fact-line">
               <span className="profile-hero-fact-row">
-                🏬 نقطة الاستلام: {form.pickupLocation || "غير محددة"}
-              </span>
-              <span className="profile-hero-fact-row">
                 <span
                   className={`status-dot ${acceptingOrders ? "on" : "off"}`}
                 ></span>
                 {acceptingOrders ? "متاحة" : "غير متاحة"}
               </span>
             </div>
-            {form.deliveryZones.length > 0 && (
-              <div className="profile-hero-fact-line">
-                <span className="profile-hero-fact-row profile-hero-zones">
-                  🚚 توصيل إلى {form.deliveryZones.length} مناطق (
-                  {form.deliveryZones
-                    .map(
-                      (z) =>
-                        `${z.region} ${z.fee > 0 ? `${z.fee} ₪` : "مجاني"}`,
-                    )
-                    .join("، ")}
-                  )
-                </span>
-              </div>
-            )}
           </div>
         </div>
       </div>
@@ -561,7 +544,33 @@ export default function MediatorProfile() {
                 {form.bio || "لم تتم إضافة نبذة بعد."}
               </p>
             </div>
+            <div className="public-info-card">
+              <h3 className="public-info-card-title">الاستلام والتوصيل</h3>
 
+              <div className="delivery-info-block">
+                <div className="delivery-info-label">🏬 نقطة الاستلام</div>
+                <p className="public-info-bio-text">
+                  {form.pickupLocation || "غير محددة"}
+                </p>
+              </div>
+
+              <div className="delivery-info-block">
+                <div className="delivery-info-label">
+                  🚚 أسعار التوصيل للمنزل حسب المنطقة
+                </div>
+                {form.deliveryZones.length === 0 ? (
+                  <p className="public-info-bio-text">غير محددة</p>
+                ) : (
+                  <div className="zone-chips">
+                    {form.deliveryZones.map((z) => (
+                      <span className="zone-chip" key={z.region}>
+                        {z.region} · {z.fee > 0 ? `${z.fee} ₪` : "مجاني"}
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
             <div className="public-info-card">
               <h3 className="public-info-card-title">الخدمات المتاحة</h3>
               {loadingServices ? (

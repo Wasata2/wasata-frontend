@@ -17,7 +17,6 @@ export default function Home() {
           loop
           playsInline
         />
-        <div className="hero-overlay"></div>
         
         <div className="container">
                     <div className="hero-copy">

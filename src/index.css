@@ -182,12 +182,7 @@ nav a.active {
   object-fit:cover;
   z-index:0;
 }
-.hero-overlay{
-  position:absolute;
-  inset:0;
-  background:rgba(255,255,255,.5);
-  z-index:1;
-}
+
 .hero .container{
   position:relative;
   z-index:2;
@@ -5642,7 +5637,7 @@ footer .copyright {
 }
 /* ============ القسم الرئيسي مع فيديو الخلفية: نص قصير وواضح فوق الفيديو ============ */
 .hero {
-  min-height: 82vh;
+  min-height: 89vh;
   display: flex;
   align-items: center;
   padding: 80px 0;
@@ -5650,16 +5645,13 @@ footer .copyright {
 .hero .container {
   width: 100%;
 }
-.hero-overlay {
-  display: none;
-}
 .hero h1 {
-  color: #000;
+  color: #fff;
   text-shadow: 0 0 14px rgba(255, 255, 255, 0.7);
 }
 .hero p {
-  color: #000;
-  text-shadow: 0 0 12px rgba(255, 255, 255, 0.7);
+  color: #fff;
+  text-shadow: 0 2px 12px rgba(0, 0, 0, 0.6);
 }
 /* رجّعت الأزرار لشكلها الأصلي لأنو الأبيض كان مخصص للخلفية الغامقة */
 .hero .btn-primary {
@@ -5904,6 +5896,51 @@ footer .copyright {
   width: 38px;
   height: 38px;
   font-size: 14px;
+}
+/* ===== بطاقة الاستلام والتوصيل ===== */
+.delivery-info-block + .delivery-info-block {
+  margin-top: 18px;
+}
+
+.delivery-info-label {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--gray);
+  margin-bottom: 6px;
+}
+
+.delivery-info-block .zone-chips {
+  justify-content: flex-start;
+  background: #f7f8fc;
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 0;
+}
+.notif-unread-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #e53935;
+  margin-inline-end: 8px;
+}.price-approval-card {
+  border: 1.5px solid var(--blue);
+  background: var(--blue-tint);
+}
+.price-approval-text {
+  font-size: 13px;
+  color: var(--gray);
+  margin-bottom: 14px;
+}.review-order-layout {
+  grid-template-columns: 1fr 1fr;
+  align-items: start;
+}
+
+.review-order-col {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 0;
 }
 @media (max-width: 600px) {
   .hero {

@@ -548,189 +548,193 @@ export default function NewOrder() {
       )}
 
       {/* ============ المرحلة ٣: مراجعة الطلب وإرساله ============ */}
-      {step === "review" && selectedMediator && (
-        <div className="review-order-layout">
-          <div className="review-order-summary">
-            <div className="review-row">
-              <span>عدد المنتجات</span>
-              <span>{totalItems} منتج ({totalPieces} قطعة)</span>
-            </div>
-            {deliveryMethod === "home" && homeFeeLabel && (
-              <div className="review-row">
-                <span>رسوم التوصيل{hasZones && deliveryRegion ? ` (${deliveryRegion})` : ""}</span>
-                <span>{homeFeeLabel}</span>
-              </div>
-            )}
-            <p className="review-disclaimer">
-              ⚠ السعر بيتحدد من الوسيطة بعد ما توافق على طلبك، وبيوصلك إشعار فيه. رسوم التوصيل (إن وجدت) بتنضاف تلقائيًا للإجمالي.
-            </p>
-
-            {submitError && <div className="stagnant-form-error">{submitError}</div>}
-
-            <button
-              type="button"
-              className="btn btn-primary review-submit-btn"
-              onClick={handleFinalSubmit}
-              disabled={submitting || (pickupUnavailable && deliveryMethod === "pickup")}
-            >
-              {submitting ? "جاري الإرسال..." : `إرسال الطلب إلى ${selectedMediator.name} →`}
+      {/* ============ المرحلة ٣: مراجعة الطلب وإرساله ============ */}
+{step === "review" && selectedMediator && (
+  <div className="review-order-layout">
+    {/* العمود الأول (اليمين): الوسيطة + طريقة الاستلام */}
+    <div className="review-order-col">
+      <div className="review-side-card">
+        <div className="review-side-header">
+          <span>الوسيطة</span>
+          {!hasChosenMediator && (
+            <button type="button" className="change-mediator-link" onClick={() => setStep("mediator")}>
+              تغيير الوسيطة
             </button>
-            <button
-              type="button"
-              className="btn btn-outline review-back-btn"
-              onClick={() => setStep(hasChosenMediator ? "products" : "mediator")}
-            >
-              العودة
-            </button>
-            <p className="review-payment-note">
-              🔒 لن يتم خصم أي مبلغ الآن، الدفع يتم بعد تأكيد الوسيطة استلام طلبك.
-            </p>
-          </div>
-
-          <div className="review-order-side">
-            <div className="review-side-card">
-              <div className="review-side-header">
-                <span>الوسيطة</span>
-                {!hasChosenMediator && (
-                  <button type="button" className="change-mediator-link" onClick={() => setStep("mediator")}>
-                    تغيير الوسيطة
-                  </button>
-                )}
-              </div>
-              <div className="review-mediator-row">
-                <MediatorAvatar mediator={selectedMediator} />
-                <div>
-                  <div className="mediator-pick-bar-name">{selectedMediator.name}</div>
-                  <div className="mediator-pick-bar-meta">
-                    {[selectedMediator.city && `📍 ${selectedMediator.city}`, commissionText(selectedMediator)]
-                      .filter(Boolean)
-                      .join(" · ")}
-                  </div>
-                </div>
-              </div>
-
-              {/* الخدمات هون للمعرفة بس — ما في اختيار من الزبونة، وبيتحدد أول خدمة متاحة تلقائيًا بالخلفية */}
-              <div className="mediator-services-info">
-                <span>خدمات الوسيطة</span>
-                {profile.loading ? (
-                  <span>جاري تحميل الخدمات...</span>
-                ) : profile.services.length === 0 ? (
-                  <span className="stagnant-form-error">هاي الوسيطة ما ضافت أي خدمة، ما بتقدري تطلبي منها حاليًا.</span>
-                ) : (
-                  <div className="mediator-services-chips">
-                    {profile.services.map((sv) => (
-                      <span key={sv.id} className="mediator-service-chip">
-                        {sv.name}
-                      </span>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </div>
-
-            <div className="review-side-card">
-              <div className="review-side-header">
-                <span>طريقة استلام الطلب</span>
-              </div>
-              <label className="delivery-option">
-                {optionFeeLabel && (
-                  <span className={`delivery-fee-tag ${deliveryFee === 0 && !(hasZones && !deliveryRegion) ? "free" : ""}`}>
-                    {optionFeeLabel}
-                  </span>
-                )}
-                <span>التوصيل إلى المنزل</span>
-                <input
-                  type="radio"
-                  name="delivery"
-                  checked={deliveryMethod === "home"}
-                  onChange={() => {
-                    setDeliveryMethod("home");
-                    setSubmitError("");
-                  }}
-                />
-              </label>
-
-              {deliveryMethod === "home" && (
-                <div className="delivery-home-fields">
-                  {hasZones && (
-                    <label>
-                      <span>المنطقة</span>
-                      <select
-                        value={deliveryRegion}
-                        onChange={(e) => {
-                          setDeliveryRegion(e.target.value);
-                          setSubmitError("");
-                        }}
-                      >
-                        <option value="">اختاري منطقتك</option>
-                        {zones.map((z) => (
-                          <option key={z.region} value={z.region}>
-                            {z.region} — {z.fee > 0 ? `${z.fee} ₪` : "مجاني"}
-                          </option>
-                        ))}
-                      </select>
-                    </label>
-                  )}
-                  <label>
-                    <span>العنوان</span>
-                    <input
-                      type="text"
-                      placeholder="المدينة، الحي، أقرب معلم..."
-                      value={homeAddress}
-                      onChange={(e) => setHomeAddress(e.target.value)}
-                    />
-                  </label>
-                  <label>
-                    <span>رقم للتواصل</span>
-                    <input
-                      type="tel"
-                      placeholder="05xxxxxxxx"
-                      value={homePhone}
-                      onChange={(e) => setHomePhone(e.target.value)}
-                    />
-                  </label>
-                </div>
-              )}
-
-              <label className="delivery-option" style={!pickupAvailable ? { opacity: 0.55 } : undefined}>
-                <span className="delivery-fee-tag free">مجاني</span>
-                <span>الاستلام من نقطة استلام</span>
-                <input
-                  type="radio"
-                  name="delivery"
-                  checked={deliveryMethod === "pickup"}
-                  disabled={!pickupAvailable}
-                  onChange={() => setDeliveryMethod("pickup")}
-                />
-              </label>
-
-              {!pickupAvailable && (
-                <p className="delivery-pickup-note">هاي الوسيطة ما حدّدت نقطة استلام بعد.</p>
-              )}
-
-              {pickupAvailable && deliveryMethod === "pickup" && (
-                <p className="delivery-pickup-note">
-                  📍 نقطة الاستلام:{" "}
-                  {pickupLocation || selectedMediator.city || "غير محددة، تواصلي مع الوسيطة"}
-                </p>
-              )}
-            </div>
-
-            <div className="review-side-card">
-              <div className="review-side-header">
-                <span>ملاحظات للوسيطة</span>
-              </div>
-              <textarea
-                rows={4}
-                placeholder="أضيفي أي ملاحظات مهمة حول الطلب"
-                value={notesToMediator}
-                onChange={(e) => setNotesToMediator(e.target.value)}
-              ></textarea>
-              <p className="review-notes-hint">اختياري — ستصل ملاحظاتك إلى الوسيطة مع الطلب.</p>
+          )}
+        </div>
+        <div className="review-mediator-row">
+          <MediatorAvatar mediator={selectedMediator} />
+          <div>
+            <div className="mediator-pick-bar-name">{selectedMediator.name}</div>
+            <div className="mediator-pick-bar-meta">
+              {[selectedMediator.city && `📍 ${selectedMediator.city}`, commissionText(selectedMediator)]
+                .filter(Boolean)
+                .join(" · ")}
             </div>
           </div>
         </div>
-      )}
+
+        <div className="mediator-services-info">
+          <span>خدمات الوسيطة</span>
+          {profile.loading ? (
+            <span>جاري تحميل الخدمات...</span>
+          ) : profile.services.length === 0 ? (
+            <span className="stagnant-form-error">هاي الوسيطة ما ضافت أي خدمة، ما بتقدري تطلبي منها حاليًا.</span>
+          ) : (
+            <div className="mediator-services-chips">
+              {profile.services.map((sv) => (
+                <span key={sv.id} className="mediator-service-chip">
+                  {sv.name}
+                </span>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+
+      <div className="review-side-card">
+        <div className="review-side-header">
+          <span>طريقة استلام الطلب</span>
+        </div>
+        <label className="delivery-option">
+          {optionFeeLabel && (
+            <span className={`delivery-fee-tag ${deliveryFee === 0 && !(hasZones && !deliveryRegion) ? "free" : ""}`}>
+              {optionFeeLabel}
+            </span>
+          )}
+          <span>التوصيل إلى المنزل</span>
+          <input
+            type="radio"
+            name="delivery"
+            checked={deliveryMethod === "home"}
+            onChange={() => {
+              setDeliveryMethod("home");
+              setSubmitError("");
+            }}
+          />
+        </label>
+
+        {deliveryMethod === "home" && (
+          <div className="delivery-home-fields">
+            {hasZones && (
+              <label>
+                <span>المنطقة</span>
+                <select
+                  value={deliveryRegion}
+                  onChange={(e) => {
+                    setDeliveryRegion(e.target.value);
+                    setSubmitError("");
+                  }}
+                >
+                  <option value="">اختاري منطقتك</option>
+                  {zones.map((z) => (
+                    <option key={z.region} value={z.region}>
+                      {z.region} — {z.fee > 0 ? `${z.fee} ₪` : "مجاني"}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            )}
+            <label>
+              <span>العنوان</span>
+              <input
+                type="text"
+                placeholder="المدينة، الحي، أقرب معلم..."
+                value={homeAddress}
+                onChange={(e) => setHomeAddress(e.target.value)}
+              />
+            </label>
+            <label>
+              <span>رقم للتواصل</span>
+              <input
+                type="tel"
+                placeholder="05xxxxxxxx"
+                value={homePhone}
+                onChange={(e) => setHomePhone(e.target.value)}
+              />
+            </label>
+          </div>
+        )}
+
+        <label className="delivery-option" style={!pickupAvailable ? { opacity: 0.55 } : undefined}>
+          <span className="delivery-fee-tag free">مجاني</span>
+          <span>الاستلام من نقطة استلام</span>
+          <input
+            type="radio"
+            name="delivery"
+            checked={deliveryMethod === "pickup"}
+            disabled={!pickupAvailable}
+            onChange={() => setDeliveryMethod("pickup")}
+          />
+        </label>
+
+        {!pickupAvailable && (
+          <p className="delivery-pickup-note">هاي الوسيطة ما حدّدت نقطة استلام بعد.</p>
+        )}
+
+        {pickupAvailable && deliveryMethod === "pickup" && (
+          <p className="delivery-pickup-note">
+            📍 نقطة الاستلام:{" "}
+            {pickupLocation || selectedMediator.city || "غير محددة، تواصلي مع الوسيطة"}
+          </p>
+        )}
+      </div>
+    </div>
+
+    {/* العمود الثاني (اليسار): الملاحظات + صندوق الإرسال */}
+    <div className="review-order-col">
+      <div className="review-side-card">
+        <div className="review-side-header">
+          <span>ملاحظات للوسيطة</span>
+        </div>
+        <textarea
+          rows={4}
+          placeholder="أضيفي أي ملاحظات مهمة حول الطلب"
+          value={notesToMediator}
+          onChange={(e) => setNotesToMediator(e.target.value)}
+        ></textarea>
+        <p className="review-notes-hint">اختياري — ستصل ملاحظاتك إلى الوسيطة مع الطلب.</p>
+      </div>
+
+      <div className="review-order-summary">
+        <div className="review-row">
+          <span>عدد المنتجات</span>
+          <span>{totalItems} منتج ({totalPieces} قطعة)</span>
+        </div>
+        {deliveryMethod === "home" && homeFeeLabel && (
+          <div className="review-row">
+            <span>رسوم التوصيل{hasZones && deliveryRegion ? ` (${deliveryRegion})` : ""}</span>
+            <span>{homeFeeLabel}</span>
+          </div>
+        )}
+        <p className="review-disclaimer">
+          ⚠ السعر بيتحدد من الوسيطة بعد ما توافق على طلبك، وبيوصلك إشعار فيه. رسوم التوصيل (إن وجدت) بتنضاف تلقائيًا للإجمالي.
+        </p>
+
+        {submitError && <div className="stagnant-form-error">{submitError}</div>}
+
+        <button
+          type="button"
+          className="btn btn-primary review-submit-btn"
+          onClick={handleFinalSubmit}
+          disabled={submitting || (pickupUnavailable && deliveryMethod === "pickup")}
+        >
+          {submitting ? "جاري الإرسال..." : `إرسال الطلب إلى ${selectedMediator.name} →`}
+        </button>
+        <button
+          type="button"
+          className="btn btn-outline review-back-btn"
+          onClick={() => setStep(hasChosenMediator ? "products" : "mediator")}
+        >
+          العودة
+        </button>
+        <p className="review-payment-note">
+          🔒 لن يتم خصم أي مبلغ الآن، الدفع يتم بعد تأكيد الوسيطة استلام طلبك.
+        </p>
+      </div>
+    </div>
+  </div>
+)}
 
       {toast && <div className="new-order-toast">✓ {toast}</div>}
     </DashboardLayout>

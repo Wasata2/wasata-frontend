@@ -1,6 +1,5 @@
 import { parseApiDate } from "./utils/dates";
-import { normalizeZones } from "./utils/deliveryZones";
-
+import { normalizeZones, regionToApi } from "./utils/deliveryZones";
 const BASE_URL = "https://wasata-backend-production-nojkxd.laravel.cloud";
 
 export async function getCsrfCookie() {
@@ -136,7 +135,6 @@ export async function logoutUser() {
 // استبدلي دالة updateStore الموجودة بـ src/api.js بهاي النسخة (فقط أضفت pickup_location و delivery_fee).
 // ملاحظة: الباك اند لازم يقبل الحقلين بـ PATCH /api/stores/me، وإلا بيتجاهلهم.
 export async function updateStore(data) {
-
   const formData = new FormData();
   // Laravel بيحتاج POST + _method=PATCH لما بيكون فيه ملف (multipart/form-data)
   formData.append("_method", "PATCH");
@@ -169,7 +167,10 @@ export async function updateStore(data) {
       formData.append("delivery_zones", "");
     } else {
       data.delivery_zones.forEach((zone, i) => {
-        formData.append(`delivery_zones[${i}][region]`, zone.region);
+        formData.append(
+          `delivery_zones[${i}][region]`,
+          regionToApi(zone.region),
+        );
         formData.append(`delivery_zones[${i}][fee]`, zone.fee);
       });
     }
@@ -185,8 +186,6 @@ export async function updateStore(data) {
   });
 }
 
-
-
 export async function updateProfile(data) {
   const hasImage = !!data.image;
 
@@ -200,11 +199,11 @@ export async function updateProfile(data) {
       formData.append("full_name", data.full_name);
     if (data.phone !== undefined) formData.append("phone", data.phone);
     formData.append("image", data.image);
-        if (data.city !== undefined) {
+    if (data.city !== undefined) {
       formData.append("city", data.city);
       formData.append("location", data.city); // عمود المدينة بجدول المستخدمين اسمه location
     }
-        formData.append("image", data.image);
+    formData.append("image", data.image);
     formData.append("profile_picture", data.image); // اسم عمود صورة المستخدمين بالباك اند
     result = await request("/api/auth/profile", {
       method: "POST",
@@ -217,7 +216,7 @@ export async function updateProfile(data) {
     const body = {};
     if (data.full_name !== undefined) body.full_name = data.full_name;
     if (data.phone !== undefined) body.phone = data.phone;
-       if (data.city !== undefined) {
+    if (data.city !== undefined) {
       body.city = data.city;
       body.location = data.city; // عمود المدينة بجدول المستخدمين اسمه location
     }
@@ -559,13 +558,17 @@ export const CUSTOMER_ORDER_STEP_LABELS = [
 ];
 
 // طلبات الزبونة نفسها (تختلف عن getOrders اللي بترجع طلبات الوسيطة الواردة)
+// طلبات الزبونة نفسها (تختلف عن getOrders اللي بترجع طلبات الوسيطة الواردة)
 function mapMyOrderFromApi(o) {
   const stepIndex = CUSTOMER_ORDER_STATUSES.indexOf(o.status);
   const isCancelled = o.status === "cancelled" || o.status === "rejected";
   const isCompleted = o.status === "received" || o.status === "completed";
+  // الوسيطة حددت السعر وبانتظار موافقة الزبونة
+  const isAwaiting = o.status === "awaiting_approval";
 
   return {
     id: o.id,
+    orderType: o.order_type || "shein",
     store: o.store_name || "—",
     storeId: o.store_id ?? o.store?.id ?? null,
     storeImage: resolveStoreImageUrl(
@@ -580,13 +583,15 @@ function mapMyOrderFromApi(o) {
       o.items_sum_quantity ??
       o.total_items_quantity ??
       null,
-    price: o.estimated_amount ?? o.total_amount ?? 0,
+    // السعر النهائي (منتجات + توصيل) من totals، وإلا الإجمالي، وإلا التقدير الأولي
+    price: mapTotals(o)?.totalAmount ?? o.total_amount ?? o.estimated_amount ?? 0,
     date: pickOrderDate(o, buildStatusTimes(o)),
     statusUpdatedAt: o.status_updated_at || o.updated_at || o.created_at || "",
     statusTimes: buildStatusTimes(o),
     reviewed: !!o.reviewed,
     rejectionReason: o.rejection_reason || null,
     rawStatus: o.status,
+    awaitingApproval: isAwaiting,
     type: isCancelled ? "cancelled" : isCompleted ? "completed" : "active",
     statusLabel: isCancelled
       ? o.status === "rejected"
@@ -594,7 +599,10 @@ function mapMyOrderFromApi(o) {
         : "ملغي"
       : isCompleted
         ? "مكتمل"
-        : CUSTOMER_ORDER_STEP_LABELS[stepIndex] || "تم الطلب",
+        : isAwaiting
+          ? "بانتظار موافقتك على السعر"
+          : CUSTOMER_ORDER_STEP_LABELS[stepIndex] || "تم الطلب",
+    // بحالة الانتظار بنضل عند الخطوة الأولى (تم الطلب)
     currentStepIndex: stepIndex >= 0 ? stepIndex : 0,
   };
 }
@@ -619,16 +627,26 @@ export async function getMyOrders() {
 function mapMyOrderDetailFromApi(o) {
   const items = (o.items || []).map(mapOrderItemFromApi);
   const totalPrice = sumItemPrices(items);
+  const statusTimes = buildStatusTimes(o);
+  const stepIndex = CUSTOMER_ORDER_STATUSES.indexOf(o.status);
   return {
     id: o.id,
+    orderType: o.order_type || "shein",
     store: o.store_name || (o.store && o.store.name) || "الوسيطة",
-    date: o.date || o.created_at || "",
+    date: pickOrderDate(o, statusTimes),
     statusUpdatedAt: o.status_updated_at || o.updated_at || o.created_at,
+    statusTimes,
     status: o.status,
+    rawStatus: o.status,
+    awaitingApproval: o.status === "awaiting_approval",
+    currentStepIndex: stepIndex >= 0 ? stepIndex : 0,
     // الإجمالي النهائي من الباك اند (منتجات + توصيل) وإلا مجموع المنتجات
     price: mapTotals(o)?.totalAmount ?? totalPrice,
     rejectionReason: o.rejection_reason || o.cancellation_reason || null,
-    deliveryMethod: o.delivery_method === "home_delivery" ? "توصيل إلى المنزل" : "استلام من نقطة",
+    deliveryMethod:
+      o.delivery_method === "home_delivery"
+        ? "توصيل إلى المنزل"
+        : "استلام من نقطة",
     deliveryType: o.delivery_method || null,
     address: o.address || o.delivery_address || "",
     contactPhone: pickContactPhone(o),
@@ -640,7 +658,7 @@ function mapMyOrderDetailFromApi(o) {
 
 export async function getMyOrderDetail(id) {
   const result = await request(`/api/orders/${id}`, {
-    errorMessage: 'تعذر جلب تفاصيل الطلب',
+    errorMessage: "تعذر جلب تفاصيل الطلب",
   });
   return mapMyOrderDetailFromApi(mergeOrderDetailResponse(result));
 }
@@ -662,7 +680,11 @@ export async function createOrder({
   form.append("delivery_method", deliveryMethod);
   if (address) form.append("address", address);
   if (contactPhone) form.append("contact_phone", contactPhone);
-  if (deliveryRegion) form.append("delivery_region", deliveryRegion);
+  if (deliveryRegion) {
+    const apiRegion = regionToApi(deliveryRegion);
+    form.append("delivery_region", apiRegion);
+    form.append("delivery_area", apiRegion); // احتياط لو الباك اند صار يقرا الاسم الجديد
+  }
   if (customerNote) form.append("customer_note", customerNote);
   if (estimatedAmount !== null && estimatedAmount !== undefined) {
     form.append("estimated_amount", estimatedAmount);
@@ -787,19 +809,31 @@ export async function cancelOrder(id) {
   });
   return mapOrderFromApi(result.order || result);
 }
+// الزبونة بتقبل السعر اللي حددته الوسيطة
+export async function approveOrderPrice(id) {
+  const result = await request(`/api/orders/${id}/approve-price`, {
+    method: "PATCH",
+    errorMessage: "تعذر قبول السعر",
+  });
+  return mapOrderFromApi(result.order || result);
+}
 
+// الزبونة بترفض السعر، فبيتلغى الطلب
+export async function declineOrderPrice(id) {
+  const result = await request(`/api/orders/${id}/decline-price`, {
+    method: "PATCH",
+    errorMessage: "تعذر رفض السعر",
+  });
+  return mapOrderFromApi(result.order || result);
+}
 // تقييمات الزبائن الحقيقية عن الوسيطة الحالية
 function mapReviewFromApi(r) {
+  console.log("review raw:", r.customer_name, r.customer_profile_picture_url);
+  const rawImage = r.customer_profile_picture_url;
   return {
     id: r.id,
     customer: r.customer_name || r.customer || r.user_name || "زبونة",
-        customerImage: resolveStoreImageUrl(
-      r.customer_image_url ||
-        r.customer_profile_picture_url ||
-        r.customer_profile_picture ||
-        r.customer?.profile_picture_url ||
-        r.user?.profile_picture_url,
-    ),
+    customerImage: rawImage ? resolveStockImage(rawImage) : null,
     date: r.created_at || r.date,
     rating: r.rating,
     comment: r.comment || r.review || "",
@@ -1032,7 +1066,8 @@ export async function getStockItems(filters = {}) {
   const result = await request(`/api/stock-items?${params.toString()}`, {
     errorMessage: "تعذر جلب القطع الراكدة",
   });
-  const list = unwrapStockList(result);  return Array.isArray(list) ? list.map(mapStockItemFromApi) : [];
+  const list = unwrapStockList(result);
+  return Array.isArray(list) ? list.map(mapStockItemFromApi) : [];
 }
 
 // إضافة قطعة جديدة
@@ -1137,7 +1172,7 @@ export async function getStoreStockItems(storeId) {
     errorMessage: "تعذر جلب القطع المعروضة",
   });
   const list = unwrapStockList(result);
-    return Array.isArray(list) ? list.map(mapStockItemFromApi) : [];
+  return Array.isArray(list) ? list.map(mapStockItemFromApi) : [];
 }
 
 // جهة الزبونة: طلب حجز قطعة
@@ -1154,7 +1189,7 @@ export async function reserveStockItem(
   if (address) body.address = address;
   if (contactPhone) body.contact_phone = contactPhone;
   if (customerNote) body.customer_note = customerNote;
-  if (deliveryRegion) body.delivery_region = deliveryRegion;
+  if (deliveryRegion) body.delivery_area = regionToApi(deliveryRegion);
 
   const result = await request(`/api/stock-items/${id}/reserve`, {
     method: "PATCH",
@@ -1163,6 +1198,5 @@ export async function reserveStockItem(
   });
   return mapStockItemFromApi(unwrapStockItem(result));
 }
-
 
 export { BASE_URL };
