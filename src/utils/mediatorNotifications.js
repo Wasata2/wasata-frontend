@@ -46,14 +46,19 @@ function buildNotifications(orders) {
       });
     }
     if (o.status === "cancelled" && o.orderType !== "stock_item") {
-      list.push({
-        id: `${o.id}:cancelled`,
-        orderId: o.id,
-        kind: "cancelled",
-        text: `${o.customer || "الزبونة"} ألغت الطلب #${o.id} (أو رفضت السعر)`,
-        time,
-      });
-    }
+  const declinedPrice =
+    !!o.statusTimes?.awaiting_approval ||
+    /رفضت الزبونة السعر/.test(o.rejectionReason || "");
+  list.push({
+    id: `${o.id}:cancelled`,
+    orderId: o.id,
+    kind: declinedPrice ? "declined" : "cancelled",
+    text: declinedPrice
+      ? `${o.customer || "الزبونة"} رفضت سعر الطلب #${o.id} وتم إلغاؤه`
+      : `${o.customer || "الزبونة"} ألغت الطلب #${o.id}`,
+    time,
+  });
+}
   });
   return list.sort((a, b) => new Date(b.time) - new Date(a.time));
 }

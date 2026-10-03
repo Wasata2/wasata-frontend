@@ -4,6 +4,8 @@ import DashboardLayout from "../components/DashboardLayout";
 import { useAuth } from "../context/AuthContext";
 import { getStores, getMyOrders } from "../api";
 import { MediatorCard } from "./ExploreMediators";
+import { formatDateTime } from "../utils/dates";
+
 
 // خطوات مسار الطلب — نفس ترتيب صفحة "طلباتي"
 const TIMELINE_STEPS = [
@@ -35,14 +37,22 @@ export default function CustomerDashboard() {
 };
 
   const [pendingOrder, setPendingOrder] = useState(null);
-  useEffect(() => {
-    getMyOrders()
-      .then(({ orders }) => {
-        const active = orders.find((o) => o.type === "active");
-        setPendingOrder(active || null);
-      })
-      .catch(() => {});
-  }, []);
+useEffect(() => {
+  getMyOrders()
+    .then(({ orders }) => {
+      // بنعرض بس الطلبات الجديدة: "تم الطلب" أو "بانتظار موافقتك على السعر"
+      const fresh = orders.filter(
+        (o) => o.rawStatus === "pending" || o.rawStatus === "awaiting_approval",
+      );
+      // الأحدث أولًا
+fresh.sort(
+  (a, b) =>
+    Number(b.awaitingApproval) - Number(a.awaitingApproval) ||
+    new Date(b.date) - new Date(a.date),
+);      setPendingOrder(fresh[0] || null);
+    })
+    .catch(() => {});
+}, []);
 
   // كل الوسيطات — منها بنطلّع المقترحات ونتائج البحث
   const [allMediators, setAllMediators] = useState([]);
@@ -158,15 +168,17 @@ export default function CustomerDashboard() {
             </div>
             <div>
               <div className="order-date-label">تاريخ الطلب</div>
-              <div className="order-date-value">{pendingOrder.date}</div>
-            </div>
+<div className="order-date-value">{formatDateTime(pendingOrder.date)}</div>            </div>
           </div>
 
-          <div className="order-actions">
-            <Link to="/my-orders" className="btn btn-outline">
-              📄 عرض التفاصيل
-            </Link>
-          </div>
+         <div className="order-actions">
+  <Link
+    to={`/orders/${pendingOrder.id}`}
+    className={`btn ${pendingOrder.awaitingApproval ? "btn-primary" : "btn-outline"}`}
+  >
+    {pendingOrder.awaitingApproval ? "🔔 مراجعة السعر والرد" : "📄 عرض التفاصيل"}
+  </Link>
+</div>
 
           <div className="order-timeline">
             {TIMELINE_STEPS.map((label, index) => {

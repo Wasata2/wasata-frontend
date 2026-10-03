@@ -482,15 +482,15 @@ export default function MediatorOrders() {
         <div className="modal-overlay" onClick={closeAcceptModal}>
           <div className="modal-card" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
-              <span>تحديد السعر النهائي — طلب #{acceptOrderData.id}</span>
+<span>تسعير الطلب #{acceptOrderData.id}</span>
               <button className="modal-close-btn" onClick={closeAcceptModal}>
                 ✕
               </button>
             </div>
             <div className="modal-body">
-              <p className="service-description">
-                حددي السعر النهائي الحقيقي لكل منتج قبل تأكيد قبول الطلب.
-              </p>
+             <p className="service-description">
+  حددي السعر النهائي لكل منتج، وبيوصل للزبونة لتوافق عليه قبل ما يبدأ التنفيذ.
+</p>
 
               {(acceptOrderData.items || []).length === 0 ? (
                 <p className="service-description">
@@ -554,7 +554,7 @@ export default function MediatorOrders() {
                   onClick={confirmAccept}
                   disabled={acceptSubmitting}
                 >
-                  {acceptSubmitting ? "جاري التأكيد..." : "تأكيد القبول"}
+                  {acceptSubmitting ? "جاري الإرسال..." : "إرسال السعر للزبونة"}
                 </button>
               </div>
             </div>

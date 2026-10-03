@@ -163,8 +163,8 @@ export default function MediatorNotifications() {
                 <div className="notification-card-actions">
                   {/* القبول بدو تحديد سعر كل منتج، فبيتم من صفحة الطلبات */}
                   <Link to="/mediator-orders" className="details-link">
-                    قبول وتحديد السعر
-                  </Link>
+تحديد السعر وإرساله للزبونة   
+               </Link>
                   <Link to={`/mediator-orders/${order.id}`} className="details-link">
                     عرض التفاصيل
                   </Link>

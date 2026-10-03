@@ -27,11 +27,16 @@ export function applyStatusUpdate(prev, updated) {
     status: updated.status,
     statusUpdatedAt: updated.statusUpdatedAt,
     amount: updated.amount || prev.amount,
+    totals: updated.totals || prev.totals,
     statusTimes: {
       ...(prev.statusTimes || {}),
       ...(updated.statusTimes || {}),
       ...(updated.status && updated.statusUpdatedAt
-        ? { [updated.status]: (updated.statusTimes || {})[updated.status] || updated.statusUpdatedAt }
+        ? {
+            [updated.status]:
+              (updated.statusTimes || {})[updated.status] ||
+              updated.statusUpdatedAt,
+          }
         : {}),
     },
   };

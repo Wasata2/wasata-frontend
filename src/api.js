@@ -344,7 +344,6 @@ export async function getOrderStats() {
   };
 }
 
-// قبول طلب — بينقل الحالة من pending إلى ordered_from_shein
 export async function acceptOrder(id, items) {
   const result = await request(`/api/orders/${id}/accept`, {
     method: "PATCH",
@@ -413,6 +412,7 @@ function pickCustomerName(o) {
 // (status_history: [{ status, created_at }]) أو من أعمدة مثل shipped_at / arrived_at.
 const ORDER_STATUS_KEYS = [
   "pending",
+  "awaiting_approval",
   "ordered_from_shein",
   "shipped",
   "arrived",
@@ -513,8 +513,11 @@ function mapOrderFromApi(o) {
     statusTimes: buildStatusTimes(o),
     itemsCount: o.items_count ?? rawItems.length,
     totalQuantity,
-    amount: o.estimated_amount ?? o.total_amount ?? o.amount ?? 0,
-    status: o.status,
+amount: (() => {
+  const t = mapTotals(o);
+  if (t?.priced) return t.totalAmount;
+  return o.estimated_amount ?? o.total_amount ?? o.amount ?? 0;
+})(),    status: o.status,
     items,
     // بيانات التوصيل (بتظهر للوسيطة بصفحة تفاصيل الطلب)
     deliveryType: o.delivery_method || null, // "home_delivery" | "pickup"
@@ -526,8 +529,7 @@ function mapOrderFromApi(o) {
     customerNote: extractUserNote(o.customer_note),
     totalPrice: sumItemPrices(items),
     totals: mapTotals(o),
-    rejectionReason: o.rejection_reason || null,
-  };
+rejectionReason: o.rejection_reason || o.cancellation_reason || null,  };
 }
 
 // الإجماليات من الباك اند (totals): total_amount = items_total + delivery_fee
@@ -600,8 +602,7 @@ function mapMyOrderFromApi(o) {
     statusUpdatedAt: o.status_updated_at || o.updated_at || o.created_at || "",
     statusTimes: buildStatusTimes(o),
     reviewed: !!o.reviewed,
-    rejectionReason: o.rejection_reason || null,
-    rawStatus: o.status,
+rejectionReason: o.rejection_reason || o.cancellation_reason || null,    rawStatus: o.status,
     awaitingApproval: isAwaiting,
     type: isCancelled ? "cancelled" : isCompleted ? "completed" : "active",
     statusLabel: isCancelled
