@@ -18,7 +18,12 @@ const STATUS_STEPS = [
   { key: "inspected", label: "تم الفحص" },
   { key: "received", label: "تم الاستلام" },
 ];
-
+function decideErrorMessage(err) {
+  if (err.code === "ORDER_NOT_AWAITING_APPROVAL")
+    return "هاد الطلب ما عاد بانتظار موافقتك، حدّثنا الصفحة.";
+  if (err.code === "ORDER_NOT_YOURS") return "هاد الطلب مش إلك.";
+  return err.message;
+}
 export default function CustomerOrderDetails() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -66,8 +71,7 @@ export default function CustomerOrderDetails() {
       await approveOrderPrice(id);
       load();
     } catch (err) {
-      setDecideError(err.message);
-    } finally {
+setDecideError(decideErrorMessage(err))    } finally {
       setDeciding(false);
     }
   };
@@ -80,7 +84,7 @@ export default function CustomerOrderDetails() {
       await declineOrderPrice(id);
       navigate("/my-orders");
     } catch (err) {
-      setDecideError(err.message);
+setDecideError(decideErrorMessage(err))
     } finally {
       setDeciding(false);
     }

@@ -3,7 +3,11 @@ import { Link, useParams } from "react-router-dom";
 import { getOrderDetails, updateOrderStatus } from "../api";
 import DashboardLayout from "../components/DashboardLayout";
 import { formatDateTime } from "../utils/dates";
-import { formatProductsCount, getStepTime, applyStatusUpdate } from "../utils/orders";
+import {
+  formatProductsCount,
+  getStepTime,
+  applyStatusUpdate,
+} from "../utils/orders";
 
 const STATUS_STEPS = [
   { key: "pending", label: "تم الطلب" },
@@ -56,12 +60,16 @@ export default function OrderDetails() {
       ? 0
       : STATUS_STEPS.findIndex((s) => s.key === order.status)
     : -1;
-  const isCancelled = order && (order.status === "cancelled" || order.status === "rejected");
+  const isCancelled =
+    order && (order.status === "cancelled" || order.status === "rejected");
   const isPending = order && order.status === "pending";
   const isLocked = isPending || isAwaiting;
   const isFinalStep = currentStepIndex === STATUS_STEPS.length - 1;
   const nextStep =
-    !isCancelled && !isLocked && currentStepIndex >= 0 && currentStepIndex < STATUS_STEPS.length - 1
+    !isCancelled &&
+    !isLocked &&
+    currentStepIndex >= 0 &&
+    currentStepIndex < STATUS_STEPS.length - 1
       ? STATUS_STEPS[currentStepIndex + 1]
       : null;
 
@@ -80,20 +88,24 @@ export default function OrderDetails() {
   };
 
   const confirmUpdate = async () => {
-    if (!nextStep) return;
-    setUpdating(true);
-    setUpdateError("");
-    try {
-      const updated = await updateOrderStatus(order.id, nextStep.key);
-      setOrder((prev) => applyStatusUpdate(prev, updated));
-      setConfirmModalOpen(false);
-    } catch (err) {
-      setUpdateError(err.message);
-      setConfirmModalOpen(false);
-    } finally {
-      setUpdating(false);
-    }
-  };
+  if (!nextStep) return;
+  setUpdating(true);
+  setUpdateError("");
+  try {
+    const updated = await updateOrderStatus(order.id, nextStep.key);
+    setOrder((prev) => applyStatusUpdate(prev, updated));
+    setConfirmModalOpen(false);
+  } catch (err) {
+    setUpdateError(
+      err.code === "ORDER_AWAITING_APPROVAL"
+        ? "الطلب بانتظار موافقة الزبونة على السعر، ما بتقدري تحدّثي حالته هلأ."
+        : err.message,
+    );
+    setConfirmModalOpen(false);
+  } finally {
+    setUpdating(false);
+  }
+};
 
   return (
     <DashboardLayout role="broker">
@@ -130,7 +142,9 @@ export default function OrderDetails() {
               </div>
               <div>
                 <div className="profile-field-label">تاريخ الطلب</div>
-                <div className="profile-field-value">{formatDateTime(order.date)}</div>
+                <div className="profile-field-value">
+                  {formatDateTime(order.date)}
+                </div>
               </div>
               <div>
                 <div className="profile-field-label">اسم الزبونة</div>
@@ -138,7 +152,9 @@ export default function OrderDetails() {
               </div>
               <div>
                 <div className="profile-field-label">عدد المنتجات</div>
-                <div className="profile-field-value">{formatProductsCount(order)}</div>
+                <div className="profile-field-value">
+                  {formatProductsCount(order)}
+                </div>
               </div>
             </div>
           </div>
@@ -159,13 +175,17 @@ export default function OrderDetails() {
               {order.deliveryType === "pickup" && (
                 <div>
                   <div className="profile-field-label">نقطة الاستلام</div>
-                  <div className="profile-field-value">{order.pickupLocation || "—"}</div>
+                  <div className="profile-field-value">
+                    {order.pickupLocation || "—"}
+                  </div>
                 </div>
               )}
               {order.deliveryType === "home_delivery" && (
                 <div>
                   <div className="profile-field-label">العنوان</div>
-                  <div className="profile-field-value">{order.address || "—"}</div>
+                  <div className="profile-field-value">
+                    {order.address || "—"}
+                  </div>
                 </div>
               )}
               <div>
@@ -182,7 +202,10 @@ export default function OrderDetails() {
               </div>
             </div>
             {order.customerNote && (
-              <div className="service-notes" style={{ whiteSpace: "pre-line", marginTop: "12px" }}>
+              <div
+                className="service-notes"
+                style={{ whiteSpace: "pre-line", marginTop: "12px" }}
+              >
                 ملاحظات الزبونة: {order.customerNote}
               </div>
             )}
@@ -194,9 +217,16 @@ export default function OrderDetails() {
 
               <div className="order-track-row">
                 {STATUS_STEPS.map((step, index) => {
-                  const isDone = index < currentStepIndex || (isFinalStep && index === currentStepIndex);
+                  const isDone =
+                    index < currentStepIndex ||
+                    (isFinalStep && index === currentStepIndex);
                   const isCurrent = index === currentStepIndex && !isFinalStep;
-                  const timestamp = getStepTime(order, step.key, index, currentStepIndex);
+                  const timestamp = getStepTime(
+                    order,
+                    step.key,
+                    index,
+                    currentStepIndex,
+                  );
                   return (
                     <div className="order-track-step" key={step.key}>
                       <div className="order-track-step-top">
@@ -223,7 +253,9 @@ export default function OrderDetails() {
                         {step.label}
                       </div>
                       {(isDone || isCurrent) && timestamp && (
-                        <div className="order-track-date">{formatDateTime(timestamp)}</div>
+                        <div className="order-track-date">
+                          {formatDateTime(timestamp)}
+                        </div>
                       )}
                     </div>
                   );
@@ -245,16 +277,18 @@ export default function OrderDetails() {
           {!isCancelled && (
             <div className="order-details-card order-status-update-card">
               <div>
-                <h2 className="order-details-section-title">تحديث حالة الطلب</h2>
+                <h2 className="order-details-section-title">
+                  تحديث حالة الطلب
+                </h2>
                 {isPending ? (
                   <p className="service-description">
-                    هاد الطلب لسا بانتظار قبول أو رفض — أكّدي القبول (مع تحديد السعر النهائي
-                    لكل منتج) أو الرفض من صفحة "الطلبات".
+                    هاد الطلب لسا بانتظار قبول أو رفض — أكّدي القبول (مع تحديد
+                    السعر النهائي لكل منتج) أو الرفض من صفحة "الطلبات".
                   </p>
                 ) : isAwaiting ? (
                   <p className="service-description">
-                    حددتي سعر الطلب وبانتظار موافقة الزبونة عليه. رح يكمل الطلب مساره
-                    تلقائيًا بمجرد ما توافق، وتقدري تحدّثي حالته بعدها.
+                    حددتي سعر الطلب وبانتظار موافقة الزبونة عليه. رح يكمل الطلب
+                    مساره تلقائيًا بمجرد ما توافق، وتقدري تحدّثي حالته بعدها.
                   </p>
                 ) : (
                   <>
@@ -292,12 +326,18 @@ export default function OrderDetails() {
           <div className="order-details-card">
             <h2 className="order-details-section-title">المنتجات</h2>
             {(order.items || []).length === 0 ? (
-              <p className="service-description">لا توجد تفاصيل منتجات لهذا الطلب.</p>
+              <p className="service-description">
+                لا توجد تفاصيل منتجات لهذا الطلب.
+              </p>
             ) : (
               order.items.map((item) => (
                 <div className="order-item-row" key={item.id}>
                   {item.image && (
-                    <img src={item.image} alt={item.name} className="order-item-image" />
+                    <img
+                      src={item.image}
+                      alt={item.name}
+                      className="order-item-image"
+                    />
                   )}
                   <div className="order-item-info">
                     <div className="order-item-name">{item.name}</div>
@@ -312,13 +352,25 @@ export default function OrderDetails() {
                       </a>
                     )}
                     <div className="order-item-tags">
-                      {item.size && <span className="service-fee-tag">المقاس: {item.size}</span>}
-                      {item.color && <span className="service-fee-tag">اللون: {item.color}</span>}
+                      {item.size && (
+                        <span className="service-fee-tag">
+                          المقاس: {item.size}
+                        </span>
+                      )}
+                      {item.color && (
+                        <span className="service-fee-tag">
+                          اللون: {item.color}
+                        </span>
+                      )}
                       {item.quantity && (
-                        <span className="service-fee-tag">الكمية: {item.quantity}</span>
+                        <span className="service-fee-tag">
+                          الكمية: {item.quantity}
+                        </span>
                       )}
                       {item.price != null && (
-                        <span className="service-fee-tag">سعر القطعة: {item.price} ₪</span>
+                        <span className="service-fee-tag">
+                          سعر القطعة: {item.price} ₪
+                        </span>
                       )}
                       {item.price != null && Number(item.quantity) > 1 && (
                         <span className="service-fee-tag">
@@ -326,17 +378,27 @@ export default function OrderDetails() {
                         </span>
                       )}
                     </div>
-                    {item.notes && <div className="service-notes">ملاحظة: {item.notes}</div>}
+                    {item.notes && (
+                      <div className="service-notes">ملاحظة: {item.notes}</div>
+                    )}
                   </div>
                 </div>
               ))
             )}
-            {(order.items || []).length > 0 && order.totals && order.totals.deliveryFee > 0 && (
-              <div style={{ display: "flex", justifyContent: "space-between", marginTop: "14px" }}>
-                <span>رسوم التوصيل</span>
-                <span>{order.totals.deliveryFee} ₪</span>
-              </div>
-            )}
+            {(order.items || []).length > 0 &&
+              order.totals &&
+              order.totals.deliveryFee > 0 && (
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    marginTop: "14px",
+                  }}
+                >
+                  <span>رسوم التوصيل</span>
+                  <span>{order.totals.deliveryFee} ₪</span>
+                </div>
+              )}
             {(order.items || []).length > 0 && (
               <div
                 style={{
@@ -361,21 +423,31 @@ export default function OrderDetails() {
           </div>
 
           {updateModalOpen && (
-            <div className="modal-overlay" onClick={() => setUpdateModalOpen(false)}>
+            <div
+              className="modal-overlay"
+              onClick={() => setUpdateModalOpen(false)}
+            >
               <div className="modal-card" onClick={(e) => e.stopPropagation()}>
                 <div className="modal-header">
                   <span>تغيير حالة الطلب</span>
-                  <button className="modal-close-btn" onClick={() => setUpdateModalOpen(false)}>
+                  <button
+                    className="modal-close-btn"
+                    onClick={() => setUpdateModalOpen(false)}
+                  >
                     ✕
                   </button>
                 </div>
                 <div className="modal-body">
                   <p className="current-status-line">
-                    الحالة الحالية: <strong>{STATUS_META[order.status]?.label}</strong>
+                    الحالة الحالية:{" "}
+                    <strong>{STATUS_META[order.status]?.label}</strong>
                   </p>
                   <label>الانتقال إلى:</label>
                   {nextStep && (
-                    <button className="btn btn-primary next-status-btn" onClick={goToConfirm}>
+                    <button
+                      className="btn btn-primary next-status-btn"
+                      onClick={goToConfirm}
+                    >
                       {nextStep.label}
                     </button>
                   )}
@@ -386,7 +458,10 @@ export default function OrderDetails() {
 
           {confirmModalOpen && (
             <div className="modal-overlay" onClick={cancelConfirm}>
-              <div className="modal-card confirm-modal-card" onClick={(e) => e.stopPropagation()}>
+              <div
+                className="modal-card confirm-modal-card"
+                onClick={(e) => e.stopPropagation()}
+              >
                 <div className="modal-header">
                   <span>تأكيد التحديث</span>
                   <button className="modal-close-btn" onClick={cancelConfirm}>
@@ -395,13 +470,22 @@ export default function OrderDetails() {
                 </div>
                 <div className="modal-body">
                   <p className="confirm-question">
-                    هل تريدين تحديث حالة الطلب إلى <strong>{nextStep?.label}</strong>؟
+                    هل تريدين تحديث حالة الطلب إلى{" "}
+                    <strong>{nextStep?.label}</strong>؟
                   </p>
                   <div className="modal-actions confirm-actions">
-                    <button className="btn btn-outline" onClick={cancelConfirm} disabled={updating}>
+                    <button
+                      className="btn btn-outline"
+                      onClick={cancelConfirm}
+                      disabled={updating}
+                    >
                       إلغاء
                     </button>
-                    <button className="btn btn-primary" onClick={confirmUpdate} disabled={updating}>
+                    <button
+                      className="btn btn-primary"
+                      onClick={confirmUpdate}
+                      disabled={updating}
+                    >
                       {updating ? "جاري التحديث..." : "تأكيد"}
                     </button>
                   </div>

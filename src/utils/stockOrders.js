@@ -1,9 +1,9 @@
 // طلبات القطع الراكدة عند الزبونة.
 // لما الزبونة بتطلب قطعة، الباك اند بيحجزها (reserve) بس ما بيرجّع لها طلب ضمن GET /api/my-orders،
 // فبنحفظ نسخة من بيانات القطعة والوسيطة بالمتصفح (لكل حساب) ونعرضها مع الطلبات النشطة.
-// لما الباك اند يجهّز مسار طلبات القطع (reserve بيرجّع order_id)، بنخزّن orderId مع الطلب
-// وبنقرا حالته الحقيقية من الباك اند (تم الاستلام / ملغي) بدل التخمين.
-import { getStoreStockItems, getMyOrderDetail } from "../api";
+// ملاحظة: القطع الراكدة ما إلها سجل Order حقيقي بالباك اند، فما في orderId نعتمد عليه.
+// حالة الطلب (تم الاستلام / ملغي) بتيجي من GET /api/my-stock-orders.
+import { getStoreStockItems, getMyStockReservations } from "../api";
 
 const keyFor = (userId) => `wasata_stock_orders_${userId ?? "me"}`;
 
@@ -53,10 +53,9 @@ export function getStockOrderTotal(o) {
 }
 
 // بنحفظ طلب القطعة (لو نفس القطعة انطلبت قبل وانلغت، بنستبدل القديم)
-export function saveStockOrder(userId, { item, mediator, delivery = {}, orderId = null }) {
+export function saveStockOrder(userId, { item, mediator, delivery = {} }) {
   const order = {
     itemId: item.id,
-    orderId: orderId ?? null, // رقم الطلب الحقيقي بالباك اند (لو reserve رجّعه)
     name: item.name,
     image: item.image || null,
     category: item.category || "",
@@ -84,18 +83,16 @@ export function saveStockOrder(userId, { item, mediator, delivery = {}, orderId 
   return order;
 }
 
-// حالة الطلب الحقيقية من الباك اند ← حالة طلب القطعة عندنا
-function statusFromRealOrder(status) {
-  if (status === "received" || status === "completed") return "received";
-  if (status === "cancelled" || status === "rejected") return "cancelled";
-  return "ordered";
+// حالة الحجز بالباك اند ← حالة طلب القطعة عندنا
+function statusFromReservation(status) {
+  if (status === "sold") return "received"; // الوسيطة أكدت البيع ← تم الاستلام
+  if (status === "cancelled") return "cancelled"; // الوسيطة ألغت الحجز ← ملغي
+  return "ordered"; // reserved
 }
 
-// مزامنة حالة طلبات القطع:
-// 1) الطلبات اللي الها orderId حقيقي: بنقرا حالتها من GET /api/orders/{id}
-//    (الوسيطة أكدت البيع ← received، ألغت الحجز ← cancelled)
-// 2) الطلبات القديمة بدون orderId: لو القطعة رجعت "معروضة للبيع" يعني الوسيطة ألغت الحجز.
-//    (تأكيد البيع بدون طلب حقيقي ما بنقدر نكتشفه من جهة الزبونة)
+// مزامنة حالة طلبات القطع من GET /api/my-stock-orders (حجوزات الزبونة: reserved | sold | cancelled).
+// لو الزبونة حجزت نفس القطعة أكتر من مرة، بناخد آخر حجز. ولو الـ endpoint فشل، بنرجع للطريقة القديمة:
+// لو القطعة رجعت "معروضة للبيع" يعني الحجز انلغى.
 export async function syncStockOrders(userId) {
   const list = readStockOrders(userId);
   const pending = list.filter((o) => o.status === "ordered");
@@ -103,21 +100,28 @@ export async function syncStockOrders(userId) {
 
   const updates = new Map(); // itemId ← الحالة الجديدة
 
-  const withOrderId = pending.filter((o) => o.orderId);
-  await Promise.all(
-    withOrderId.map((o) =>
-      getMyOrderDetail(o.orderId)
-        .then((detail) => {
-          const next = statusFromRealOrder(detail.status);
-          if (next !== "ordered") updates.set(String(o.itemId), next);
-        })
-        .catch(() => {})
-    )
-  );
+  let reservations = null;
+  try {
+    reservations = await getMyStockReservations();
+  } catch (e) {
+    reservations = null;
+  }
 
-  const legacy = pending.filter((o) => !o.orderId);
-  if (legacy.length > 0) {
-    const storeIds = [...new Set(legacy.map((o) => o.storeId))];
+  if (reservations) {
+    const latest = new Map();
+    reservations.forEach((r) => {
+      const key = String(r.itemId);
+      const cur = latest.get(key);
+      if (!cur || String(r.reservedAt) > String(cur.reservedAt)) latest.set(key, r);
+    });
+    pending.forEach((o) => {
+      const r = latest.get(String(o.itemId));
+      if (!r) return;
+      const next = statusFromReservation(r.status);
+      if (next !== "ordered") updates.set(String(o.itemId), next);
+    });
+  } else {
+    const storeIds = [...new Set(pending.map((o) => o.storeId))];
     const relisted = new Set();
     await Promise.all(
       storeIds.map((storeId) =>
@@ -130,14 +134,14 @@ export async function syncStockOrders(userId) {
           .catch(() => {})
       )
     );
-    legacy.forEach((o) => {
+    pending.forEach((o) => {
       if (relisted.has(String(o.itemId))) updates.set(String(o.itemId), "cancelled");
     });
   }
 
   if (updates.size === 0) return list;
   const next = list.map((o) =>
-    updates.has(String(o.itemId)) && o.status === "ordered"
+    o.status === "ordered" && updates.has(String(o.itemId))
       ? { ...o, status: updates.get(String(o.itemId)) }
       : o
   );

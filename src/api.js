@@ -54,7 +54,12 @@ async function request(
     const details = result.errors
       ? Object.values(result.errors).flat().join(" / ")
       : "";
-    throw new Error(details || result.message || errorMessage || "حدث خطأ ما");
+    const err = new Error(
+      details || result.message || errorMessage || "حدث خطأ ما",
+    );
+    err.status = response.status;
+    err.code = result.error_code || "";
+    throw err;
   }
 
   return result;
@@ -519,6 +524,7 @@ function mapOrderFromApi(o) {
       return o.estimated_amount ?? o.total_amount ?? o.amount ?? 0;
     })(),
     status: o.status,
+    orderType: o.order_type || "shein",
     items,
     // بيانات التوصيل (بتظهر للوسيطة بصفحة تفاصيل الطلب)
     deliveryType: o.delivery_method || null, // "home_delivery" | "pickup"
@@ -1041,13 +1047,12 @@ function mapReservationFromApi(r) {
   if (!r || typeof r !== "object") return null;
   const t = r.totals || {};
   return {
-    orderId: r.id ?? r.order_id ?? null,
-    customer: r.customer_name || r.customer?.full_name || r.customer?.name || "",
-    phone: r.contact_phone || r.customer_phone || r.customer?.phone || "",
-    address: r.address || r.delivery_address || "",
+    customer: r.customer_name || "",
+    phone: r.contact_phone || "",
+    address: r.address || "",
     deliveryMethod: r.delivery_method || "",
-    region: r.delivery_region || r.delivery_area || "",
-    total: t.total_amount ?? r.total_amount ?? null,
+    region: r.delivery_region || "",
+    total: t.total_amount ?? null,
     note: r.customer_note || "",
     createdAt: r.created_at || "",
   };
@@ -1068,7 +1073,7 @@ function mapStockItemFromApi(o) {
     image: rawImage ? resolveStockImage(rawImage) : null,
     status: normalizeStockStatus(o.status),
     createdAt: o.created_at || o.date || "",
-    reservation: mapReservationFromApi(o.order || o.reservation),
+    reservation: mapReservationFromApi(o.order),
   };
 }
 
@@ -1236,5 +1241,22 @@ export async function reserveStockItem(
     ...mapStockItemFromApi(unwrapStockItem(result)),
     orderId: result.order_id ?? null,
   };
+}
+// حجوزات القطع الراكدة للزبونة المسجّلة (reserved | sold | cancelled)
+export async function getMyStockReservations() {
+  const result = await request("/api/my-stock-orders", {
+    errorMessage: "تعذر جلب حجوزات القطع",
+  });
+  const list = result.reservations || result.data || [];
+  return (Array.isArray(list) ? list : []).map((r) => ({
+    itemId: r.stock_item_id,
+    storeId: r.store_id ?? null,
+    status: r.status,
+    total: r.totals?.total_amount ?? null,
+    deliveryFee: r.totals?.delivery_fee ?? null,
+    reservedAt: r.reserved_at || "",
+    soldAt: r.sold_at || null,
+    cancelledAt: r.cancelled_at || null,
+  }));
 }
 export { BASE_URL };
