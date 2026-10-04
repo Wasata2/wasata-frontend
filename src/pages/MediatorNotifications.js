@@ -1,9 +1,8 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
-import { getOrders, getOrderStats, rejectOrder, getReviews } from "../api";
-import { useAuth } from "../context/AuthContext";
-import { getUnseenReviews } from "../utils/reviewsSeen";
+import { getOrders, getOrderStats, rejectOrder } from "../api";
 import { useMediatorNotifications } from "../utils/mediatorNotifications";
+import { notificationIcon, notificationLink } from "../utils/serverNotifications";
 import { useReservedItems } from "../utils/reservedItems";
 import DashboardLayout from "../components/DashboardLayout";
 import { formatDateTime } from "../utils/dates";
@@ -12,9 +11,6 @@ import { formatProductsCount } from "../utils/orders";
 // صفحة الإشعارات: قطع محجوزة بانتظار تأكيدك، طلبات جديدة تحتاج قرار،
 // تحديثات من الزبائن (موافقة على السعر / إلغاء)، وتقييمات جديدة
 export default function MediatorNotifications() {
-  const { user } = useAuth();
-  const [newReviews, setNewReviews] = useState([]);
-
   const [orders, setOrders] = useState([]);
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -24,7 +20,11 @@ export default function MediatorNotifications() {
   const [actionError, setActionError] = useState("");
 
   const {
-    notifications: customerEvents,
+    notifications: serverNotifs,
+    error: notifError,
+    hasMore,
+    loadMore,
+    loadingMore,
     isUnread,
     markRead,
     markAllRead,
@@ -35,19 +35,17 @@ export default function MediatorNotifications() {
   const { items: reservedItems } = useReservedItems(true);
 
   useEffect(() => {
-    const reviewsPromise = getReviews().catch(() => ({ reviews: [] }));
-    Promise.all([getOrders({ status: "pending" }), getOrderStats(), reviewsPromise])
-      .then(([ordersData, statsData, reviewsData]) => {
+    Promise.all([getOrders({ status: "pending" }), getOrderStats()])
+      .then(([ordersData, statsData]) => {
         setOrders(ordersData);
         setStats(statsData);
-        setNewReviews(getUnseenReviews(user?.id ?? "me", reviewsData.reviews));
         setLoading(false);
       })
       .catch((err) => {
         setLoadError(err.message);
         setLoading(false);
       });
-  }, [user?.id]);
+  }, []);
 
   const handleReject = async (orderId) => {
     setActionError("");
@@ -64,10 +62,7 @@ export default function MediatorNotifications() {
   };
 
   const isEmpty =
-    orders.length === 0 &&
-    newReviews.length === 0 &&
-    customerEvents.length === 0 &&
-    reservedItems.length === 0;
+    orders.length === 0 && serverNotifs.length === 0 && reservedItems.length === 0;
 
   return (
     <DashboardLayout
@@ -79,14 +74,16 @@ export default function MediatorNotifications() {
       <div className="dashboard-welcome-row">
         <div className="dashboard-welcome">
           <h1>الإشعارات</h1>
-          <p>القطع المحجوزة، والطلبات الجديدة، وتحديثات الزبائن على طلباتهم، والتقييمات الجديدة على متجرك.</p>
+          <p>الطلبات الجديدة، وتحديثات الزبائن على طلباتهم، والتقييمات الجديدة، والقطع المحجوزة.</p>
         </div>
         {unreadCount > 0 && (
           <button type="button" className="btn btn-outline" onClick={markAllRead}>
-            تحديد التحديثات كمقروءة
+            تحديد الكل كمقروء
           </button>
         )}
       </div>
+
+      {notifError && <p className="form-error">تعذر تحميل الإشعارات: {notifError}</p>}
 
       {loadError && (
         <div className="empty-orders">
@@ -129,57 +126,47 @@ export default function MediatorNotifications() {
               </div>
             ))}
 
-            {customerEvents.length > 0 && (
-              <h3 className="notifications-section-title">تحديثات من الزبائن</h3>
+            {serverNotifs.length > 0 && (
+              <h3 className="notifications-section-title">آخر التحديثات</h3>
             )}
-            {customerEvents.map((n) => (
-              <div className="notification-card" key={n.id}>
-                <div className="notification-card-main">
-                  <div className="notification-card-title">
-                    {isUnread(n.id) && <span className="notif-unread-dot" />}
-                    {n.kind === "approved" ? "✅" : "❌"} {n.text}
+            {serverNotifs.map((n) => {
+              const to = notificationLink(n, "broker");
+              return (
+                <div className="notification-card" key={`n-${n.id}`}>
+                  <div className="notification-card-main">
+                    <div className="notification-card-title">
+                      {isUnread(n.id) && <span className="notif-unread-dot" />}
+                      {notificationIcon(n.type)} {n.title}
+                    </div>
+                    <div className="notification-card-sub">
+                      {n.body ? `${n.body} · ` : ""}
+                      {formatDateTime(n.time)}
+                    </div>
                   </div>
-                  <div className="notification-card-sub">{formatDateTime(n.time)}</div>
-                </div>
-                <div className="notification-card-actions">
-                  <Link
-                    to={`/mediator-orders/${n.orderId}`}
-                    className="details-link"
-                    onClick={() => markRead(n.id)}
-                  >
-                    عرض الطلب
-                  </Link>
-                </div>
-              </div>
-            ))}
-
-            {newReviews.length > 0 && <h3 className="notifications-section-title">تقييمات جديدة</h3>}
-            {newReviews.map((review) => (
-              <div className="notification-card" key={`review-${review.id}`}>
-                <div className="notification-card-main">
-                  <div className="notification-card-title">
-                    تقييم جديد من {review.customer}{" "}
-                    <span className="notification-stars">
-                      {"★".repeat(Math.max(0, Math.min(5, review.rating || 0)))}
-                      {"☆".repeat(5 - Math.max(0, Math.min(5, review.rating || 0)))}
-                    </span>
-                  </div>
-                  <div className="notification-card-sub">
-                    {review.comment ? `"${review.comment}" · ` : ""}
-                    {review.orderId ? `طلب #${review.orderId} · ` : ""}
-                    {formatDateTime(review.date)}
+                  <div className="notification-card-actions">
+                    {to ? (
+                      <Link to={to} className="details-link" onClick={() => markRead(n.id)}>
+                        عرض
+                      </Link>
+                    ) : (
+                      isUnread(n.id) && (
+                        <button type="button" className="details-link" onClick={() => markRead(n.id)}>
+                          تحديد كمقروء
+                        </button>
+                      )
+                    )}
                   </div>
                 </div>
-                <div className="notification-card-actions">
-                  <Link to="/mediator-reviews" className="details-link">
-                    عرض التقييم
-                  </Link>
-                </div>
-              </div>
-            ))}
+              );
+            })}
+            {hasMore && (
+              <button type="button" className="btn btn-outline" onClick={loadMore} disabled={loadingMore}>
+                {loadingMore ? "جاري التحميل..." : "عرض المزيد"}
+              </button>
+            )}
 
             {orders.length > 0 &&
-              (newReviews.length > 0 || customerEvents.length > 0 || reservedItems.length > 0) && (
+              (serverNotifs.length > 0 || reservedItems.length > 0) && (
                 <h3 className="notifications-section-title">طلبات جديدة تحتاج قرارك</h3>
               )}
             {orders.map((order) => (

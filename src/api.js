@@ -1,5 +1,6 @@
 import { parseApiDate } from "./utils/dates";
 import { normalizeZones, regionToApi } from "./utils/deliveryZones";
+import { messageForErrorCode } from "./utils/errorCodes";
 
 const BASE_URL = "https://wasata-backend-production-nojkxd.laravel.cloud";
 
@@ -48,13 +49,24 @@ async function request(
   let result = {};
   try {
     result = await response.json();
-  } catch (e) {}
+  } catch (e) { }
 
   if (!response.ok) {
     const details = result.errors
       ? Object.values(result.errors).flat().join(" / ")
       : "";
-    throw new Error(details || result.message || errorMessage || "حدث خطأ ما");
+    // error_code ثابت من الباك اند: لو معروف بنعرض رسالته العربية، وإلا رسالة الباك اند
+    const code = result.error_code || null;
+    const error = new Error(
+      messageForErrorCode(code) ||
+      details ||
+      result.message ||
+      errorMessage ||
+      "حدث خطأ ما",
+    );
+    error.code = code;
+    error.status = response.status;
+    throw error;
   }
 
   return result;
@@ -525,7 +537,7 @@ function mapOrderFromApi(o) {
     address: o.address || o.delivery_address || "",
     // نقطة الاستلام: الباك بيرجّعها جوا كائن المتجر المرفق مع الطلب (store.pickup_location)
     pickupLocation:
-      (o.store && o.store.pickup_location) || o.pickup_location || "",
+      o.pickup_location || (o.store && o.store.pickup_location) || "",
     contactPhone: pickContactPhone(o),
     customerNote: extractUserNote(o.customer_note),
     totalPrice: sumItemPrices(items),
@@ -584,9 +596,9 @@ function mapMyOrderFromApi(o) {
     storeId: o.store_id ?? o.store?.id ?? null,
     storeImage: resolveStoreImageUrl(
       o.store_image_url ||
-        o.store_image ||
-        o.store?.image_url ||
-        o.store?.image,
+      o.store_image ||
+      o.store?.image_url ||
+      o.store?.image,
     ),
     itemsCount: o.items_count ?? 0,
     totalQuantity:
@@ -665,7 +677,7 @@ function mapMyOrderDetailFromApi(o) {
     deliveryType: o.delivery_method || null,
     address: o.address || o.delivery_address || "",
     pickupLocation:
-      (o.store && o.store.pickup_location) || o.pickup_location || "",
+      o.pickup_location || (o.store && o.store.pickup_location) || "",
     contactPhone: pickContactPhone(o),
     customerNote: extractUserNote(o.customer_note),
     items,
@@ -840,6 +852,14 @@ export async function declineOrderPrice(id) {
   const result = await request(`/api/orders/${id}/decline-price`, {
     method: "PATCH",
     errorMessage: "تعذر رفض السعر",
+  });
+  return mapOrderFromApi(result.order || result);
+}
+// الوسيطة بتسحب العرض (السعر) قبل ما توافق الزبونة: الطلب بيرجع pending والأسعار بتتصفّر
+export async function withdrawOrderPrice(id) {
+  const result = await request(`/api/orders/${id}/withdraw-price`, {
+    method: "PATCH",
+    errorMessage: "تعذر سحب العرض",
   });
   return mapOrderFromApi(result.order || result);
 }
@@ -1238,3 +1258,66 @@ export async function reserveStockItem(
   };
 }
 export { BASE_URL };
+// ===== الإشعارات الحقيقية من الباك اند =====
+// GET   /api/notifications               (?unread_only=1 ، و pagination لما ينضاف)
+// GET   /api/notifications/unread-count
+// PATCH /api/notifications/{id}/read
+// PATCH /api/notifications/read-all
+// شكل الإشعار: { id, user_id, type, title, body, data: { order_id }, read_at, created_at }
+function mapNotificationFromApi(n) {
+  const data = n.data && typeof n.data === "object" ? n.data : {};
+  return {
+    id: n.id,
+    type: n.type || "",
+    title: n.title || "",
+    body: n.body || "",
+    orderId: data.order_id ?? n.order_id ?? null,
+    data,
+    read: !!n.read_at,
+    time: n.created_at,
+  };
+}
+
+export async function getNotifications({ page = 1, perPage = 20, unreadOnly = false } = {}) {
+  const params = new URLSearchParams();
+  params.set("page", page);
+  params.set("per_page", perPage);
+  if (unreadOnly) params.set("unread_only", 1);
+
+  const result = await request(`/api/notifications?${params.toString()}`, {
+    errorMessage: "تعذر جلب الإشعارات",
+  });
+  // بنقبل الرد كمصفوفة مباشرة أو جوا مفتاح (notifications / data)، لحد ما نشوف الشكل النهائي
+  const list = Array.isArray(result)
+    ? result
+    : result.notifications || result.data || [];
+  return {
+    notifications: list.map(mapNotificationFromApi),
+    pagination: Array.isArray(result) ? null : result.pagination || null,
+  };
+}
+
+export async function getUnreadNotificationsCount() {
+  const result = await request("/api/notifications/unread-count", {
+    errorMessage: "تعذر جلب عدد الإشعارات",
+  });
+  const value =
+    typeof result === "number"
+      ? result
+      : result.unread_count ?? result.count ?? result.unread ?? null;
+  return value === null ? null : Number(value);
+}
+
+export async function markNotificationRead(id) {
+  return request(`/api/notifications/${id}/read`, {
+    method: "PATCH",
+    errorMessage: "تعذر تحديد الإشعار كمقروء",
+  });
+}
+
+export async function markAllNotificationsRead() {
+  return request("/api/notifications/read-all", {
+    method: "PATCH",
+    errorMessage: "تعذر تحديد الإشعارات كمقروءة",
+  });
+}
