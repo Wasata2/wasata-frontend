@@ -3,6 +3,8 @@ import { Link } from "react-router-dom";
 import { updateProfile, getMyOrders, BASE_URL } from "../api";
 import DashboardLayout from "../components/DashboardLayout";
 import { useAuth } from "../context/AuthContext";
+import DeleteAccountSection from "../components/DeleteAccountSection";
+
 function resolveImageUrl(path) {
   if (!path) return null;
   if (
@@ -115,8 +117,8 @@ export default function CustomerProfile() {
 
       const serverImage = resolveImageUrl(
         updatedUser.profile_picture_url ||
-          updatedUser.image_url ||
-          updatedUser.image,
+        updatedUser.image_url ||
+        updatedUser.image,
       );
       if (serverImage) {
         setImagePreview(serverImage);
@@ -348,7 +350,7 @@ export default function CustomerProfile() {
           </div>
         )}
       </div>
-
+      <DeleteAccountSection />
       {toast && <div className="toast-notification">{toast}</div>}
     </DashboardLayout>
   );

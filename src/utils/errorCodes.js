@@ -27,6 +27,9 @@ export const ERROR_CODE_MESSAGES = {
   ACCOUNT_HAS_ACTIVE_ORDERS:
     "ما بتقدري تحذفي حسابك وعندك طلبات نشطة. أنهيها أو ألغيها أول.",
   INCORRECT_PASSWORD: "كلمة المرور غير صحيحة.",
+  // تسجيل الدخول بحساب محذوف (403)
+  ACCOUNT_DELETED:
+    "هذا الحساب محذوف. إذا بدك تسترجعيه تواصلي مع الدعم خلال 30 يوم من تاريخ الحذف.",
 };
 
 export function messageForErrorCode(code) {

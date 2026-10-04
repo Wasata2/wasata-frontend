@@ -1340,3 +1340,18 @@ export async function markAllNotificationsRead() {
     errorMessage: "تعذر تحديد الإشعارات كمقروءة",
   });
 }
+ 
+// ===== حذف الحساب =====
+// DELETE /api/account مع body: { password }. حذف "ناعم" (soft delete): الحساب بيتخفى 30 يوم
+// وبعدها بيتحذف فعليًا. الأخطاء: ACCOUNT_HAS_ACTIVE_ORDERS و INCORRECT_PASSWORD.
+export async function deleteAccount(password) {
+  const result = await request("/api/account", {
+    method: "DELETE",
+    body: { password },
+    errorMessage: "تعذر حذف الحساب",
+  });
+  // الباك اند ببطل كل التوكنات، فبننظف الجلسة عنا كمان
+  localStorage.removeItem("token");
+  localStorage.removeItem("user");
+  return result;
+}
