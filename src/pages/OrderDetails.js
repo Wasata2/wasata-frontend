@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Link, useParams } from "react-router-dom";
-import { getOrderDetails, updateOrderStatus } from "../api";
+import { getOrderDetails, updateOrderStatus, withdrawOrderPrice } from "../api";
 import DashboardLayout from "../components/DashboardLayout";
 import { formatDateTime } from "../utils/dates";
 import {
@@ -41,6 +41,7 @@ export default function OrderDetails() {
   const [confirmModalOpen, setConfirmModalOpen] = useState(false);
   const [updating, setUpdating] = useState(false);
   const [updateError, setUpdateError] = useState("");
+  const [withdrawing, setWithdrawing] = useState(false);
 
   useEffect(() => {
     getOrderDetails(id)
@@ -72,6 +73,24 @@ export default function OrderDetails() {
     currentStepIndex < STATUS_STEPS.length - 1
       ? STATUS_STEPS[currentStepIndex + 1]
       : null;
+
+  // سحب العرض: لو الزبونة ما ردّت على السعر، الوسيطة بترجّع الطلب لـ pending وبتعيد التسعير
+  const handleWithdraw = async () => {
+    if (!window.confirm("متأكدة بدك تسحبي العرض؟ الأسعار رح تتصفّر والطلب بيرجع لانتظار تسعيرك.")) {
+      return;
+    }
+    setWithdrawing(true);
+    setUpdateError("");
+    try {
+      await withdrawOrderPrice(order.id);
+      const fresh = await getOrderDetails(order.id);
+      setOrder(fresh);
+    } catch (err) {
+      setUpdateError(err.message);
+    } finally {
+      setWithdrawing(false);
+    }
+  };
 
   const openUpdateModal = () => {
     setUpdateError("");
@@ -308,9 +327,14 @@ export default function OrderDetails() {
                   الرجوع لصفحة الطلبات
                 </Link>
               ) : isAwaiting ? (
-                <span className="current-status-pill">
-                  <span className="current-status-dot" /> بانتظار موافقة الزبونة
-                </span>
+                <div style={{ display: "flex", gap: "10px", alignItems: "center", flexWrap: "wrap" }}>
+                  <span className="current-status-pill">
+                    <span className="current-status-dot" /> بانتظار موافقة الزبونة
+                  </span>
+                  <button className="btn btn-outline" onClick={handleWithdraw} disabled={withdrawing}>
+                    {withdrawing ? "جاري السحب..." : "سحب العرض"}
+                  </button>
+                </div>
               ) : isFinalStep ? (
                 <span className="order-completed-pill">✓ تم إتمام الطلب</span>
               ) : (

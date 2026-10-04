@@ -262,7 +262,7 @@ export default function NewOrder() {
       });
       navigate("/my-orders");
     } catch (err) {
-      if (/pickup location/i.test(err.message || "")) {
+     if (err.code === "PICKUP_NOT_AVAILABLE" || /pickup location/i.test(err.message || "")) {
         setPickupUnavailable(true);
       }
       setSubmitError(translateOrderError(err.message) || "تعذر إرسال الطلب، حاولي مرة ثانية.");

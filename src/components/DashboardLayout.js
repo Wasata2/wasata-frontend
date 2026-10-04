@@ -119,12 +119,11 @@ export default function DashboardLayout({
       ? "/customer-notifications"
       : notifLink || (role === "broker" ? "/mediator-notifications" : null);
   const bellCount =
-    role === "customer"
-      ? customerNotif.unreadCount
-      : (notifBadge || 0) +
-        (role === "broker"
-          ? newReviewsCount + brokerNotif.unreadCount + reserved.count
-          : 0);
+  role === "customer"
+    ? customerNotif.unreadCount
+    : role === "broker"
+      ? brokerNotif.unreadCount + reserved.count
+      : notifBadge || 0;
 
   const links = role === "broker" ? BROKER_LINKS : CUSTOMER_LINKS;
   const roleLabel = role === "broker" ? "وسيطة" : "زبونة";

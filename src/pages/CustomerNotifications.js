@@ -1,11 +1,22 @@
 import { Link } from "react-router-dom";
 import DashboardLayout from "../components/DashboardLayout";
 import { useCustomerNotifications } from "../utils/customerNotifications";
+import { notificationIcon, notificationLink } from "../utils/serverNotifications";
 import { formatDateTime } from "../utils/dates";
 
 export default function CustomerNotifications() {
-  const { notifications, loading, isUnread, markRead, markAllRead, unreadCount } =
-    useCustomerNotifications(true);
+  const {
+    notifications,
+    loading,
+    error,
+    hasMore,
+    loadMore,
+    loadingMore,
+    isUnread,
+    markRead,
+    markAllRead,
+    unreadCount,
+  } = useCustomerNotifications(true);
 
   return (
     <DashboardLayout role="customer">
@@ -21,6 +32,8 @@ export default function CustomerNotifications() {
         )}
       </div>
 
+      {error && <p className="form-error">{error}</p>}
+
       {loading ? (
         <p className="explore-loading">جاري التحميل...</p>
       ) : notifications.length === 0 ? (
@@ -30,28 +43,46 @@ export default function CustomerNotifications() {
         </div>
       ) : (
         <div className="notifications-list">
-          {notifications.map((n) => (
-            <div className="notification-card" key={n.id}>
-              <div>
-                <div className="notification-card-title">
-                  {isUnread(n.id) && <span className="notif-unread-dot" />}
-                  {n.isRejected ? "❌" : "🔔"} {n.text}
+          {notifications.map((n) => {
+            const to = notificationLink(n, "customer");
+            return (
+              <div className="notification-card" key={n.id}>
+                <div>
+                  <div className="notification-card-title">
+                    {isUnread(n.id) && <span className="notif-unread-dot" />}
+                    {notificationIcon(n.type)} {n.title}
+                  </div>
+                  <div className="notification-card-sub">
+                    {n.body ? `${n.body} · ` : ""}
+                    {formatDateTime(n.time)}
+                  </div>
                 </div>
-                <div className="notification-card-sub">
-                  طلب #{n.orderId} · {n.store} · {formatDateTime(n.time)}
+                <div className="notification-card-actions">
+                  {to ? (
+                    <Link to={to} className="btn btn-outline btn-sm" onClick={() => markRead(n.id)}>
+                      عرض
+                    </Link>
+                  ) : (
+                    isUnread(n.id) && (
+                      <button type="button" className="btn btn-outline btn-sm" onClick={() => markRead(n.id)}>
+                        تحديد كمقروء
+                      </button>
+                    )
+                  )}
                 </div>
               </div>
-              <div className="notification-card-actions">
-                <Link
-                  to={`/orders/${n.orderId}`}
-                  className="btn btn-outline btn-sm"
-                  onClick={() => markRead(n.id)}
-                >
-                  عرض الطلب
-                </Link>
-              </div>
-            </div>
-          ))}
+            );
+          })}
+          {hasMore && (
+            <button
+              type="button"
+              className="btn btn-outline"
+              onClick={loadMore}
+              disabled={loadingMore}
+            >
+              {loadingMore ? "جاري التحميل..." : "عرض المزيد"}
+            </button>
+          )}
         </div>
       )}
     </DashboardLayout>
