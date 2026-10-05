@@ -40,20 +40,35 @@ export default function DeleteAccountSection({ isMediator = false }) {
 
   return (
     <>
-      <div className="profile-card" style={{ marginTop: "24px" }}>
-        <h2 className="order-details-section-title">حذف الحساب</h2>
-        <p className="service-description">
-          {isMediator
-            ? "لو حذفتي حسابك، متجرك بيختفي من الاستكشاف وما رح تقدري تدخلي. بيانات الطلبات والتقييمات القديمة بتضل محفوظة."
-            : "لو حذفتي حسابك ما رح تقدري تدخلي. طلباتك القديمة بتضل محفوظة عند الوسيطات، وتقييماتك بتظهر بدون اسمك."}
-        </p>
-        <p className="service-description">
-          الحساب بيتخفى 30 يوم، وبعدها بيتحذف نهائيًا. خلال هالفترة تقدري تتواصلي مع الدعم لاسترجاعه.
-          ما بيمكن الحذف لو عندك طلبات نشطة.
-        </p>
-        <button type="button" className="btn btn-outline" onClick={openModal}>
-          حذف حسابي
-        </button>
+      <div className="account-data-card">
+        {/* النص على اليمين والزر على اليسار بمنتصف ارتفاع الصندوق */}
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: "24px",
+            flexWrap: "wrap",
+          }}
+        >
+          <div style={{ flex: "1 1 320px" }}>
+            <div className="section-header-row">
+              <h3>حذف الحساب</h3>
+            </div>
+            <p className="delete-account-text">
+              {isMediator
+                ? "لو حذفتي حسابك، متجرك بيختفي من الاستكشاف وما رح تقدري تدخلي. بيانات الطلبات والتقييمات القديمة بتضل محفوظة."
+                : "لو حذفتي حسابك ما رح تقدري تدخلي. طلباتك القديمة بتضل محفوظة عند الوسيطات، وتقييماتك بتظهر بدون اسمك."}
+            </p>
+            <p className="delete-account-text">
+              الحساب بيتخفى 30 يوم وبعدها بيتحذف نهائيًا، وخلال هالفترة تقدري تتواصلي مع الدعم لاسترجاعه.
+              ما بيمكن الحذف لو عندك طلبات نشطة.
+            </p>
+          </div>
+          <button type="button" className="btn btn-danger-outline" onClick={openModal}>
+            🗑 حذف حسابي
+          </button>
+        </div>
       </div>
 
       {open && (
