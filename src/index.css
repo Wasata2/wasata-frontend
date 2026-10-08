@@ -5993,6 +5993,37 @@ footer .copyright {
     text-align: center;
   }
 }
+
+/* ===== قسم حذف الحساب ===== */
+.btn-danger-outline {
+  background: #fef3f2;
+  color: #d92d20;
+  border: 1px solid #f4b4ae;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease,
+    transform 0.15s ease, box-shadow 0.2s ease;
+}
+
+.btn-danger-outline:hover {
+  background: #d92d20;
+  color: #fff;
+  border-color: #d92d20;
+  transform: translateY(-1px);
+  box-shadow: 0 6px 14px rgba(217, 45, 32, 0.25);
+}
+
+.btn-danger-outline:active {
+  transform: translateY(0);
+  box-shadow: none;
+}
+
+.delete-account-text {
+  color: var(--muted, #6b7280);
+  font-size: 14px;
+  line-height: 1.8;
+  margin: 0 0 6px;
+}
 /* ============ Responsive ============ */
 @media (max-width:1024px) {
   .suggested-grid {

@@ -14,6 +14,7 @@ import { useAuth } from "../context/AuthContext";
 import { DELIVERY_REGIONS, normalizeZones } from "../utils/deliveryZones";
 import { formatDate, latestByDate } from "../utils/dates";
 import ReviewAvatar from "../components/ReviewAvatar";
+import DeleteAccountSection from "../components/DeleteAccountSection";
 // رابط صورة المتجر يجي أحيانًا من الباك اند كمسار نسبي (بدون دومين) —
 // هاي الدالة بتتأكد إنه رابط كامل قبل ما نعرضه، وإلا بترجع null
 function resolveImageUrl(path) {
@@ -125,7 +126,7 @@ export default function MediatorProfile() {
   useEffect(() => {
     try {
       sessionStorage.removeItem("wasata_profile_preview");
-    } catch (e) {}
+    } catch (e) { }
   }, []);
 
   // القطع المعروضة للبيع: بوضع المعاينة بنفتح نفس صفحة الزبونة (بدون زر الطلب)
@@ -135,7 +136,7 @@ export default function MediatorProfile() {
     // بنتذكّر إنها كانت بوضع المعاينة عشان ترجع عليه بعد زر "عودة"
     try {
       sessionStorage.setItem("wasata_profile_preview", "1");
-    } catch (e) {}
+    } catch (e) { }
     navigate(`/mediators/${myStoreId}/items`);
   };
 
@@ -221,7 +222,7 @@ export default function MediatorProfile() {
   useEffect(() => {
     getOrderStats()
       .then(setStats)
-      .catch(() => {});
+      .catch(() => { });
   }, []);
 
   const handleImageChange = async (e) => {
@@ -392,7 +393,7 @@ export default function MediatorProfile() {
         generalForm.pickupLocation.trim() !== "" &&
         savedStore.pickup_location !== undefined &&
         (savedStore.pickup_location || "") !==
-          generalForm.pickupLocation.trim();
+        generalForm.pickupLocation.trim();
       const zonesIgnored =
         savedStore.delivery_zones !== undefined &&
         normalizeZones(savedStore.delivery_zones).length !== zonesToSave.length;
@@ -739,10 +740,10 @@ export default function MediatorProfile() {
               style={
                 imagePreview
                   ? {
-                      backgroundImage: `url(${imagePreview})`,
-                      backgroundSize: "cover",
-                      backgroundPosition: "center",
-                    }
+                    backgroundImage: `url(${imagePreview})`,
+                    backgroundSize: "cover",
+                    backgroundPosition: "center",
+                  }
                   : undefined
               }
             >
@@ -1100,7 +1101,7 @@ export default function MediatorProfile() {
             </div>
           </div>
         )}
-
+        <DeleteAccountSection isMediator />
         {toast && <div className="toast-notification">{toast}</div>}
       </main>
     </div>
