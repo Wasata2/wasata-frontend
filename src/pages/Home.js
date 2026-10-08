@@ -8,16 +8,19 @@ export default function Home() {
       <Navbar />
 
       <section className="hero" id="home">
-        {/* فيديو خلفية القسم الرئيسي — حطي ملف الفيديو باسم hero-bg.mp4 داخل مجلد public */}
-        <video
-          className="hero-video"
-          src={`${process.env.PUBLIC_URL}/hero-bg.mp4`}
-          autoPlay
-          muted
-          loop
-          playsInline
-        />
-        
+        <img
+    className="hero-video"
+    src={`${process.env.PUBLIC_URL}/hero-bg.jpg`}
+    alt=""
+    aria-hidden="true"
+    style={{
+      position: "absolute",
+      inset: 0,
+      width: "100%",
+      height: "100%",
+      objectFit: "cover",
+    }}
+      />  
         <div className="container">
                     <div className="hero-copy">
             <h1>وسيطتك المناسبة، وطلبك تحت المتابعة</h1>
